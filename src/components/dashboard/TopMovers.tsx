@@ -3,7 +3,12 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 
-function Sparkline({ data, isPositive }) {
+interface SparklineProps {
+  data: any[];
+  isPositive: boolean;
+}
+
+function Sparkline({ data, isPositive }: SparklineProps) {
   const color = isPositive ? '#FFC107' : '#E53935';
   return (
     <div className="w-16 h-8">
@@ -16,7 +21,7 @@ function Sparkline({ data, isPositive }) {
   );
 }
 
-function makeSparkData(isPositive) {
+function makeSparkData(isPositive: boolean) {
   let v = 100;
   return Array.from({ length: 12 }, () => {
     v += (Math.random() - (isPositive ? 0.42 : 0.58)) * 4;
@@ -24,7 +29,12 @@ function makeSparkData(isPositive) {
   });
 }
 
-export default function TopMovers({ assets, onAssetClick }) {
+interface TopMoversProps {
+  assets?: any[];
+  onAssetClick?: (asset: any) => void;
+}
+
+export default function TopMovers({ assets, onAssetClick }: TopMoversProps) {
   const movers = (assets || []).slice(0, 6).map(a => ({
     ...a,
     sparkData: makeSparkData(a.change_percent >= 0),

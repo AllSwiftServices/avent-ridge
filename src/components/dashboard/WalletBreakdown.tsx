@@ -2,7 +2,15 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-function WalletBreakdownCard({ title, balance, change, hideBalance, index }) {
+interface WalletBreakdownCardProps {
+  title: string;
+  balance: number;
+  change: number;
+  hideBalance: boolean;
+  index: number;
+}
+
+function WalletBreakdownCard({ title, balance, change, hideBalance, index }: WalletBreakdownCardProps) {
   const isPositive = change >= 0;
   return (
     <motion.div
@@ -23,7 +31,14 @@ function WalletBreakdownCard({ title, balance, change, hideBalance, index }) {
   );
 }
 
-export default function WalletBreakdown({ mainBalance, cryptoValue, stockValue, hideBalance }) {
+interface WalletBreakdownProps {
+  mainBalance: number;
+  cryptoValue: number;
+  stockValue: number;
+  hideBalance: boolean;
+}
+
+export default function WalletBreakdown({ mainBalance, cryptoValue, stockValue, hideBalance }: WalletBreakdownProps) {
   const cards = [
     { title: 'Main Wallet', balance: mainBalance, change: 1.23 },
     { title: 'Crypto Wallet', balance: cryptoValue, change: 3.45 },

@@ -3,7 +3,11 @@ import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export default function QuickTradeButton({ onClick }) {
+interface QuickTradeButtonProps {
+  onClick?: () => void;
+}
+
+export default function QuickTradeButton({ onClick }: QuickTradeButtonProps) {
   return (
     <motion.button
       onClick={onClick}

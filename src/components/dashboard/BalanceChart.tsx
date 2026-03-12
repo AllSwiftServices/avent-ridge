@@ -5,29 +5,29 @@ import { cn } from '@/lib/utils';
 
 const FILTERS = ['1D', '7D', '1M', '3M', '1Y', 'ALL'];
 
-function generateData(days, baseValue, isPositive) {
+function generateData(days: number, baseValue: number, isPositive: boolean) {
   const points = [];
   let val = baseValue * (isPositive ? 0.94 : 1.06);
-  const labels = {
-    '1D': (i) => `${i}:00`,
-    '7D': (i) => ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i % 7],
-    '1M': (i) => `${i + 1}`,
-    '3M': (i) => ['Jan','Feb','Mar'][Math.floor(i / (days / 3))],
-    '1Y': (i) => ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Math.floor(i / (days / 12))],
-    'ALL': (i) => `${2020 + Math.floor(i / (days / 5))}`,
-  };
   for (let i = 0; i < days; i++) {
     const drift = isPositive ? 0.52 : 0.48;
     val = Math.max(val * 0.9, val + (Math.random() - drift) * val * 0.02);
     points.push({ label: i, value: parseFloat(val.toFixed(2)) });
   }
-  points[points.length - 1].value = baseValue;
+  if (points.length > 0) {
+    points[points.length - 1].value = baseValue;
+  }
   return points;
 }
 
-const PERIOD_POINTS = { '1D': 24, '7D': 7, '1M': 30, '3M': 90, '1Y': 52, 'ALL': 60 };
+const PERIOD_POINTS: Record<string, number> = { '1D': 24, '7D': 7, '1M': 30, '3M': 90, '1Y': 52, 'ALL': 60 };
 
-const CustomTooltip = ({ active, payload, isPositive }) => {
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: any[];
+  isPositive: boolean;
+}
+
+const CustomTooltip = ({ active, payload, isPositive }: CustomTooltipProps) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs shadow-xl">
@@ -38,7 +38,12 @@ const CustomTooltip = ({ active, payload, isPositive }) => {
   );
 };
 
-export default function BalanceChart({ totalBalance, isPositive }) {
+interface BalanceChartProps {
+  totalBalance: number;
+  isPositive: boolean;
+}
+
+export default function BalanceChart({ totalBalance, isPositive }: BalanceChartProps) {
   const [active, setActive] = useState('7D');
   const data = useMemo(() => generateData(PERIOD_POINTS[active], totalBalance, isPositive), [active, totalBalance]);
   const color = isPositive ? '#FFC107' : '#E53935';

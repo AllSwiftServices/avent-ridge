@@ -9,7 +9,13 @@ const actions = [
   { label: 'Withdraw', icon: ArrowUpFromLine },
 ];
 
-export default function QuickActions({ onDeposit, onTrade, onWithdraw }) {
+interface QuickActionsProps {
+  onDeposit: () => void;
+  onTrade: () => void;
+  onWithdraw: () => void;
+}
+
+export default function QuickActions({ onDeposit, onTrade, onWithdraw }: QuickActionsProps) {
   const handlers = [onDeposit, onTrade, onWithdraw];
 
   return (

@@ -183,7 +183,7 @@ export default function Dashboard() {
             </button>
           </div>
           <TopMovers
-            assets={assets}
+            assets={assets || []}
             onAssetClick={(asset: any) => navigate(createPageUrl('Markets') + `?asset=${asset.symbol}`)}
           />
         </motion.div>

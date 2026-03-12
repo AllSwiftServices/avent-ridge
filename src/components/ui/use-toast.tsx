@@ -4,12 +4,29 @@ import { useState, useEffect } from "react";
 const TOAST_LIMIT = 20;
 const TOAST_REMOVE_DELAY = 1000000;
 
+export type ToastActionElement = React.ReactElement<
+  typeof import("@/components/ui/toast").ToastAction
+>
+
+export type ToastProps = React.ComponentPropsWithoutRef<
+  typeof import("@/components/ui/toast").Toast
+>
+
+export interface Toasts extends ToastProps {
+  id: string
+  title?: React.ReactNode
+  description?: React.ReactNode
+  action?: ToastActionElement
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}
+
 const actionTypes = {
   ADD_TOAST: "ADD_TOAST",
   UPDATE_TOAST: "UPDATE_TOAST",
   DISMISS_TOAST: "DISMISS_TOAST",
   REMOVE_TOAST: "REMOVE_TOAST",
-};
+} as const
 
 let count = 0;
 
@@ -18,9 +35,9 @@ function genId() {
   return count.toString();
 }
 
-const toastTimeouts = new Map();
+const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
 
-const addToRemoveQueue = (toastId) => {
+const addToRemoveQueue = (toastId: string) => {
   if (toastTimeouts.has(toastId)) {
     return;
   }
@@ -36,7 +53,7 @@ const addToRemoveQueue = (toastId) => {
   toastTimeouts.set(toastId, timeout);
 };
 
-const _clearFromRemoveQueue = (toastId) => {
+const _clearFromRemoveQueue = (toastId: string) => {
   const timeout = toastTimeouts.get(toastId);
   if (timeout) {
     clearTimeout(timeout);
@@ -44,7 +61,29 @@ const _clearFromRemoveQueue = (toastId) => {
   }
 };
 
-export const reducer = (state, action) => {
+type Action =
+  | {
+      type: typeof actionTypes.ADD_TOAST
+      toast: Toasts
+    }
+  | {
+      type: typeof actionTypes.UPDATE_TOAST
+      toast: Partial<Toasts>
+    }
+  | {
+      type: typeof actionTypes.DISMISS_TOAST
+      toastId?: Toasts["id"]
+    }
+  | {
+      type: typeof actionTypes.REMOVE_TOAST
+      toastId?: Toasts["id"]
+    }
+
+interface State {
+  toasts: Toasts[]
+}
+
+export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case actionTypes.ADD_TOAST:
       return {
@@ -99,21 +138,23 @@ export const reducer = (state, action) => {
   }
 };
 
-const listeners = [];
+const listeners: Array<(state: State) => void> = []
 
-let memoryState = { toasts: [] };
+let memoryState: State = { toasts: [] }
 
-function dispatch(action) {
+function dispatch(action: Action) {
   memoryState = reducer(memoryState, action);
   listeners.forEach((listener) => {
     listener(memoryState);
   });
 }
 
-function toast({ ...props }) {
+type Toast = Omit<Toasts, "id">
+
+function toast({ ...props }: Toast) {
   const id = genId();
 
-  const update = (props) =>
+  const update = (props: Toasts) =>
     dispatch({
       type: actionTypes.UPDATE_TOAST,
       toast: { ...props, id },
@@ -157,8 +198,9 @@ function useToast() {
   return {
     ...state,
     toast,
-    dismiss: (toastId) => dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
-  };
+    dismiss: (toastId?: string) =>
+      dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
+  }
 }
 
 export { useToast, toast }; 

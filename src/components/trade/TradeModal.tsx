@@ -6,7 +6,13 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 
-export default function TradeModal({ asset, isOpen, onClose, onTrade, balance = 0 }) {
+export default function TradeModal({ asset, isOpen, onClose, onTrade, balance = 0 }: {
+  asset: any,
+  isOpen: boolean,
+  onClose: () => void,
+  onTrade: (trade: any) => void,
+  balance?: number
+}) {
   const [tradeType, setTradeType] = useState('buy');
   const [amount, setAmount] = useState('');
   const [step, setStep] = useState('input');
@@ -107,7 +113,7 @@ export default function TradeModal({ asset, isOpen, onClose, onTrade, balance = 
                             borderRadius: '12px',
                             boxShadow: '0 4px 6px -1px var(--color-primary-foreground)'
                           }}
-                          formatter={(value) => [`$${value.toFixed(2)}`, 'Price']}
+                          formatter={(value: any) => [`$${parseFloat(value).toFixed(2)}`, 'Price']}
                         />
                         <Line
                           type="monotone"
@@ -311,7 +317,7 @@ export default function TradeModal({ asset, isOpen, onClose, onTrade, balance = 
   );
 }
 
-function generateChartData(currentPrice, isPositive) {
+function generateChartData(currentPrice: number, isPositive: boolean) {
   const data = [];
   let price = currentPrice * (isPositive ? 0.95 : 1.05);
   

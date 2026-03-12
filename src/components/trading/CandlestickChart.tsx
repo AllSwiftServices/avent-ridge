@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 
 const TIME_FILTERS = ['1M', '5M', '15M', '1H', '1D'];
 
-function generateCandles(basePrice, count = 60, volatility = 0.008) {
+function generateCandles(basePrice: number, count = 60, volatility = 0.008) {
   const candles = [];
   let price = basePrice * (0.92 + Math.random() * 0.06);
   const now = Date.now();
@@ -27,7 +27,7 @@ function generateCandles(basePrice, count = 60, volatility = 0.008) {
 }
 
 // Custom Candlestick Bar
-function CandleBar(props) {
+function CandleBar(props: any) {
   const { x, y, width, height, open, close, high, low } = props;
   if (!x || !y || !width) return null;
   const isGreen = close >= open;
@@ -44,7 +44,7 @@ function CandleBar(props) {
   );
 }
 
-const CustomTooltip = ({ active, payload }) => {
+const CustomTooltip = ({ active, payload }: { active?: boolean, payload?: any[] }) => {
   if (!active || !payload?.length) return null;
   const d = payload[0]?.payload;
   if (!d) return null;
@@ -65,10 +65,10 @@ const CustomTooltip = ({ active, payload }) => {
   );
 };
 
-export default function CandlestickChart({ basePrice, isPositive }) {
+export default function CandlestickChart({ basePrice, isPositive }: { basePrice: number, isPositive: boolean }) {
   const [timeFilter, setTimeFilter] = useState('15M');
   const [chartType, setChartType] = useState('candle');
-  const [data, setData] = useState([]);
+  const [data, setData] = useState<any[]>([]);
 
   useEffect(() => {
     setData(generateCandles(basePrice, 60));

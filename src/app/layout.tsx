@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 import Sidebar from "@/components/navigation/Sidebar";
@@ -7,15 +6,9 @@ import BottomNav from "@/components/navigation/BottomNav";
 import QuickTradeButton from "@/components/common/QuickTradeButton";
 import AppContent from "@/components/AppContent";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// Using system font families for build stability
+const geistSans = { variable: "--font-geist-sans" };
+const geistMono = { variable: "--font-geist-mono" };
 
 export const metadata: Metadata = {
   title: "Avent Ridge",

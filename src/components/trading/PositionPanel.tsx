@@ -4,7 +4,17 @@ import { X, TrendingUp, TrendingDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
-export default function PositionPanel({ position, currentPrice, onClose }) {
+export default function PositionPanel({ position, currentPrice, onClose }: {
+  position: {
+    symbol: string,
+    entryPrice: number,
+    quantity: number,
+    side: 'buy' | 'sell',
+    leverage: number
+  },
+  currentPrice: number,
+  onClose: () => void
+}) {
   if (!position) return null;
 
   const pnl = (currentPrice - position.entryPrice) * position.quantity * (position.side === 'buy' ? 1 : -1);

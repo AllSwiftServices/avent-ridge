@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 
 export default function LivePriceHeader({ price, prevPrice, change, changePercent, high24h, low24h, volume }: {
   price: number;
-  prevPrice: number;
+  prevPrice: number | null;
   change: number;
   changePercent: number;
   high24h: number;
@@ -12,7 +12,7 @@ export default function LivePriceHeader({ price, prevPrice, change, changePercen
   volume: string;
 }) {
   const isPositive = changePercent >= 0;
-  const direction = price > prevPrice ? 'up' : price < prevPrice ? 'down' : 'same';
+  const direction = !prevPrice || price === prevPrice ? 'same' : price > prevPrice ? 'up' : 'down';
 
   const fmt = (n: number, d = 2) =>
     n?.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }) ?? '—';

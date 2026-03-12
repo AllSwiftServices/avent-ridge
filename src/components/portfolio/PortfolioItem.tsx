@@ -2,7 +2,17 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-export default function PortfolioItem({ item, currentPrice, index = 0 }) {
+export default function PortfolioItem({ item, currentPrice, index = 0 }: {
+  item: {
+    asset_symbol: string,
+    quantity: number,
+    total_invested: number,
+    asset_type: string,
+    avg_buy_price: number
+  },
+  currentPrice: number,
+  index?: number
+}) {
   const currentValue = item.quantity * currentPrice;
   const profitLoss = currentValue - item.total_invested;
   const profitLossPercent = ((currentValue - item.total_invested) / item.total_invested) * 100;

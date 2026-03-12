@@ -7,7 +7,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@/components/ui/ThemeProvider';
 import { useAuth } from '@/lib/AuthContext';
 
-export default function ProOrderPanel({ asset, price, balance: balanceProp = 12500, onOrderPlaced }: any) {
+export default function ProOrderPanel({ asset, price, balance: balanceProp = 12500, onOrderPlaced }: {
+  asset: any,
+  price: number,
+  balance?: number,
+  onOrderPlaced?: (params: { side: string, quantity: number, entryPrice: number, leverage: number }) => void
+}) {
   const { theme } = useTheme();
   const { user } = useAuth();
   const queryClient = useQueryClient();

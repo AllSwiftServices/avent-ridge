@@ -16,13 +16,13 @@ const ASSETS = [
   { symbol: 'XRP', name: 'Ripple', type: 'crypto', pair: 'XRP/USDT' },
 ];
 
-export default function AssetSelector({ selected, onChange }) {
+export default function AssetSelector({ selected, onChange }: { selected: any, onChange: (asset: any) => void }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const ref = useRef(null);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);

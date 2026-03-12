@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-function generateOrders(basePrice, side, count = 8) {
+function generateOrders(basePrice: number, side: 'ask' | 'bid', count = 8) {
   const orders = [];
   let p = side === 'ask' ? basePrice * 1.0005 : basePrice * 0.9995;
   for (let i = 0; i < count; i++) {
@@ -11,13 +11,13 @@ function generateOrders(basePrice, side, count = 8) {
     orders.push({ price: p.toFixed(2), qty: qty.toFixed(4), total });
     p = side === 'ask' ? p * (1 + Math.random() * 0.001) : p * (1 - Math.random() * 0.001);
   }
-  return side === 'bid' ? orders.sort((a, b) => b.price - a.price) : orders;
+  return side === 'bid' ? orders.sort((a, b) => parseFloat(b.price) - parseFloat(a.price)) : orders;
 }
 
-export default function OrderBook({ price }) {
-  const [bids, setBids] = useState([]);
-  const [asks, setAsks] = useState([]);
-  const [flash, setFlash] = useState({});
+export default function OrderBook({ price }: { price: number }) {
+  const [bids, setBids] = useState<{ price: string; qty: string; total: string }[]>([]);
+  const [asks, setAsks] = useState<{ price: string; qty: string; total: string }[]>([]);
+  const [flash, setFlash] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setBids(generateOrders(price, 'bid', 8));
@@ -49,7 +49,7 @@ export default function OrderBook({ price }) {
 
   const maxQty = Math.max(...[...bids, ...asks].map(o => parseFloat(o.qty)));
 
-  const Row = ({ order, side, idx }) => {
+  const Row = ({ order, side, idx }: { order: any, side: 'ask' | 'bid', idx: number }) => {
     const key = `${side}-${idx}`;
     const isFlashing = flash[key];
     const pct = (parseFloat(order.qty) / maxQty) * 100;
@@ -58,14 +58,14 @@ export default function OrderBook({ price }) {
       <motion.div
         className={cn(
           'relative flex items-center justify-between py-1.5 px-2 rounded-lg text-xs font-mono transition-colors',
-          isFlashing && (isGreen ? 'bg-yellow-500/20' : 'bg-red-500/20')
+          isFlashing && (isGreen ? 'bg-success/20' : 'bg-destructive/20')
         )}
       >
         <div
-          className={cn('absolute inset-y-0 left-0 rounded-lg opacity-10', isGreen ? 'bg-yellow-400' : 'bg-red-500')}
+          className={cn('absolute inset-y-0 left-0 rounded-lg opacity-10', isGreen ? 'bg-success' : 'bg-destructive')}
           style={{ width: `${pct}%` }}
         />
-        <span className="font-semibold z-10" style={{ color: isGreen ? '#FFC107' : '#E53935' }}>
+        <span className={cn("font-semibold z-10", isGreen ? "text-success" : "text-destructive")}>
           {order.price}
         </span>
         <span className="text-muted-foreground z-10">{order.qty}</span>

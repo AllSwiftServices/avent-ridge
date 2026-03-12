@@ -30,8 +30,8 @@ interface CustomTooltipProps {
 const CustomTooltip = ({ active, payload, isPositive }: CustomTooltipProps) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs shadow-xl">
-      <p className={cn('font-bold', isPositive ? 'text-[#FFC107]' : 'text-[#E53935]')}>
+    <div className="bg-card border border-border rounded-xl px-3 py-2 text-xs shadow-xl">
+      <p className={cn('font-bold', isPositive ? 'text-primary' : 'text-destructive')}>
         ${payload[0].value.toLocaleString('en-US', { minimumFractionDigits: 2 })}
       </p>
     </div>
@@ -46,7 +46,8 @@ interface BalanceChartProps {
 export default function BalanceChart({ totalBalance, isPositive }: BalanceChartProps) {
   const [active, setActive] = useState('7D');
   const data = useMemo(() => generateData(PERIOD_POINTS[active], totalBalance, isPositive), [active, totalBalance]);
-  const color = isPositive ? '#FFC107' : '#E53935';
+  // Use HSL variables directly for SVGs if needed, but hex is fine for Recharts props
+  const color = isPositive ? 'var(--color-primary)' : 'var(--color-destructive)'; 
   const gradientId = isPositive ? 'gainGrad' : 'lossGrad';
 
   return (
@@ -77,14 +78,14 @@ export default function BalanceChart({ totalBalance, isPositive }: BalanceChartP
               fill={`url(#${gradientId})`}
               isAnimationActive={false}
               dot={false}
-              style={{ filter: `drop-shadow(0 0 6px ${color}80)` }}
+              style={{ filter: `drop-shadow(0 0 6px ${isPositive ? 'var(--color-primary)' : 'var(--color-destructive)'}80)` }}
             />
           </AreaChart>
         </ResponsiveContainer>
       </motion.div>
 
       {/* Time filters */}
-      <div className="flex gap-1 mt-3 rounded-2xl p-1" style={{ background: '#F0F0F5' }}>
+      <div className="flex gap-1 mt-3 rounded-2xl p-1 bg-secondary">
         {FILTERS.map(f => (
           <button
             key={f}
@@ -92,8 +93,8 @@ export default function BalanceChart({ totalBalance, isPositive }: BalanceChartP
             className={cn(
               'flex-1 py-1.5 rounded-xl text-xs font-semibold transition-all',
               active === f
-                ? 'bg-[#FFC107] text-black'
-                : 'text-gray-500 hover:text-gray-800'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground'
             )}
           >
             {f}

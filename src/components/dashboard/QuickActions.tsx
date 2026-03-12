@@ -32,12 +32,11 @@ export default function QuickActions({ onDeposit, onTrade, onWithdraw }: QuickAc
           className="flex flex-col items-center gap-2 group"
         >
           <div
-            className="w-14 h-14 rounded-full flex items-center justify-center transition-all duration-200 border"
-            style={{ background: '#FFFFFF', borderColor: '#E0E0E8', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+            className="w-14 h-14 rounded-full flex items-center justify-center transition-all duration-200 border bg-card border-border shadow-sm group-hover:shadow-md"
           >
-            <Icon className="h-6 w-6 text-[#FFC107]" />
+            <Icon className="h-6 w-6 text-primary" />
           </div>
-          <span className="text-xs font-medium transition-colors" style={{ color: '#6B7280' }}>{label}</span>
+          <span className="text-xs font-medium transition-colors text-muted-foreground group-hover:text-foreground">{label}</span>
         </motion.button>
       ))}
     </div>

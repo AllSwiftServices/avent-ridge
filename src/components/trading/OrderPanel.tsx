@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronLeft, ChevronRight, CheckCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@/components/ui/ThemeProvider';
@@ -27,12 +28,7 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
   const queryClient = useQueryClient();
   const dark = theme === 'dark';
 
-  const bg = dark ? '#0F1117' : '#F5F6FA';
-  const surface = dark ? '#181B23' : '#FFFFFF';
-  const border = dark ? 'rgba(255,255,255,0.08)' : '#E0E0E8';
-  const textPri = dark ? '#F9FAFB' : '#1A1A2E';
-  const textSec = dark ? '#9CA3AF' : '#6B7280';
-  const inputBg = dark ? '#1E2130' : '#EAECF0';
+  // Manual tokens replaced by Tailwind classes
 
   const [optionType, setOptionType] = useState(OPTION_TYPES[0]);
   const [optionOpen, setOptionOpen] = useState(false);
@@ -96,19 +92,19 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
   };
 
   return (
-    <div style={{ background: bg, color: textPri }}>
+    <div className="bg-background text-foreground">
       {/* ── PLATFORM TIME BAR ── */}
-      <div className="flex items-center justify-between px-4 py-2 text-xs border-b" style={{ borderColor: border, color: textSec }}>
+      <div className="flex items-center justify-between px-4 py-2 text-xs border-b border-border text-muted-foreground">
         <div className="flex items-center gap-2">
           <span>Platform Time</span>
-          <span className="font-mono font-semibold" style={{ color: textPri }}>
+          <span className="font-mono font-semibold text-foreground">
             {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <span>Fixed Time</span>
-          <div className="w-8 h-4 rounded-full relative" style={{ background: '#E0E0E8' }}>
-            <div className="w-3 h-3 rounded-full absolute top-0.5 left-0.5" style={{ background: '#9CA3AF' }} />
+          <div className="w-8 h-4 rounded-full relative bg-muted">
+            <div className="w-3 h-3 rounded-full absolute top-0.5 left-0.5 bg-muted-foreground/50" />
           </div>
         </div>
       </div>
@@ -118,8 +114,7 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
         <div className="relative">
           <button
             onClick={() => setOptionOpen(o => !o)}
-            className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm"
-            style={{ background: inputBg, color: textSec }}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm bg-muted text-muted-foreground"
           >
             <span>{optionType}</span>
             <ChevronDown className="h-4 w-4" />
@@ -128,15 +123,16 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
             {optionOpen && (
               <motion.div
                 initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-                className="absolute left-0 right-0 top-full mt-1 rounded-xl shadow-xl z-20 overflow-hidden"
-                style={{ background: surface, border: `1px solid ${border}` }}
+                className="absolute left-0 right-0 top-full mt-1 rounded-xl shadow-xl z-20 overflow-hidden bg-card border border-border"
               >
                 {OPTION_TYPES.map(opt => (
                   <button
                     key={opt}
                     onClick={() => { setOptionType(opt); setOptionOpen(false); }}
-                    className="w-full text-left px-4 py-3 text-sm hover:opacity-80 transition-opacity border-b last:border-0"
-                    style={{ borderColor: border, color: opt === optionType ? '#FFC107' : textPri }}
+                    className={cn(
+                      "w-full text-left px-4 py-3 text-sm hover:bg-muted transition-colors border-b last:border-0 border-border",
+                      opt === optionType ? 'text-primary' : 'text-foreground'
+                    )}
                   >
                     {opt}
                   </button>
@@ -148,19 +144,17 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
 
         {/* ── ASSET TYPE (display only) ── */}
         <div
-          className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm"
-          style={{ background: inputBg, color: textSec }}
+          className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm bg-muted text-muted-foreground"
         >
           <span>{asset?.name || asset?.symbol || 'Select asset'}</span>
           <ChevronDown className="h-4 w-4" />
         </div>
 
         {/* ── AMOUNT INPUT ── */}
-        <div className="flex items-center rounded-xl overflow-hidden" style={{ background: inputBg }}>
+        <div className="flex items-center rounded-xl overflow-hidden bg-muted">
           <button
             onClick={() => setAmount(a => Math.max(1, a - (a >= 100 ? 10 : 1)))}
-            className="px-4 py-3 hover:opacity-70 transition-opacity"
-            style={{ color: textSec }}
+            className="px-4 py-3 hover:text-foreground text-muted-foreground transition-colors"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -168,22 +162,20 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
             type="number"
             value={amount}
             onChange={e => setAmount(Math.max(1, Number(e.target.value)))}
-            className="flex-1 text-center bg-transparent text-sm font-semibold focus:outline-none"
-            style={{ color: textPri }}
+            className="flex-1 text-center bg-transparent text-sm font-semibold focus:outline-none text-foreground"
           />
           <button
             onClick={() => setAmount(a => a + (a >= 100 ? 10 : 1))}
-            className="px-4 py-3 hover:opacity-70 transition-opacity"
-            style={{ color: textSec }}
+            className="px-4 py-3 hover:text-foreground text-muted-foreground transition-colors"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
 
         {/* ── POTENTIAL PROFIT ── */}
-        <div className="flex items-center justify-between px-4 py-3 rounded-xl" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
-          <span className="text-sm" style={{ color: '#10B981' }}>Potential Profit</span>
-          <span className="font-bold text-sm" style={{ color: '#10B981' }}>
+        <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-primary/10 border border-primary/20">
+          <span className="text-sm text-primary">Potential Profit</span>
+          <span className="font-bold text-sm text-primary">
             + ${potentialProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </span>
         </div>
@@ -194,10 +186,10 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
             <button
               key={d.value}
               onClick={() => setDuration(d.value)}
-              className="py-2 rounded-xl text-xs font-semibold transition-all"
-              style={duration === d.value
-                ? { background: '#FFC107', color: '#000' }
-                : { background: inputBg, color: textSec }}
+              className={cn(
+                "py-2 rounded-xl text-xs font-semibold transition-all",
+                duration === d.value ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'bg-muted text-muted-foreground hover:text-foreground'
+              )}
             >
               {d.label}
             </button>
@@ -212,10 +204,10 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }}
               className="flex flex-col items-center justify-center py-4 gap-2"
             >
-              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: lastSide === 'call' ? '#10B981' : '#EF4444' }}>
-                <CheckCircle className="h-6 w-6 text-white" />
+              <div className={cn("w-12 h-12 rounded-full flex items-center justify-center", lastSide === 'call' ? "bg-primary" : "bg-destructive")}>
+                <CheckCircle className="h-6 w-6 text-primary-foreground" />
               </div>
-              <p className="font-bold text-sm" style={{ color: textPri }}>
+              <p className="font-bold text-sm text-foreground">
                 {lastSide === 'call' ? 'Call' : 'Put'} order placed!
               </p>
             </motion.div>
@@ -223,15 +215,13 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
             <motion.div key="btns" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => handleTrade('call')}
-                className="py-4 rounded-2xl font-bold text-white text-base flex items-center justify-center gap-2 transition-transform active:scale-95"
-                style={{ background: '#10B981', boxShadow: '0 4px 20px rgba(16,185,129,0.35)' }}
+                className="py-4 rounded-2xl font-bold text-primary-foreground text-base flex items-center justify-center gap-2 transition-transform active:scale-95 bg-primary shadow-lg shadow-primary/20"
               >
                 <span className="text-lg">⬆</span> Call
               </button>
               <button
                 onClick={() => handleTrade('put')}
-                className="py-4 rounded-2xl font-bold text-white text-base flex items-center justify-center gap-2 transition-transform active:scale-95"
-                style={{ background: '#EF4444', boxShadow: '0 4px 20px rgba(239,68,68,0.35)' }}
+                className="py-4 rounded-2xl font-bold text-destructive-foreground text-base flex items-center justify-center gap-2 transition-transform active:scale-95 bg-destructive shadow-lg shadow-destructive/20"
               >
                 <span className="text-lg">⬇</span> Put
               </button>
@@ -243,8 +233,8 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
       {/* ── TRADING HISTORY (inline) ── */}
       <div className="px-4 pb-6">
         <div className="mb-3">
-          <h3 className="font-bold text-base" style={{ color: textPri }}>Trading History</h3>
-          <p className="text-xs mt-0.5" style={{ color: textSec }}>
+          <h3 className="font-bold text-base text-foreground">Trading History</h3>
+          <p className="text-xs mt-0.5 text-muted-foreground">
             View all records and details of your past trading activities, records cannot be deleted.
           </p>
         </div>
@@ -252,39 +242,39 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
         <div className="space-y-0">
           {(transactions || []).map((tx: any) => {
             const isCall = tx.type === 'buy';
-            const pnlColor = isCall ? '#10B981' : '#EF4444';
             const profit = isCall ? tx.amount * PROFIT_RATE : -tx.amount;
             return (
               <div
                 key={tx.id}
-                className="py-3 border-b"
-                style={{ borderColor: border }}
+                className="py-3 border-b border-border"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold" style={{ color: pnlColor }}>
+                    <span className={cn("text-xs font-bold", isCall ? "text-success" : "text-destructive")}>
                       {isCall ? 'Call' : 'Put'}
                     </span>
-                    <span className="text-xs" style={{ color: textSec }}>
+                    <span className="text-xs text-muted-foreground">
                       ${tx.amount?.toLocaleString('en-US', { minimumFractionDigits: 2 }) ?? '0.00'}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold" style={{ color: pnlColor }}>
+                    <span className={cn("text-xs font-bold", profit >= 0 ? "text-success" : "text-destructive")}>
                       {profit >= 0 ? '+' : ''}${Math.abs(profit).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between mt-0.5">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-semibold" style={{ color: textSec }}>{tx.asset_symbol || '—'}</span>
-                    <span className="text-[11px]" style={{ color: textSec }}>
+                    <span className="text-[11px] font-semibold text-muted-foreground">{tx.asset_symbol || '—'}</span>
+                    <span className="text-[11px] text-muted-foreground">
                       {tx.created_at ? format(new Date(tx.created_at), 'h:mmaaa') : '—'}
                     </span>
                   </div>
                   <span
-                    className="text-[11px] font-semibold capitalize"
-                    style={{ color: tx.status === 'completed' ? '#10B981' : tx.status === 'failed' ? '#EF4444' : '#F59E0B' }}
+                    className={cn(
+                      "text-[11px] font-semibold capitalize",
+                      tx.status === 'completed' ? 'text-success' : tx.status === 'failed' ? 'text-destructive' : 'text-amber-500'
+                    )}
                   >
                     {tx.status === 'completed' ? 'Success' : tx.status === 'failed' ? 'Failed' : 'Pending'}
                   </span>
@@ -294,7 +284,7 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
           })}
 
           {(!transactions || transactions.length === 0) && (
-            <p className="text-center py-8 text-sm" style={{ color: textSec }}>No history yet</p>
+            <p className="text-center py-8 text-sm text-muted-foreground">No history yet</p>
           )}
         </div>
       </div>

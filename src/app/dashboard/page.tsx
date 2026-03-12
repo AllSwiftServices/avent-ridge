@@ -20,7 +20,6 @@ export default function Dashboard() {
   const [hideBalance, setHideBalance] = useState(false);
   const { user, isLoadingAuth } = useAuth();
   const navigate = useNavigate();
-  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     if (!isLoadingAuth && !user) {
@@ -77,41 +76,28 @@ export default function Dashboard() {
   if (isLoadingAuth) return null;
 
   return (
-    <div className="min-h-screen pb-24 md:pb-8" style={{ background: theme === 'dark' ? 'hsl(240 5% 5%)' : '#F5F6FA', color: theme === 'dark' ? '#fff' : '#1A1A2E' }}>
+    <div className="min-h-screen pb-24 md:pb-8 bg-background text-foreground">
       {/* ── HEADER ── */}
-      <header className="sticky top-0 z-30 backdrop-blur-xl border-b" style={{ background: theme === 'dark' ? 'rgba(13,13,20,0.95)' : 'rgba(245,246,250,0.9)', borderColor: theme === 'dark' ? 'hsl(240 5% 14%)' : '#E0E0E8' }}>
+      <header className="sticky top-0 z-30 backdrop-blur-xl border-b bg-background/90 border-border">
         <div className="flex items-center gap-3 px-4 py-3">
           {/* Menu icon → Profile */}
-          <button onClick={() => navigate(createPageUrl('Profile'))} className="p-2 rounded-xl transition-colors flex-shrink-0" style={{ color: theme === 'dark' ? '#9CA3AF' : '#4B5563' }}>
+          <button onClick={() => navigate(createPageUrl('Profile'))} className="p-2 rounded-xl transition-colors shrink-0 text-muted-foreground">
             <Menu className="h-5 w-5" />
           </button>
 
           {/* Search bar */}
           <div
-            className="flex-1 flex items-center gap-2 px-4 py-2.5 rounded-full cursor-pointer"
-            style={{ background: theme === 'dark' ? 'hsl(240 5% 12%)' : '#EAECF0' }}
+            className="flex-1 flex items-center gap-2 px-4 py-2.5 rounded-full cursor-pointer bg-muted"
             onClick={() => navigate(createPageUrl('Markets'))}
           >
-            <Search className="h-4 w-4 flex-shrink-0" style={{ color: '#9CA3AF' }} />
-            <span className="text-sm truncate" style={{ color: '#9CA3AF' }}>Search...</span>
+            <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="text-sm truncate text-muted-foreground">Search...</span>
           </div>
 
-          {/* Dark/Light mode toggle */}
-          <button
-            onClick={toggleTheme}
-            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
-            style={{ background: theme === 'dark' ? 'hsl(240 5% 12%)' : '#EAECF0' }}
-          >
-            {theme === 'dark'
-              ? <Sun className="h-4 w-4" style={{ color: '#FFC107' }} />
-              : <Moon className="h-4 w-4" style={{ color: '#4B5563' }} />
-            }
-          </button>
-
           {/* Bell */}
-          <button className="p-2 rounded-xl transition-colors relative flex-shrink-0" style={{ color: theme === 'dark' ? '#9CA3AF' : '#4B5563' }}>
+          <button className="p-2 rounded-xl transition-colors relative shrink-0 text-muted-foreground">
             <Bell className="h-5 w-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
           </button>
         </div>
       </header>
@@ -120,39 +106,39 @@ export default function Dashboard() {
         {/* ── SECTION 1: Portfolio Overview ── */}
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="text-center">
           <div className="flex items-center justify-center gap-2 mb-1">
-            <p className="text-sm font-medium" style={{ color: '#6B7280' }}>Portfolio Value</p>
-            <button onClick={() => setHideBalance(h => !h)}>
+            <p className="text-sm font-medium text-muted-foreground">Portfolio Value</p>
+            <button onClick={() => setHideBalance(h => !h)} className="text-muted-foreground">
               {hideBalance
-                ? <EyeOff className="h-4 w-4" style={{ color: '#6B7280' }} />
-                : <Eye className="h-4 w-4" style={{ color: '#6B7280' }} />}
+                ? <EyeOff className="h-4 w-4" />
+                : <Eye className="h-4 w-4" />}
             </button>
           </div>
 
           {hideBalance ? (
-            <p className="text-4xl font-bold tracking-tight" style={{ color: '#1A1A2E' }}>••••••••</p>
+            <p className="text-4xl font-bold tracking-tight text-foreground">••••••••</p>
           ) : (
-            <AnimatedNumber value={totalBalance} prefix="$" decimals={2} className="text-4xl font-bold tracking-tight" style={{ color: '#1A1A2E' }} />
+            <AnimatedNumber value={totalBalance} prefix="$" decimals={2} className="text-4xl font-bold tracking-tight text-foreground" />
           )}
 
           <div className={cn('flex items-center justify-center gap-1.5 mt-2 text-sm font-semibold')}>
-            {isPositive ? <TrendingUp className="h-4 w-4" style={{ color: '#FFC107' }} /> : <TrendingDown className="h-4 w-4" style={{ color: '#E53935' }} />}
-            <span style={{ color: isPositive ? '#FFC107' : '#E53935' }}>
+            {isPositive ? <TrendingUp className="h-4 w-4 text-primary" /> : <TrendingDown className="h-4 w-4 text-destructive" />}
+            <span className={isPositive ? 'text-primary' : 'text-destructive'}>
               {isPositive ? '+' : ''}{totalChange.toFixed(2)}%
             </span>
-            <span style={{ color: '#6B7280' }}>
+            <span className="text-muted-foreground">
               ({isPositive ? '+' : ''}${Math.abs(changeDollar).toFixed(2)}) today
             </span>
           </div>
 
           {/* Chart */}
-          <div className="mt-6 rounded-3xl p-4 border" style={{ background: '#FFFFFF', borderColor: '#E0E0E8', boxShadow: '0 2px 16px rgba(0,0,0,0.06)' }}>
+          <div className="mt-6 rounded-3xl p-4 border bg-card border-border shadow-md">
             <BalanceChart totalBalance={totalBalance} isPositive={isPositive} />
           </div>
         </motion.div>
 
         {/* ── SECTION 2: Wallet Breakdown ── */}
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <p className="font-bold text-base mb-3" style={{ color: '#1A1A2E' }}>Wallets</p>
+          <p className="font-bold text-base mb-3 text-foreground">Wallets</p>
           <WalletBreakdown
             mainBalance={mainBalance}
             cryptoValue={cryptoValue || 5420.5}
@@ -176,8 +162,7 @@ export default function Dashboard() {
             <span />
             <button
               onClick={() => navigate(createPageUrl('Markets'))}
-              className="text-xs font-semibold"
-              style={{ color: '#FFC107' }}
+              className="text-xs font-semibold text-primary"
             >
               See all →
             </button>

@@ -31,7 +31,7 @@ function CandleBar(props) {
   const { x, y, width, height, open, close, high, low } = props;
   if (!x || !y || !width) return null;
   const isGreen = close >= open;
-  const color = isGreen ? '#FFC107' : '#E53935';
+  const color = isGreen ? 'var(--color-primary)' : 'var(--color-destructive)';
   const barX = x + width / 2;
   const bodyTop = Math.min(props.openY ?? y, props.closeY ?? (y + height));
   const bodyH = Math.abs((props.openY ?? y) - (props.closeY ?? (y + height))) || 1;
@@ -53,11 +53,11 @@ const CustomTooltip = ({ active, payload }) => {
     <div className="bg-card border border-border rounded-xl p-3 shadow-xl text-xs space-y-1 min-w-[130px]">
       <p className="font-semibold text-muted-foreground mb-1">{d.time}</p>
       <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-        <span className="text-muted-foreground">O</span><span className="font-mono">${d.open?.toFixed(2)}</span>
-        <span className="text-muted-foreground">H</span><span className="font-mono" style={{ color: '#FFC107' }}>${d.high?.toFixed(2)}</span>
-        <span className="text-muted-foreground">L</span><span className="font-mono" style={{ color: '#E53935' }}>${d.low?.toFixed(2)}</span>
+        <span className="text-muted-foreground">O</span><span className="font-mono text-foreground">${d.open?.toFixed(2)}</span>
+        <span className="text-muted-foreground">H</span><span className="font-mono text-primary">${d.high?.toFixed(2)}</span>
+        <span className="text-muted-foreground">L</span><span className="font-mono text-destructive">${d.low?.toFixed(2)}</span>
         <span className="text-muted-foreground">C</span>
-        <span className="font-mono font-semibold" style={{ color: isGreen ? '#FFC107' : '#E53935' }}>
+        <span className={cn("font-mono font-semibold", isGreen ? "text-primary" : "text-destructive")}>
           ${d.close?.toFixed(2)}
         </span>
       </div>
@@ -98,7 +98,7 @@ export default function CandlestickChart({ basePrice, isPositive }) {
 
   const priceMin = Math.min(...data.map(d => d.low)) * 0.999;
   const priceMax = Math.max(...data.map(d => d.high)) * 1.001;
-  const lineColor = isPositive ? '#FFC107' : '#E53935';
+  const lineColor = isPositive ? 'var(--color-primary)' : 'var(--color-destructive)';
 
   return (
     <div className="w-full">
@@ -112,10 +112,9 @@ export default function CandlestickChart({ basePrice, isPositive }) {
               className={cn(
                 'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
                 timeFilter === tf
-                  ? 'font-semibold text-black'
+                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               )}
-              style={timeFilter === tf ? { background: '#FFC107' } : {}}
             >
               {tf}
             </button>
@@ -189,7 +188,7 @@ export default function CandlestickChart({ basePrice, isPositive }) {
                     const { x, y, width, height, payload } = props;
                     if (!payload) return null;
                     const isGreen = payload.close >= payload.open;
-                    const color = isGreen ? '#FFC107' : '#E53935';
+                    const color = isGreen ? 'var(--color-primary)' : 'var(--color-destructive)';
                     return <rect x={x + 1} y={y} width={Math.max(width - 2, 1)} height={height} fill={color} rx={1} />;
                   }}
                   isAnimationActive={false}

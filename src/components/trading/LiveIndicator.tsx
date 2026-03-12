@@ -2,15 +2,15 @@ import React from 'react';
 import { Volume2, VolumeX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export default function LiveIndicator({ soundOn, onToggleSound }) {
+export default function LiveIndicator({ soundOn, onToggleSound }: { soundOn: boolean, onToggleSound: () => void }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-red-500/10 border border-red-500/20">
+      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-destructive/10 border border-destructive/20">
         <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive" />
         </span>
-        <span className="text-[11px] font-bold text-red-500 tracking-wider">LIVE</span>
+        <span className="text-[11px] font-bold text-destructive tracking-wider">LIVE</span>
       </div>
       <button
         onClick={onToggleSound}

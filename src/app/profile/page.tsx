@@ -68,7 +68,7 @@ export default function Profile() {
           icon: Shield,
           label: 'KYC Verification',
           badge: kycRecord?.status === 'approved' ? '✔ Verified' : kycRecord?.status === 'pending' ? '⏳ Pending' : kycRecord?.status === 'rejected' ? '✖ Failed' : 'Not Started',
-          badgeColor: kycRecord?.status === 'approved' ? 'text-[#FFC107] bg-[#FFC107]/10' : kycRecord?.status === 'rejected' ? 'text-[#E53935] bg-[#E53935]/10' : 'text-[#B0B3B8] bg-[#B0B3B8]/10',
+          badgeColor: kycRecord?.status === 'approved' ? 'text-primary bg-primary/10' : kycRecord?.status === 'rejected' ? 'text-destructive bg-destructive/10' : 'text-muted-foreground bg-muted',
           action: () => router.push('/verify-identity')
         },
         { icon: Lock, label: 'Security Settings', action: () => { } },
@@ -97,9 +97,9 @@ export default function Profile() {
   ];
 
   return (
-    <div className="min-h-screen pb-24 md:pb-8" style={{ background: '#F5F6FA', color: '#1A1A2E' }}>
+    <div className="min-h-screen pb-24 md:pb-8 bg-background text-foreground">
       {/* Header */}
-      <header className="sticky top-0 z-30 backdrop-blur-xl border-b" style={{ background: 'rgba(245,246,250,0.95)', borderColor: '#E0E0E8' }}>
+      <header className="sticky top-0 z-30 backdrop-blur-xl border-b bg-background/95 border-border">
         <div className="px-4 py-4">
           <h1 className="font-bold text-2xl">Profile</h1>
         </div>
@@ -113,18 +113,17 @@ export default function Profile() {
           className="p-6 rounded-3xl bg-card border border-border"
         >
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center font-bold text-2xl text-black"
-              style={{ background: '#FFC107' }}>
+            <div className="w-16 h-16 rounded-full flex items-center justify-center font-bold text-2xl bg-primary text-primary-foreground">
               {user?.user_metadata?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
             </div>
             <div className="flex-1">
               <h2 className="text-xl font-bold">{user?.user_metadata?.full_name || 'User'}</h2>
               <p className="text-sm text-muted-foreground">{user?.email}</p>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-                {kycRecord?.status === 'approved' && <div className="flex items-center gap-1"><CheckCircle className="h-4 w-4" style={{ color: '#FFC107' }} /><span className="text-xs font-medium" style={{ color: '#FFC107' }}>Verified</span></div>}
-                {kycRecord?.status === 'pending' && <div className="flex items-center gap-1"><Clock className="h-4 w-4" style={{ color: '#FFC107' }} /><span className="text-xs font-medium" style={{ color: '#FFC107' }}>Pending AI Verification</span></div>}
-                {kycRecord?.status === 'rejected' && <div className="flex items-center gap-1"><X className="h-4 w-4" style={{ color: '#E53935' }} /><span className="text-xs font-medium" style={{ color: '#E53935' }}>Verification Failed</span></div>}
-                {(user as any)?.email_verified && <div className="flex items-center gap-1"><Mail className="h-4 w-4 text-green-500" /><span className="text-xs font-medium text-green-600">Email Verified</span></div>}
+                {kycRecord?.status === 'approved' && <div className="flex items-center gap-1"><CheckCircle className="h-4 w-4 text-primary" /><span className="text-xs font-medium text-primary">Verified</span></div>}
+                {kycRecord?.status === 'pending' && <div className="flex items-center gap-1"><Clock className="h-4 w-4 text-primary" /><span className="text-xs font-medium text-primary">Pending AI Verification</span></div>}
+                {kycRecord?.status === 'rejected' && <div className="flex items-center gap-1"><X className="h-4 w-4 text-destructive" /><span className="text-xs font-medium text-destructive">Verification Failed</span></div>}
+                {(user as any)?.email_verified && <div className="flex items-center gap-1"><Mail className="h-4 w-4 text-primary" /><span className="text-xs font-semibold text-primary">Email Verified</span></div>}
                 {!kycRecord && !(user as any)?.email_verified && <div className="flex items-center gap-1"><Shield className="h-4 w-4 text-muted-foreground" /><span className="text-xs text-muted-foreground font-medium">Not Verified</span></div>}
               </div>
             </div>
@@ -185,8 +184,8 @@ export default function Profile() {
           onClick={handleLogout}
           className={cn(
             'w-full flex items-center justify-center gap-2 p-4',
-            'rounded-2xl bg-red-500/10 text-red-500',
-            'font-medium hover:bg-red-500/20 transition-colors'
+            'rounded-2xl bg-destructive/10 text-destructive',
+            'font-bold hover:bg-destructive/20 transition-colors'
           )}
         >
           <LogOut className="h-5 w-5" />

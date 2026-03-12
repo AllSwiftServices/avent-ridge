@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, TrendingDown, CheckCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@/components/ui/ThemeProvider';
@@ -11,11 +12,7 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 125
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const dark = theme === 'dark';
-  const surface = dark ? 'hsl(240 5% 8%)' : '#FFFFFF';
-  const border = dark ? 'hsl(240 5% 14%)' : '#E0E0E8';
-  const textPri = dark ? '#F9FAFB' : '#1A1A2E';
-  const textSec = dark ? '#9CA3AF' : '#6B7280';
-  const inputBg = dark ? 'hsl(240 5% 12%)' : '#EAECF0';
+  // Manual tokens replaced by Tailwind classes
 
   const [tab, setTab] = useState('buy');
   const [orderType, setOrderType] = useState('market');
@@ -70,17 +67,19 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 125
   const pcts = [25, 50, 75, 100];
 
   return (
-    <div className="rounded-3xl border p-4 space-y-4" style={{ background: surface, borderColor: border }}>
+    <div className="rounded-3xl border p-4 space-y-4 bg-card border-border shadow-md">
       {/* Buy / Sell tabs */}
-      <div className="grid grid-cols-2 rounded-2xl overflow-hidden" style={{ background: inputBg }}>
+      <div className="grid grid-cols-2 rounded-2xl overflow-hidden bg-muted">
         {['buy', 'sell'].map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className="py-2.5 text-sm font-bold capitalize transition-all"
-            style={tab === t
-              ? { background: t === 'buy' ? '#10B981' : '#EF4444', color: '#fff', borderRadius: '1rem' }
-              : { color: textSec }}
+            className={cn(
+              "py-2.5 text-sm font-bold capitalize transition-all",
+              tab === t
+                ? (t === 'buy' ? 'bg-primary text-primary-foreground rounded-2xl shadow-lg shadow-primary/20' : 'bg-destructive text-destructive-foreground rounded-2xl shadow-lg shadow-destructive/20')
+                : "text-muted-foreground"
+            )}
           >
             {t === 'buy' ? '▲ Buy / Long' : '▼ Sell / Short'}
           </button>
@@ -93,10 +92,12 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 125
           <button
             key={ot}
             onClick={() => setOrderType(ot)}
-            className="px-3 py-1.5 rounded-xl text-xs font-semibold capitalize transition-all"
-            style={orderType === ot
-              ? { background: '#FFC107', color: '#000' }
-              : { background: inputBg, color: textSec }}
+            className={cn(
+              "px-3 py-1.5 rounded-xl text-xs font-semibold capitalize transition-all",
+              orderType === ot
+                ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                : 'bg-muted text-muted-foreground hover:text-foreground'
+            )}
           >
             {ot}
           </button>
@@ -104,9 +105,9 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 125
       </div>
 
       {/* Price display */}
-      <div className="flex items-center justify-between text-sm" style={{ color: textSec }}>
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>Market Price</span>
-        <span className="font-bold" style={{ color: isBuy ? '#10B981' : '#EF4444' }}>
+        <span className={cn("font-bold", isBuy ? "text-primary" : "text-destructive")}>
           ${price?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '—'}
         </span>
       </div>
@@ -114,7 +115,7 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 125
       {/* Limit price input */}
       {orderType !== 'market' && (
         <div>
-          <p className="text-xs mb-1.5" style={{ color: textSec }}>
+          <p className="text-xs mb-1.5 text-muted-foreground">
             {orderType === 'limit' ? 'Limit Price' : 'Stop Price'}
           </p>
           <input
@@ -122,30 +123,27 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 125
             placeholder="Enter price"
             value={limitPrice}
             onChange={e => setLimitPrice(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none"
-            style={{ background: inputBg, color: textPri }}
+            className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none bg-muted text-foreground"
           />
         </div>
       )}
 
       {/* Quantity */}
       <div>
-        <p className="text-xs mb-1.5" style={{ color: textSec }}>Quantity ({asset?.symbol})</p>
+        <p className="text-xs mb-1.5 text-muted-foreground">Quantity ({asset?.symbol})</p>
         <input
           type="number"
           placeholder="0.00"
           value={quantity}
           onChange={e => setQuantity(e.target.value)}
-          className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none"
-          style={{ background: inputBg, color: textPri }}
+          className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none bg-muted text-foreground placeholder:text-muted-foreground/50"
         />
         <div className="flex gap-2 mt-2">
           {pcts.map(pct => (
             <button
               key={pct}
               onClick={() => setQuantity(((balance * pct / 100) / price).toFixed(6))}
-              className="flex-1 py-1 rounded-lg text-xs font-semibold"
-              style={{ background: inputBg, color: textSec }}
+              className="flex-1 py-1 rounded-lg text-xs font-semibold bg-muted text-muted-foreground hover:text-foreground"
             >
               {pct}%
             </button>
@@ -155,24 +153,24 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 125
 
       {/* Leverage */}
       <div>
-        <div className="flex justify-between text-xs mb-1.5" style={{ color: textSec }}>
+        <div className="flex justify-between text-xs mb-1.5 text-muted-foreground">
           <span>Leverage</span>
-          <span className="font-bold" style={{ color: '#FFC107' }}>{leverage}x</span>
+          <span className="font-bold text-primary">{leverage}x</span>
         </div>
         <input
           type="range" min={1} max={100} value={leverage}
           onChange={e => setLeverage(Number(e.target.value))}
           className="w-full accent-yellow-400"
         />
-        <div className="flex justify-between text-[10px] mt-0.5" style={{ color: textSec }}>
+        <div className="flex justify-between text-[10px] mt-0.5 text-muted-foreground">
           <span>1x</span><span>25x</span><span>50x</span><span>100x</span>
         </div>
       </div>
 
       {/* Order total */}
-      <div className="flex items-center justify-between px-3 py-2.5 rounded-xl" style={{ background: inputBg }}>
-        <span className="text-xs" style={{ color: textSec }}>Order Total</span>
-        <span className="text-sm font-bold" style={{ color: textPri }}>
+      <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-muted">
+        <span className="text-xs text-muted-foreground">Order Total</span>
+        <span className="text-sm font-bold text-foreground">
           ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </span>
       </div>
@@ -185,18 +183,20 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 125
             initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }}
             className="flex flex-col items-center py-3 gap-2"
           >
-            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: isBuy ? '#10B981' : '#EF4444' }}>
-              <CheckCircle className="h-5 w-5 text-white" />
+            <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", isBuy ? "bg-primary" : "bg-destructive")}>
+              <CheckCircle className="h-5 w-5 text-primary-foreground" />
             </div>
-            <p className="text-sm font-bold" style={{ color: textPri }}>Order placed!</p>
+            <p className="text-sm font-bold text-foreground">Order placed!</p>
           </motion.div>
         ) : (
           <motion.button
             key="btn"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             onClick={handleSubmit}
-            className="w-full py-3.5 rounded-2xl font-bold text-white text-sm flex items-center justify-center gap-2 transition-transform active:scale-95"
-            style={{ background: isBuy ? '#10B981' : '#EF4444', boxShadow: `0 4px 20px ${isBuy ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.35)'}` }}
+            className={cn(
+              "w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-transform active:scale-95",
+              isBuy ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-destructive text-destructive-foreground shadow-lg shadow-destructive/20"
+            )}
           >
             {isBuy ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
             {isBuy ? 'Buy / Long' : 'Sell / Short'} {asset?.symbol}

@@ -16,8 +16,8 @@ export default function QuickTradeButton({ onClick }: QuickTradeButtonProps) {
       className={cn(
         'fixed right-4 bottom-24 md:bottom-8 z-30',
         'w-14 h-14 rounded-full',
-        'bg-gradient-to-br from-primary to-blue-600',
-        'text-white shadow-lg shadow-primary/30',
+        'bg-primary',
+        'text-primary-foreground shadow-lg shadow-primary/30',
         'flex items-center justify-center',
         'hover:shadow-xl hover:shadow-primary/40 transition-shadow'
       )}

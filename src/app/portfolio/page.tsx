@@ -80,9 +80,9 @@ export default function PortfolioPage() {
   ];
 
   return (
-    <div className="min-h-screen pb-24 md:pb-8" style={{ background: '#F5F6FA', color: '#1A1A2E' }}>
+    <div className="min-h-screen pb-24 md:pb-8 bg-background text-foreground">
       {/* Header */}
-      <header className="sticky top-0 z-30 backdrop-blur-xl border-b" style={{ background: 'rgba(245,246,250,0.95)', borderColor: '#E0E0E8' }}>
+      <header className="sticky top-0 z-30 backdrop-blur-xl border-b bg-background/95 border-border">
         <div className="px-4 py-4">
           <h1 className="font-bold text-2xl">Portfolio</h1>
         </div>
@@ -103,7 +103,7 @@ export default function PortfolioPage() {
               decimals={2}
               className="text-4xl font-bold"
             />
-            <div className="flex items-center justify-center gap-1 mt-2" style={{ color: isPositive ? '#FFC107' : '#E53935' }}>
+            <div className="flex items-center justify-center gap-1 mt-2 font-medium" style={{ color: isPositive ? 'var(--color-primary)' : 'var(--color-destructive)' }}>
               {isPositive ? (
                 <TrendingUp className="h-4 w-4" />
               ) : (
@@ -123,9 +123,9 @@ export default function PortfolioPage() {
                 ${metrics.totalInvested.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </p>
             </div>
-            <div className="p-4 rounded-2xl" style={{ background: isPositive ? 'rgba(255,193,7,0.08)' : 'rgba(229,57,53,0.08)' }}>
+            <div className={cn("p-4 rounded-2xl", isPositive ? "bg-primary/10" : "bg-destructive/10")}>
               <p className="text-xs text-muted-foreground mb-1">Profit/Loss</p>
-              <p className="text-lg font-semibold" style={{ color: isPositive ? '#FFC107' : '#E53935' }}>
+              <p className={cn("text-lg font-semibold", isPositive ? "text-primary" : "text-destructive")}>
                 {isPositive ? '+' : ''}${metrics.profitLoss.toFixed(2)}
               </p>
             </div>

@@ -138,15 +138,19 @@ export default function LiveTrading() {
             <div className="flex items-center rounded-xl overflow-hidden bg-muted">
               <button
                 onClick={() => setTradeMode('binary')}
-                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold transition-all"
-                style={tradeMode === 'binary' ? { background: '#FFC107', color: '#000' } : { color: 'var(--muted-foreground)' }}
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold transition-all",
+                  tradeMode === 'binary' ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                )}
               >
                 <Zap className="h-3.5 w-3.5" /> Binary
               </button>
               <button
                 onClick={() => setTradeMode('advanced')}
-                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold transition-all"
-                style={tradeMode === 'advanced' ? { background: '#FFC107', color: '#000' } : { color: 'var(--muted-foreground)' }}
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold transition-all",
+                  tradeMode === 'advanced' ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                )}
               >
                 <BarChart2 className="h-3.5 w-3.5" /> Pro
               </button>

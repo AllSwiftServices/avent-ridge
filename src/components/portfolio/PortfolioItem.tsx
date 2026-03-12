@@ -20,8 +20,7 @@ export default function PortfolioItem({ item, currentPrice, index = 0 }) {
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm text-black"
-            style={{ background: '#FFC107' }}>
+          <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-primary text-primary-foreground shadow-lg shadow-primary/20">
             {item.asset_symbol?.slice(0, 2)}
           </div>
           <div>
@@ -35,7 +34,7 @@ export default function PortfolioItem({ item, currentPrice, index = 0 }) {
           <p className="font-semibold">
             ${currentValue?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
-          <p className="text-sm font-medium" style={{ color: isPositive ? '#FFC107' : '#E53935' }}>
+          <p className={cn("text-sm font-semibold", isPositive ? "text-primary" : "text-destructive")}>
             {isPositive ? '+' : ''}{profitLossPercent?.toFixed(2)}%
           </p>
         </div>
@@ -44,7 +43,7 @@ export default function PortfolioItem({ item, currentPrice, index = 0 }) {
       <div className="flex justify-between text-xs text-muted-foreground pt-3 border-t border-border">
         <span>Avg: ${item.avg_buy_price?.toFixed(2)}</span>
         <span>Invested: ${item.total_invested?.toFixed(2)}</span>
-        <span style={{ color: isPositive ? '#FFC107' : '#E53935' }}>
+        <span className={cn("font-semibold", isPositive ? "text-primary" : "text-destructive")}>
           {isPositive ? '+' : ''}${profitLoss?.toFixed(2)}
         </span>
       </div>

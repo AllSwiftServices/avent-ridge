@@ -18,7 +18,7 @@ export default function MiniChart({ data, isPositive = true, height = 40, width 
           <Line
             type="monotone"
             dataKey="price"
-            stroke={isPositive ? '#FFC107' : '#E53935'}
+            stroke={isPositive ? 'var(--color-primary)' : 'var(--color-destructive)'}
             strokeWidth={1.5}
             dot={false}
           />

@@ -72,10 +72,10 @@ export default function TradeModal({ asset, isOpen, onClose, onTrade, balance = 
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <div className={cn(
-                    'w-12 h-12 rounded-full flex items-center justify-center font-bold',
+                    'w-12 h-12 rounded-full flex items-center justify-center font-bold text-white shadow-lg',
                     asset.type === 'crypto'
-                      ? 'bg-gradient-to-br from-orange-400 to-amber-500 text-white'
-                      : 'bg-gradient-to-br from-blue-400 to-indigo-500 text-white'
+                      ? 'bg-linear-to-br from-orange-400 to-amber-500'
+                      : 'bg-linear-to-br from-blue-400 to-indigo-500'
                   )}>
                     {asset.symbol?.slice(0, 2)}
                   </div>
@@ -105,14 +105,14 @@ export default function TradeModal({ asset, isOpen, onClose, onTrade, balance = 
                             background: 'hsl(var(--card))',
                             border: '1px solid hsl(var(--border))',
                             borderRadius: '12px',
-                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                            boxShadow: '0 4px 6px -1px var(--color-primary-foreground)'
                           }}
                           formatter={(value) => [`$${value.toFixed(2)}`, 'Price']}
                         />
                         <Line
                           type="monotone"
                           dataKey="price"
-                          stroke={isPositive ? '#10B981' : '#EF4444'}
+                          stroke={isPositive ? 'var(--color-primary)' : 'var(--color-destructive)'}
                           strokeWidth={2}
                           dot={false}
                         />
@@ -127,7 +127,7 @@ export default function TradeModal({ asset, isOpen, onClose, onTrade, balance = 
                     </p>
                     <p className={cn(
                       'text-sm font-medium',
-                      isPositive ? 'text-emerald-500' : 'text-red-500'
+                      isPositive ? 'text-primary' : 'text-destructive'
                     )}>
                       {isPositive ? '↑' : '↓'} {Math.abs(asset.change_percent).toFixed(2)}% today
                     </p>
@@ -140,7 +140,7 @@ export default function TradeModal({ asset, isOpen, onClose, onTrade, balance = 
                       className={cn(
                         'flex-1 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2',
                         tradeType === 'buy'
-                          ? 'bg-emerald-500 text-white shadow-lg'
+                          ? 'bg-primary text-primary-foreground shadow-lg'
                           : 'text-muted-foreground hover:text-foreground'
                       )}
                     >
@@ -152,7 +152,7 @@ export default function TradeModal({ asset, isOpen, onClose, onTrade, balance = 
                       className={cn(
                         'flex-1 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2',
                         tradeType === 'sell'
-                          ? 'bg-red-500 text-white shadow-lg'
+                          ? 'bg-destructive text-destructive-foreground shadow-lg'
                           : 'text-muted-foreground hover:text-foreground'
                       )}
                     >
@@ -209,7 +209,7 @@ export default function TradeModal({ asset, isOpen, onClose, onTrade, balance = 
                   </div>
 
                   {!canAfford && numAmount > 0 && (
-                    <div className="flex items-center gap-2 p-3 mb-4 bg-red-500/10 text-red-500 rounded-xl text-sm">
+                    <div className="flex items-center gap-2 p-3 mb-4 bg-destructive/10 text-destructive rounded-xl text-sm">
                       <AlertCircle className="h-4 w-4" />
                       Insufficient balance
                     </div>
@@ -221,8 +221,8 @@ export default function TradeModal({ asset, isOpen, onClose, onTrade, balance = 
                     className={cn(
                       'w-full h-14 rounded-2xl font-semibold text-lg btn-press',
                       tradeType === 'buy'
-                        ? 'bg-emerald-500 hover:bg-emerald-600'
-                        : 'bg-red-500 hover:bg-red-600'
+                        ? 'bg-primary text-primary-foreground hover:opacity-90'
+                        : 'bg-destructive text-destructive-foreground hover:opacity-90'
                     )}
                   >
                     {tradeType === 'buy' ? 'Buy' : 'Sell'} {asset.symbol}
@@ -236,7 +236,7 @@ export default function TradeModal({ asset, isOpen, onClose, onTrade, balance = 
                   <div className="space-y-4 mb-8">
                     <div className="flex justify-between py-3 border-b border-border">
                       <span className="text-muted-foreground">Type</span>
-                      <span className={cn('font-semibold', tradeType === 'buy' ? 'text-emerald-500' : 'text-red-500')}>
+                      <span className={cn('font-semibold', tradeType === 'buy' ? 'text-primary' : 'text-destructive')}>
                         {tradeType.toUpperCase()}
                       </span>
                     </div>
@@ -266,8 +266,8 @@ export default function TradeModal({ asset, isOpen, onClose, onTrade, balance = 
                       className={cn(
                         'flex-1 h-12 rounded-xl font-semibold btn-press',
                         tradeType === 'buy'
-                          ? 'bg-emerald-500 hover:bg-emerald-600'
-                          : 'bg-red-500 hover:bg-red-600'
+                          ? 'bg-primary text-primary-foreground hover:opacity-90'
+                          : 'bg-destructive text-destructive-foreground hover:opacity-90'
                       )}
                     >
                       Confirm
@@ -288,13 +288,13 @@ export default function TradeModal({ asset, isOpen, onClose, onTrade, balance = 
                     transition={{ type: 'spring', delay: 0.2 }}
                     className={cn(
                       'w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center',
-                      tradeType === 'buy' ? 'bg-emerald-500' : 'bg-red-500'
+                      tradeType === 'buy' ? 'bg-primary' : 'bg-destructive'
                     )}
                   >
                     {tradeType === 'buy' ? (
-                      <TrendingUp className="h-10 w-10 text-white" />
+                      <TrendingUp className="h-10 w-10 text-primary-foreground" />
                     ) : (
-                      <TrendingDown className="h-10 w-10 text-white" />
+                      <TrendingDown className="h-10 w-10 text-destructive-foreground" />
                     )}
                   </motion.div>
                   <h3 className="text-2xl font-bold mb-2">Order Placed!</h3>

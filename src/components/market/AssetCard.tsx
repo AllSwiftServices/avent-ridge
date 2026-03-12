@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import MiniChart from '../common/MiniChart';
 
-export default function AssetCard({ asset, onClick, index = 0 }) {
+export default function AssetCard({ asset, onClick, index = 0 }: { asset: any, onClick: () => void, index?: number }) {
   const isPositive = asset.change_percent >= 0;
   
   return (
@@ -22,8 +22,7 @@ export default function AssetCard({ asset, onClick, index = 0 }) {
       )}
     >
       <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm text-black"
-          style={{ background: '#FFC107' }}>
+        <div className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm bg-primary text-primary-foreground shadow-lg shadow-primary/20">
           {asset.symbol?.slice(0, 2)}
         </div>
         <div>
@@ -44,8 +43,8 @@ export default function AssetCard({ asset, onClick, index = 0 }) {
             ${asset.price?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
           <p className={cn(
-            'text-sm font-medium',
-            isPositive ? 'text-[#FFC107]' : 'text-[#E53935]'
+            'text-sm font-semibold',
+            isPositive ? 'text-success' : 'text-destructive'
           )}>
             {isPositive ? '+' : ''}{asset.change_percent?.toFixed(2)}%
           </p>

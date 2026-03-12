@@ -20,8 +20,17 @@ export default function WalletCard({
   onToggleHide,
   onDeposit,
   onWithdraw
+}: {
+  type?: 'main' | 'crypto' | 'stocks';
+  title: string;
+  balance: number;
+  change: number;
+  hideBalance: boolean;
+  onToggleHide: () => void;
+  onDeposit?: () => void;
+  onWithdraw?: () => void;
 }) {
-  const Icon = iconMap[type] || Wallet;
+  const Icon = (iconMap as any)[type] || Wallet;
   const isPositive = change >= 0;
 
   return (
@@ -30,46 +39,41 @@ export default function WalletCard({
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
-      className="relative overflow-hidden rounded-3xl p-5 text-white"
-      style={{
-        background: '#141417',
-        border: '1px solid rgba(255,193,7,0.2)',
-        boxShadow: '0 0 24px rgba(255,193,7,0.05)',
-      }}
+      className="relative overflow-hidden rounded-3xl p-5 border bg-card border-border shadow-md"
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <div className="p-2 rounded-xl" style={{ background: 'rgba(255,193,7,0.12)' }}>
-            <Icon className="h-5 w-5" style={{ color: '#FFC107' }} />
+          <div className="p-2 rounded-xl bg-primary/10">
+            <Icon className="h-5 w-5 text-primary" />
           </div>
-          <span className="font-medium" style={{ color: '#B0B3B8' }}>{title}</span>
+          <span className="font-medium text-muted-foreground">{title}</span>
         </div>
         <button
           onClick={onToggleHide}
-          className="p-2 rounded-lg transition-colors hover:bg-white/5"
+          className="p-2 rounded-lg transition-colors hover:bg-muted"
         >
-          {hideBalance ? <EyeOff className="h-4 w-4" style={{ color: '#B0B3B8' }} /> : <Eye className="h-4 w-4" style={{ color: '#B0B3B8' }} />}
+          {hideBalance ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
         </button>
       </div>
       
       <div className="mb-4">
         {hideBalance ? (
-          <span className="text-3xl font-bold tracking-tight text-white">••••••</span>
+          <span className="text-3xl font-bold tracking-tight text-foreground">••••••</span>
         ) : (
           <AnimatedNumber 
             value={balance} 
             prefix="$" 
             decimals={2}
-            className="text-3xl font-bold tracking-tight text-white"
+            className="text-3xl font-bold tracking-tight text-foreground"
           />
         )}
         
         {!hideBalance && (
-          <div className="flex items-center gap-1 mt-1 text-sm">
-            <span style={{ color: isPositive ? '#FFC107' : '#E53935' }}>
+          <div className="flex items-center gap-1 mt-1 text-sm font-semibold">
+            <span className={isPositive ? 'text-success' : 'text-destructive'}>
               {isPositive ? '+' : ''}{change?.toFixed(2)}%
             </span>
-            <span style={{ color: '#B0B3B8' }}>24h</span>
+            <span className="text-muted-foreground">24h</span>
           </div>
         )}
       </div>
@@ -78,23 +82,17 @@ export default function WalletCard({
         <Button
           size="sm"
           onClick={onDeposit}
-          className="flex-1 border-0 btn-press text-white transition-all"
-          style={{ background: 'rgba(255,255,255,0.06)' }}
-          onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 12px rgba(255,193,7,0.3)'}
-          onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
+          className="flex-1 btn-press bg-muted hover:bg-muted/80 text-foreground transition-all border-none"
         >
-          <ArrowDownLeft className="h-4 w-4 mr-1" style={{ color: '#FFC107' }} />
+          <ArrowDownLeft className="h-4 w-4 mr-1 text-primary" />
           Deposit
         </Button>
         <Button
           size="sm"
           onClick={onWithdraw}
-          className="flex-1 border-0 btn-press text-white transition-all"
-          style={{ background: 'rgba(255,255,255,0.06)' }}
-          onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 12px rgba(255,193,7,0.3)'}
-          onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
+          className="flex-1 btn-press bg-muted hover:bg-muted/80 text-foreground transition-all border-none"
         >
-          <ArrowUpRight className="h-4 w-4 mr-1" style={{ color: '#FFC107' }} />
+          <ArrowUpRight className="h-4 w-4 mr-1 text-primary" />
           Withdraw
         </Button>
       </div>

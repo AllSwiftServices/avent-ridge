@@ -87,9 +87,9 @@ export default function Markets() {
   };
 
   return (
-    <div className="min-h-screen pb-24 md:pb-8" style={{ background: '#F5F6FA', color: '#1A1A2E' }}>
+    <div className="min-h-screen pb-24 md:pb-8 bg-background text-foreground">
       {/* Header */}
-      <header className="sticky top-0 z-30 backdrop-blur-xl border-b" style={{ background: 'rgba(245,246,250,0.95)', borderColor: '#E0E0E8' }}>
+      <header className="sticky top-0 z-30 backdrop-blur-xl border-b bg-background/95 border-border">
         <div className="px-4 py-4">
           <h1 className="font-bold text-2xl mb-4">Markets</h1>
 
@@ -115,10 +115,9 @@ export default function Markets() {
                   'px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all',
                   'flex items-center gap-1.5',
                   activeTab === tab.id
-                    ? 'font-semibold text-black'
+                    ? 'font-semibold bg-primary text-primary-foreground shadow-sm'
                     : 'bg-muted text-muted-foreground hover:text-foreground'
                 )}
-                style={activeTab === tab.id ? { background: '#FFC107' } : {}}
               >
                 {tab.icon && <tab.icon className="h-4 w-4" />}
                 {tab.label}

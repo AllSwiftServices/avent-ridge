@@ -6,10 +6,11 @@ import { Upload, X, CheckCircle, Clock, ChevronLeft, FileText } from 'lucide-rea
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthContext';
 
-const INPUT_CLASS = "w-full bg-[#0B0B0D] border border-[#2a2a2e] rounded-xl px-4 py-3 text-white text-sm placeholder-[#555] focus:outline-none focus:border-[#FFC107] transition-colors";
-const LABEL_CLASS = "block text-xs font-semibold text-[#B0B3B8] uppercase tracking-wider mb-1.5";
+const INPUT_CLASS = "w-full bg-card border border-border rounded-xl px-4 py-3 text-foreground text-sm placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-colors";
+const LABEL_CLASS = "block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5";
 
 function UploadBox({ label, value, onChange, hint }: { label: string, value: string, onChange: (v: string) => void, hint?: string }) {
   const [drag, setDrag] = useState(false);
@@ -51,8 +52,11 @@ function UploadBox({ label, value, onChange, hint }: { label: string, value: str
         onDragLeave={() => setDrag(false)}
         onDrop={e => { e.preventDefault(); setDrag(false); handleFile(e.dataTransfer.files[0]); }}
         onClick={() => !value && inputRef.current?.click()}
-        className="relative rounded-xl border-2 border-dashed transition-all cursor-pointer overflow-hidden"
-        style={{ borderColor: drag ? '#FFC107' : value ? '#FFC107' : '#2a2a2e', background: '#0B0B0D', minHeight: 110 }}
+        className={cn(
+          "relative rounded-xl border-2 border-dashed transition-all cursor-pointer overflow-hidden",
+          drag ? "border-primary bg-primary/5" : value ? "border-primary bg-card" : "border-border bg-card"
+        )}
+        style={{ minHeight: 110 }}
       >
         <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={e => e.target.files && handleFile(e.target.files[0])} />
         {value ? (
@@ -67,9 +71,9 @@ function UploadBox({ label, value, onChange, hint }: { label: string, value: str
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-8 gap-2">
-            <Upload className="h-7 w-7" style={{ color: drag ? '#FFC107' : '#555' }} />
-            <p className="text-xs text-[#555]">Drag & drop or <span style={{ color: '#FFC107' }}>browse</span></p>
-            {hint && <p className="text-[10px] text-[#444]">{hint}</p>}
+            <Upload className={cn("h-7 w-7", drag ? "text-primary" : "text-muted-foreground")} />
+            <p className="text-xs text-muted-foreground">Drag & drop or <span className="text-primary">browse</span></p>
+            {hint && <p className="text-[10px] text-muted-foreground/60">{hint}</p>}
           </div>
         )}
       </div>
@@ -150,17 +154,17 @@ export default function VerifyIdentity() {
     }
   };
 
-  if (loading || isLoadingAuth) return <div className="min-h-screen flex items-center justify-center" style={{ background: '#0B0B0D' }}><div className="animate-spin h-8 w-8 rounded-full border-2 border-[#FFC107] border-t-transparent" /></div>;
+  if (loading || isLoadingAuth) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-spin h-8 w-8 rounded-full border-2 border-primary border-t-transparent" /></div>;
 
   return (
-    <div className="min-h-screen pb-24 md:pb-8" style={{ background: '#0B0B0D' }}>
-      <header className="sticky top-0 z-30 border-b flex items-center gap-3 px-4 py-4" style={{ background: '#0B0B0D', borderColor: '#1e1e22' }}>
-        <button onClick={() => router.back()} className="p-2 rounded-xl hover:bg-[#141417]">
-          <ChevronLeft className="h-5 w-5 text-white" />
+    <div className="min-h-screen pb-24 md:pb-8 bg-background">
+      <header className="sticky top-0 z-30 border-b flex items-center gap-3 px-4 py-4 bg-background/95 border-border">
+        <button onClick={() => router.back()} className="p-2 rounded-xl hover:bg-muted transition-colors">
+          <ChevronLeft className="h-5 w-5 text-foreground" />
         </button>
         <div>
-          <h1 className="font-bold text-white text-lg">Identity Verification</h1>
-          <p className="text-xs text-[#B0B3B8]">Verify your identity to unlock full access</p>
+          <h1 className="font-bold text-foreground text-lg">Identity Verification</h1>
+          <p className="text-xs text-muted-foreground">Verify your identity to unlock full access</p>
         </div>
       </header>
 
@@ -170,21 +174,22 @@ export default function VerifyIdentity() {
         {existing && (
           <motion.div
             initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-            className="rounded-2xl p-4 flex items-center gap-3 border"
-            style={{
-              background: existing.status === 'approved' ? 'rgba(255,193,7,0.08)' : existing.status === 'rejected' ? 'rgba(229,57,53,0.08)' : 'rgba(255,193,7,0.05)',
-              borderColor: existing.status === 'approved' ? '#FFC107' : existing.status === 'rejected' ? '#E53935' : '#555'
-            }}
+            className={cn(
+              "rounded-2xl p-4 flex items-center gap-3 border transition-colors",
+              existing.status === 'approved' ? "bg-primary/10 border-primary" : 
+              existing.status === 'rejected' ? "bg-destructive/10 border-destructive" : 
+              "bg-muted border-border"
+            )}
           >
-            {existing.status === 'approved' && <CheckCircle className="h-6 w-6 shrink-0" style={{ color: '#FFC107' }} />}
-            {existing.status === 'pending' && <Clock className="h-6 w-6 shrink-0" style={{ color: '#FFC107' }} />}
-            {existing.status === 'rejected' && <X className="h-6 w-6 shrink-0" style={{ color: '#E53935' }} />}
+            {existing.status === 'approved' && <CheckCircle className="h-6 w-6 shrink-0 text-primary" />}
+            {existing.status === 'pending' && <Clock className="h-6 w-6 shrink-0 text-primary" />}
+            {existing.status === 'rejected' && <X className="h-6 w-6 shrink-0 text-destructive" />}
             <div>
-              <p className="font-bold text-white text-sm">
+              <p className="font-bold text-foreground text-sm">
                 {existing.status === 'approved' ? '✔ Verified' : existing.status === 'pending' ? '⏳ Verification Pending' : '✖ Verification Failed'}
               </p>
-              {existing.rejection_reason && <p className="text-xs text-[#E53935] mt-0.5">{existing.rejection_reason}</p>}
-              {existing.status === 'pending' && <p className="text-xs text-[#B0B3B8] mt-0.5">Our team typically reviews within 1–2 business days.</p>}
+              {existing.rejection_reason && <p className="text-xs text-destructive mt-0.5">{existing.rejection_reason}</p>}
+              {existing.status === 'pending' && <p className="text-xs text-muted-foreground mt-0.5">Our team typically reviews within 1–2 business days.</p>}
             </div>
           </motion.div>
         )}
@@ -192,10 +197,10 @@ export default function VerifyIdentity() {
         {!existing && (
           <>
             {/* Section A */}
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl p-5 border space-y-4" style={{ background: '#141417', borderColor: '#1e1e22' }}>
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl p-5 border space-y-4 bg-card border-border shadow-sm">
               <div className="flex items-center gap-2 mb-2">
-                <FileText className="h-4 w-4" style={{ color: '#FFC107' }} />
-                <h2 className="font-bold text-white text-sm uppercase tracking-wider">Personal Information</h2>
+                <FileText className="h-4 w-4 text-primary" />
+                <h2 className="font-bold text-foreground text-sm uppercase tracking-wider">Personal Information</h2>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -218,10 +223,10 @@ export default function VerifyIdentity() {
             </motion.div>
 
             {/* Section B */}
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl p-5 border space-y-4" style={{ background: '#141417', borderColor: '#1e1e22' }}>
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl p-5 border space-y-4 bg-card border-border shadow-sm">
               <div className="flex items-center gap-2 mb-2">
-                <FileText className="h-4 w-4" style={{ color: '#FFC107' }} />
-                <h2 className="font-bold text-white text-sm uppercase tracking-wider">Identity Document</h2>
+                <FileText className="h-4 w-4 text-primary" />
+                <h2 className="font-bold text-foreground text-sm uppercase tracking-wider">Identity Document</h2>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -249,8 +254,10 @@ export default function VerifyIdentity() {
               whileTap={{ scale: 0.97 }}
               onClick={handleSubmit}
               disabled={submitting}
-              className="w-full py-4 rounded-2xl font-bold text-base border-2 transition-all"
-              style={{ background: '#0B0B0D', borderColor: '#FFC107', color: '#FFC107', boxShadow: submitting ? 'none' : '0 0 20px rgba(255,193,7,0.25)' }}
+              className={cn(
+                "w-full py-4 rounded-2xl font-bold text-base border-2 transition-all shadow-lg shadow-primary/20",
+                submitting ? "bg-muted border-muted-foreground text-muted-foreground" : "bg-primary text-primary-foreground border-primary hover:opacity-90"
+              )}
             >
               {submitting ? 'Submitting...' : 'Submit for Verification'}
             </motion.button>

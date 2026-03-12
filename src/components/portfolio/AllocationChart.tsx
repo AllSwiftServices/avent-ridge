@@ -1,9 +1,18 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
-const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
+const COLORS = [
+  'var(--color-primary)',
+  'hsl(var(--success))',
+  '#F59E0B',
+  '#8B5CF6',
+  '#EC4899',
+  'hsl(var(--destructive))',
+  '#06B6D4',
+  '#84CC16'
+];
 
-export default function AllocationChart({ data }) {
+export default function AllocationChart({ data }: { data: { name: string, value: number, color?: string }[] }) {
   if (!data || data.length === 0) {
     return (
       <div className="h-48 flex items-center justify-center text-muted-foreground">
@@ -12,8 +21,8 @@ export default function AllocationChart({ data }) {
     );
   }
 
-  const total = data.reduce((sum, item) => sum + item.value, 0);
-  const chartData = data.map((item, index) => ({
+  const total = data.reduce((sum: number, item: any) => sum + item.value, 0);
+  const chartData = data.map((item: any, index: number) => ({
     ...item,
     percentage: ((item.value / total) * 100).toFixed(1)
   }));
@@ -32,7 +41,7 @@ export default function AllocationChart({ data }) {
               paddingAngle={2}
               dataKey="value"
             >
-              {chartData.map((entry, index) => (
+              {chartData.map((entry: any, index: number) => (
                 <Cell 
                   key={`cell-${index}`} 
                   fill={COLORS[index % COLORS.length]}
@@ -46,7 +55,7 @@ export default function AllocationChart({ data }) {
                 border: '1px solid hsl(var(--border))',
                 borderRadius: '12px',
               }}
-              formatter={(value) => [`$${value.toFixed(2)}`, 'Value']}
+              formatter={(value: any) => [`$${parseFloat(value).toFixed(2)}`, 'Value']}
             />
           </PieChart>
         </ResponsiveContainer>

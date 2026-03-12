@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-function randomTrade(basePrice) {
+function randomTrade(basePrice: number) {
   const isBuy = Math.random() > 0.5;
   const price = basePrice * (1 + (Math.random() - 0.5) * 0.003);
   const qty = (Math.random() * 2 + 0.01).toFixed(4);
@@ -16,7 +16,7 @@ function randomTrade(basePrice) {
   };
 }
 
-export default function RecentTrades({ basePrice }) {
+export default function RecentTrades({ basePrice }: { basePrice: number }) {
   const [trades, setTrades] = useState(() =>
     Array.from({ length: 20 }, () => randomTrade(basePrice))
   );
@@ -43,12 +43,12 @@ export default function RecentTrades({ basePrice }) {
             {trades.map(trade => (
               <motion.div
                 key={trade.id}
-                initial={{ opacity: 0, x: -10, backgroundColor: trade.isBuy ? 'rgba(255,193,7,0.2)' : 'rgba(229,57,53,0.2)' }}
+                initial={{ opacity: 0, x: -10, backgroundColor: trade.isBuy ? 'var(--color-success-muted)' : 'var(--color-destructive-muted)' }}
                 animate={{ opacity: 1, x: 0, backgroundColor: 'transparent' }}
                 transition={{ duration: 0.35 }}
                 className="flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-mono"
               >
-                <span className="font-semibold" style={{ color: trade.isBuy ? '#FFC107' : '#E53935' }}>
+                <span className={cn("font-semibold", trade.isBuy ? "text-success" : "text-destructive")}>
                   {trade.price}
                 </span>
                 <span className="text-muted-foreground">{trade.qty}</span>

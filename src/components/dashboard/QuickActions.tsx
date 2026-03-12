@@ -1,0 +1,39 @@
+import React from 'react';
+import { motion } from 'framer-motion';
+import { ArrowDownToLine, ArrowUpFromLine, Zap } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+const actions = [
+  { label: 'Deposit', icon: ArrowDownToLine },
+  { label: 'Trade', icon: Zap },
+  { label: 'Withdraw', icon: ArrowUpFromLine },
+];
+
+export default function QuickActions({ onDeposit, onTrade, onWithdraw }) {
+  const handlers = [onDeposit, onTrade, onWithdraw];
+
+  return (
+    <div className="flex items-center justify-center gap-8">
+      {actions.map(({ label, icon: Icon }, i) => (
+        <motion.button
+          key={label}
+          onClick={handlers[i]}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.06 }}
+          whileTap={{ scale: 0.93 }}
+          whileHover={{ y: -2 }}
+          className="flex flex-col items-center gap-2 group"
+        >
+          <div
+            className="w-14 h-14 rounded-full flex items-center justify-center transition-all duration-200 border"
+            style={{ background: '#FFFFFF', borderColor: '#E0E0E8', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+          >
+            <Icon className="h-6 w-6 text-[#FFC107]" />
+          </div>
+          <span className="text-xs font-medium transition-colors" style={{ color: '#6B7280' }}>{label}</span>
+        </motion.button>
+      ))}
+    </div>
+  );
+}

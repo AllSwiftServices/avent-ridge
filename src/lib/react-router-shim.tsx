@@ -12,7 +12,7 @@ export const useLocation = () => {
   const searchParams = useSearchParams();
   return {
     pathname,
-    search,: searchParams.toString(),
+    search: searchParams.toString(),
     hash: '',
     state: null,
     key: 'default',

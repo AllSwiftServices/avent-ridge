@@ -1,8 +1,15 @@
 import React from 'react';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 
-export default function MiniChart({ data, isPositive = true, height = 40, width = 80 }) {
-  const chartData = data?.length > 0 ? data : generateSampleData(isPositive);
+interface MiniChartProps {
+  data?: any[];
+  isPositive?: boolean;
+  height?: number | string;
+  width?: number | string;
+}
+
+export default function MiniChart({ data, isPositive = true, height = 40, width = 80 }: MiniChartProps) {
+  const chartData = data?.length && data.length > 0 ? data : generateSampleData(isPositive);
   
   return (
     <div style={{ width, height }}>
@@ -21,7 +28,7 @@ export default function MiniChart({ data, isPositive = true, height = 40, width 
   );
 }
 
-function generateSampleData(isPositive) {
+function generateSampleData(isPositive: boolean) {
   const points = 20;
   const data = [];
   let value = 100;

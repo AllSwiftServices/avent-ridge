@@ -85,7 +85,8 @@ export default function Home() {
 
       showToast.success('Success! Entering dashboard...');
       await refreshUser();
-      router.push('/dashboard');
+      // Force a hard navigation to bypass any client-side App Router caching
+      window.location.href = '/dashboard';
     } catch (error: any) {
       showToast.error(error.message || 'Verification failed. Please check the code.');
     } finally {

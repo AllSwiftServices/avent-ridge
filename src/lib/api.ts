@@ -22,6 +22,7 @@ async function request<T>(
 
   try {
     const response = await fetch(url, {
+      credentials: 'include', // Ensure cookies are always sent
       ...options,
       headers,
     });

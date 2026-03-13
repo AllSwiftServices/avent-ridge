@@ -1,10 +1,12 @@
 "use client";
 
+import { useCallback, useMemo } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
 export const useNavigate = () => {
   const router = useRouter();
-  return (to: string | number) => {
+  
+  return useCallback((to: string | number) => {
     if (typeof to === 'number') {
       if (to === -1) {
         router.back();
@@ -12,21 +14,22 @@ export const useNavigate = () => {
         router.forward();
       }
     } else {
-      router.push(to);
+      router.push(to as string);
     }
-  };
+  }, [router]);
 };
 
 export const useLocation = () => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  return {
+  
+  return useMemo(() => ({
     pathname,
     search: searchParams.toString(),
     hash: '',
     state: null,
     key: 'default',
-  };
+  }), [pathname, searchParams]);
 };
 
 export const useParams = () => {

@@ -79,16 +79,22 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!isLoadingAuth && !user) {
       navigate(createPageUrl('Home'));
-    } else if (user) {
-      setFormData({
-        name: user.name || user.user_metadata?.full_name || '',
-        email: user.email || '',
-      });
-      loadKyc();
+    } else if (user && !isEditing) {
+      const currentName = user.name || user.user_metadata?.full_name || '';
+      if (formData.name !== currentName) {
+        setFormData({
+          name: currentName,
+          email: user.email || '',
+        });
+      }
+      
+      if (!kycRecord) {
+        loadKyc();
+      }
     }
-  }, [user, isLoadingAuth, navigate]);
+  }, [user, isLoadingAuth, navigate, kycRecord, isEditing, formData.name]);
 
-  const loadKyc = async () => {
+  const loadKyc = React.useCallback(async () => {
     try {
       if (!user) return;
       const { data } = await api.get(`/kyc/${user.id}`);
@@ -96,7 +102,7 @@ export default function ProfilePage() {
     } catch (error) {
       console.error('Error loading KYC:', error);
     }
-  };
+  }, [user]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();

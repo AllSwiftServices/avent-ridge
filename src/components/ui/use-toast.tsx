@@ -12,7 +12,7 @@ export type ToastProps = React.ComponentPropsWithoutRef<
   typeof import("@/components/ui/toast").Toast
 >
 
-export interface Toasts extends ToastProps {
+export interface Toasts extends Omit<ToastProps, "title" | "description"> {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
@@ -20,7 +20,6 @@ export interface Toasts extends ToastProps {
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }
-
 const actionTypes = {
   ADD_TOAST: "ADD_TOAST",
   UPDATE_TOAST: "UPDATE_TOAST",

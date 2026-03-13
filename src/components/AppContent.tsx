@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from '@/components/navigation/Sidebar';
 import BottomNav from '@/components/navigation/BottomNav';
@@ -19,18 +20,26 @@ export default function AppContent({ children }: { children: React.ReactNode }) 
     if (isAuthPage || isNoNavPage) {
         return (
             <div className="min-h-screen bg-background">
-                {children}
+                <Suspense fallback={<div className="min-h-screen bg-background" />}>
+                    {children}
+                </Suspense>
             </div>
         );
     }
 
     return (
         <div className="min-h-screen bg-background">
-            <Sidebar />
+            <Suspense fallback={null}>
+                <Sidebar />
+            </Suspense>
             <main className="md:ml-64">
-                {children}
+                <Suspense fallback={<div className="p-8"><div className="h-32 w-full animate-pulse bg-muted rounded-3xl" /></div>}>
+                    {children}
+                </Suspense>
             </main>
-            <BottomNav />
+            <Suspense fallback={null}>
+                <BottomNav />
+            </Suspense>
             <QuickTradeButton onClick={() => router.push(createPageUrl('Markets'))} />
         </div>
     );

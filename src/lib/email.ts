@@ -1,6 +1,17 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resendClient: Resend | null = null;
+
+function getResend() {
+  if (!resendClient) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      throw new Error("Missing RESEND_API_KEY. Please set RESEND_API_KEY in your environment variables.");
+    }
+    resendClient = new Resend(apiKey);
+  }
+  return resendClient;
+}
 
 export async function sendOtpEmail(to: string, otp: string) {
   console.log(`🚀 Attempting to send OTP email via Resend to: ${to}`);
@@ -53,6 +64,7 @@ export async function sendOtpEmail(to: string, otp: string) {
     `;
 
   try {
+    const resend = getResend();
     const { data, error } = await resend.emails.send({
       from:
         process.env.RESEND_FROM_EMAIL || "Avent Ridge <noreply@aventridge.com>",
@@ -121,6 +133,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
     `;
 
   try {
+    const resend = getResend();
     const { data, error } = await resend.emails.send({
       from:
         process.env.RESEND_FROM_EMAIL || "Avent Ridge <noreply@aventridge.com>",
@@ -137,7 +150,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
     console.log(`✅ Welcome email sent to ${to}. MessageId: ${data?.id}`);
     return data;
   } catch (error: any) {
-    console.error(`❌ Error sending welcome email:`, error.message);
+    console.error(`❌ Error sending welcome email to ${to}:`, error.message);
     return null;
   }
 }

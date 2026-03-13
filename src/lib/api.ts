@@ -48,8 +48,13 @@ async function request<T>(
 }
 
 export const api = {
-  get: <T>(path: string, options?: RequestInit) => 
-    request<T>(path, { ...options, method: 'GET' }),
+  get: <T>(path: string, options?: RequestInit) => {
+    // Force cache busting for aggressive iOS Safari caching without relying on window (SSR safe)
+    const timestamp = Date.now().toString();
+    const bustedPath = path.includes('?') ? `${path}&_t=${timestamp}` : `${path}?_t=${timestamp}`;
+    
+    return request<T>(bustedPath, { ...options, method: 'GET', cache: 'no-store' });
+  },
   
   post: <T>(path: string, body: any, options?: RequestInit) => 
     request<T>(path, { 

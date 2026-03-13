@@ -13,7 +13,14 @@ export async function GET() {
     if (userError || !user) {
       return NextResponse.json(
         { success: true, user: null },
-        { status: 200 }
+        { 
+          status: 200,
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+          }
+        }
       );
     }
 
@@ -37,10 +44,17 @@ export async function GET() {
       kyc_status: kycData?.status || 'not_started'
     };
 
-    return NextResponse.json({
-      success: true,
-      user: userData
-    });
+    return NextResponse.json(
+      { success: true, user: userData },
+      {
+        status: 200,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        }
+      }
+    );
   } catch (error: any) {
     console.error('[AUTH] Unexpected session error:', error);
     return NextResponse.json(

@@ -6,7 +6,6 @@ import { Zap, Mail, Lock, Eye, EyeOff, ArrowRight, Chrome, User, Shield } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { AnimatePresence } from 'framer-motion';
@@ -82,12 +81,7 @@ export default function Home() {
 
       // Log in with Supabase Auth using the email and password 
       // (This assumes the user was either already created or just created in verify-otp)
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (signInError) throw signInError;
+      // The session cookies are now set on the server in verify-otp
 
       showToast.success('Success! Entering dashboard...');
       await refreshUser();
@@ -100,13 +94,9 @@ export default function Home() {
   };
 
   const signInWithOAuth = async (provider: 'google' | 'github') => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    if (error) showToast.error(error.message);
+    // Note: OAuth still needs some client-side handling but usually redirects to a server route
+    // For now, we'll point to a future server-side OAuth route or inform the user
+    showToast.info('OAuth is currently being migrated to server-side. Please use email for now.');
   };
 
   if (isLoadingAuth) {

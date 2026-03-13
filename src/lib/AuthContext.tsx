@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { api } from '@/lib/api';
 
 export interface User {
   id: string;
@@ -28,69 +28,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authError, setAuthError] = useState<string | null>(null);
   const router = useRouter();
 
-  const fetchProfile = useCallback(async (userId: string) => {
-    try {
-      const { data: profile, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      
-      if (error) {
-        console.error('Error fetching user profile:', error);
-        return null;
-      }
-      return profile;
-    } catch (err) {
-      console.error('Unexpected error fetching profile:', err);
-      return null;
-    }
-  }, []);
-
   const refreshUser = useCallback(async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const profile = await fetchProfile(session.user.id);
-        setUser({
-          ...session.user,
-          ...profile,
-        } as User);
-      } else {
-        setUser(null);
-      }
+      const { data, error } = await api.get<{ user: User | null }>('/auth/session');
+      if (error) throw error;
+      
+      setUser(data?.user || null);
     } catch (error: any) {
       console.error('Error checking auth session:', error);
       setAuthError(error.message);
+      setUser(null);
     } finally {
       setIsLoadingAuth(false);
     }
-  }, [fetchProfile]);
+  }, []);
 
   useEffect(() => {
     refreshUser();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        const profile = await fetchProfile(session.user.id);
-        setUser({
-          ...session.user,
-          ...profile,
-        } as User);
-      } else {
-        setUser(null);
-      }
-      setIsLoadingAuth(false);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [refreshUser, fetchProfile]);
+    
+    // We remove the onAuthStateChange listener as we no longer have the supabase client here.
+    // Auth state is now managed via cookies and server routes.
+  }, [refreshUser]);
 
   const logout = useCallback(async () => {
     try {
-      await supabase.auth.signOut({ scope: 'local' });
+      await api.post('/auth/logout', {});
       setUser(null);
       router.push('/');
       router.refresh();

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
+import { sendPushNotification } from "@/lib/push-notifications";
 
 export async function PATCH(
   request: Request,
@@ -147,6 +148,18 @@ export async function PATCH(
             });
           if (txError) throw txError;
       }
+    }
+
+    try {
+      await sendPushNotification(deposit.user_id, {
+        title: status === 'approved' ? "Deposit Approved! 💰" : "Deposit Update",
+        body: status === 'approved'
+            ? `Your deposit of ${deposit.amount} ${deposit.currency} has been approved and credited to your ${deposit.wallet_type || 'trading'} wallet.`
+            : `Your deposit was rejected. Reason: ${rejection_reason || 'See transaction history for details.'}`,
+        url: "/wallet"
+      });
+    } catch (pushErr) {
+      console.error("Push notification error:", pushErr);
     }
 
     return NextResponse.json({ success: true });

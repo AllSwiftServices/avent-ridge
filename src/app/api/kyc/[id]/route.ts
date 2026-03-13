@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
+import { sendPushNotification } from "@/lib/push-notifications";
 
 export async function GET(
   request: Request,
@@ -82,6 +83,18 @@ export async function PATCH(
       .single();
 
     if (error) throw error;
+
+    try {
+        await sendPushNotification(id, {
+            title: status === 'approved' ? "Identity Verified! 🎉" : "Verification Update",
+            body: status === 'approved' 
+                ? "Your identity verification has been approved. You now have full access."
+                : `Your KYC application was rejected. Reason: ${rejection_reason || 'See dashboard for details.'}`,
+            url: "/verify-identity"
+        });
+    } catch (e) {
+        console.error("Failed to send push notification", e);
+    }
 
     return NextResponse.json(data);
   } catch (error: any) {

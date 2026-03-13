@@ -390,23 +390,38 @@ function InfoItem({ label, value }: { label: string, value: string }) {
 }
 
 function DocumentImage({ label, url }: { label: string, url: string }) {
+  const [imgError, setImgError] = useState(false);
+
+  // Validate that URL is a real URL and not 'undefined' or empty string
+  const isValidUrl = url && url !== 'undefined' && url !== 'null' && url.startsWith('http');
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-muted-foreground">{label}</span>
-        {url && (
+        {isValidUrl && (
             <a href={url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary font-bold flex items-center gap-1 hover:underline">
                 <ExternalLink className="h-2.5 w-2.5" /> VIEW FULL SIZE
             </a>
         )}
       </div>
       <div className="aspect-4/3 rounded-2xl bg-muted border border-border overflow-hidden group relative flex items-center justify-center">
-        {url ? (
-          <img src={url} alt={label} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+        {isValidUrl && !imgError ? (
+          <img
+            src={url}
+            alt={label}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            onError={() => setImgError(true)}
+          />
         ) : (
-          <div className="flex flex-col items-center gap-2 text-muted-foreground/30">
+          <div className="flex flex-col items-center gap-2 text-muted-foreground/50 p-4 text-center">
             <Shield className="h-10 w-10" />
-            <span className="text-[10px] font-bold">MISSING</span>
+            <span className="text-[10px] font-bold">{imgError ? 'IMAGE FAILED TO LOAD' : 'NOT PROVIDED'}</span>
+            {imgError && isValidUrl && (
+              <a href={url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary underline mt-1">
+                Open link directly
+              </a>
+            )}
           </div>
         )}
       </div>

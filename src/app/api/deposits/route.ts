@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, supabaseAdmin } from "@/lib/supabase-server";
+import { sendPushToAdmins } from "@/lib/push-notifications";
 
 export async function GET(request: Request) {
   try {
@@ -78,6 +79,16 @@ export async function POST(request: Request) {
       
     if (txError) {
        console.error("Failed to create pending transaction", txError);
+    }
+
+    try {
+        await sendPushToAdmins({
+            title: "New Deposit Submitted",
+            body: `${user.email} submitted a deposit of ${body.amount} ${body.currency}.`,
+            url: "/admin/deposits"
+        });
+    } catch (e) {
+        console.error("Failed to notify admins", e);
     }
 
     return NextResponse.json(depositData);

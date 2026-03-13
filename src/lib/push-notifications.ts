@@ -113,3 +113,43 @@ export async function sendPushNotification(
     };
   }
 }
+
+export async function sendPushToAdmins(
+    payload: PushPayload,
+): Promise<{ success: boolean; sentCount: number; message: string }> {
+    try {
+        // Find all admin users
+        const { data: admins, error: adminError } = await supabaseAdmin
+            .from('users')
+            .select('id')
+            .eq('role', 'admin');
+
+        if (adminError || !admins || admins.length === 0) {
+            console.log("No admins found or error fetching admins");
+            return { success: false, sentCount: 0, message: "No admins found." };
+        }
+
+        let totalSent = 0;
+        const promises = admins.map(async (admin) => {
+           const result = await sendPushNotification(admin.id, payload);
+           if (result.success) {
+               totalSent += result.sentCount;
+           }
+        });
+
+        await Promise.all(promises);
+
+        return {
+            success: true,
+            sentCount: totalSent,
+            message: `Sent to ${totalSent} admin devices.`,
+        };
+    } catch (e: any) {
+        console.error("Failed to send push to admins", e);
+        return {
+            success: false,
+            sentCount: 0,
+            message: "Internal Error: " + e.message,
+        };
+    }
+}

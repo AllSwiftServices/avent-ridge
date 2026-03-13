@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
+import { sendPushToAdmins } from "@/lib/push-notifications";
 
 export async function GET(request: Request) {
   try {
@@ -63,6 +64,16 @@ export async function POST(request: Request) {
       .single();
 
     if (error) throw error;
+
+    try {
+        await sendPushToAdmins({
+            title: "New KYC Verification",
+            body: `${user.email} submitted a new KYC application for review.`,
+            url: "/admin-kyc"
+        });
+    } catch (e) {
+        console.error("Failed to notify admins", e);
+    }
 
     return NextResponse.json(data);
   } catch (error: any) {

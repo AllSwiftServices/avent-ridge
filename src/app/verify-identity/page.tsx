@@ -52,29 +52,38 @@ function UploadBox({ label, value, onChange, hint }: { label: string, value: str
         onDragOver={e => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
         onDrop={e => { e.preventDefault(); setDrag(false); handleFile(e.dataTransfer.files[0]); }}
-        onClick={() => !value && inputRef.current?.click()}
         className={cn(
-          "relative rounded-xl border-2 border-dashed transition-all cursor-pointer overflow-hidden",
+          "relative rounded-xl border-2 border-dashed transition-all overflow-hidden",
           drag ? "border-primary bg-primary/5" : value ? "border-primary bg-card" : "border-border bg-card"
         )}
         style={{ minHeight: 110 }}
       >
-        <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={e => e.target.files && handleFile(e.target.files[0])} />
+        <input id={`upload-${label}`} type="file" accept="image/*" className="hidden" onChange={e => e.target.files && handleFile(e.target.files[0])} />
+        <input id={`capture-${label}`} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => e.target.files && handleFile(e.target.files[0])} />
+        
         {value ? (
           <div className="relative">
             <img src={value} alt="preview" className="w-full h-36 object-cover rounded-xl" />
             <button
               onClick={e => { e.stopPropagation(); onChange(''); }}
-              className="absolute top-2 right-2 bg-black/70 rounded-full p-1"
+              className="absolute top-2 right-2 bg-black/70 rounded-full p-1 cursor-pointer z-10 hover:scale-110 transition-transform"
             >
               <X className="h-4 w-4 text-white" />
             </button>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-8 gap-2">
-            <Upload className={cn("h-7 w-7", drag ? "text-primary" : "text-muted-foreground")} />
-            <p className="text-xs text-muted-foreground">Drag & drop or <span className="text-primary">browse</span></p>
-            {hint && <p className="text-[10px] text-muted-foreground/60">{hint}</p>}
+          <div className="flex flex-col items-center justify-center p-4 h-full w-full gap-3">
+             <div className="flex gap-4 w-full max-w-xs mx-auto">
+               <label htmlFor={`upload-${label}`} className="flex-1 flex flex-col items-center justify-center gap-2 bg-muted/50 rounded-2xl hover:bg-muted cursor-pointer transition-colors p-3 border border-transparent hover:border-primary/20">
+                  <Upload className="h-6 w-6 text-muted-foreground" />
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider text-center">Upload File</span>
+               </label>
+               <label htmlFor={`capture-${label}`} className="flex-1 flex flex-col items-center justify-center gap-2 bg-muted/50 rounded-2xl hover:bg-muted cursor-pointer transition-colors p-3 border border-transparent hover:border-primary/20">
+                  <Camera className="h-6 w-6 text-muted-foreground" />
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider text-center">Take Photo</span>
+               </label>
+             </div>
+             {hint && <p className="text-[10px] text-muted-foreground/60 text-center">{hint}</p>}
           </div>
         )}
       </div>

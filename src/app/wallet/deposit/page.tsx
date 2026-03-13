@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, Wallet, ChevronRight, Copy, 
   CheckCircle, QrCode, Upload, Info, 
-  AlertCircle, ShieldCheck, Send
+  AlertCircle, ShieldCheck, Send, Camera
 } from 'lucide-react';
 import { useNavigate } from '@/lib/react-router-shim';
 import { createPageUrl } from '@/utils';
@@ -304,9 +304,9 @@ export default function DepositPage() {
               </div>
 
               <div className="space-y-6">
-                <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Transaction Receipt</label>
-                    <div className="relative group">
+                <div className="space-y-4">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase px-1 text-center w-full block">Transaction Receipt</label>
+                    <div className="relative group w-full">
                         <input 
                             type="file" 
                             accept="image/*"
@@ -315,11 +315,19 @@ export default function DepositPage() {
                             id="receipt-upload" 
                             disabled={isUploading}
                         />
-                        <label 
-                            htmlFor="receipt-upload"
-                            className={cn(
-                                "flex flex-col items-center justify-center w-full aspect-video rounded-3xl border-2 border-dashed border-border hover:border-primary/50 cursor-pointer transition-all overflow-hidden",
-                                receiptUrl ? "bg-card border-solid border-success/50" : "bg-muted/30"
+                        <input 
+                            type="file" 
+                            accept="image/*"
+                            capture="environment"
+                            onChange={handleFileUpload}
+                            className="hidden" 
+                            id="receipt-capture" 
+                            disabled={isUploading}
+                        />
+                        
+                        <div className={cn(
+                                "flex flex-col items-center justify-center w-full aspect-video rounded-3xl border-2 border-dashed border-border transition-all overflow-hidden",
+                                receiptUrl ? "bg-card border-solid border-success/50 p-2" : "bg-muted/30 p-4"
                             )}
                         >
                             {isUploading ? (
@@ -328,14 +336,20 @@ export default function DepositPage() {
                                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Uploading...</p>
                                 </div>
                             ) : receiptUrl ? (
-                                <img src={receiptUrl} alt="Receipt preview" className="w-full h-full object-contain" />
+                                <img src={receiptUrl} alt="Receipt preview" className="w-full h-full object-contain rounded-2xl" />
                             ) : (
-                                <div className="flex flex-col items-center gap-3 text-muted-foreground group-hover:text-primary transition-all">
-                                    <Upload className="h-8 w-8" />
-                                    <p className="text-xs font-bold uppercase tracking-wider">Tap to Upload Receipt</p>
+                                <div className="flex gap-4 w-full h-full max-w-xs mx-auto items-center">
+                                   <label htmlFor="receipt-upload" className="flex-1 flex flex-col items-center justify-center gap-3 h-full bg-card shadow-sm border border-border rounded-2xl hover:bg-muted hover:border-primary/50 cursor-pointer transition-all">
+                                      <Upload className="h-7 w-7 text-muted-foreground" />
+                                      <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider text-center">Upload File</span>
+                                   </label>
+                                   <label htmlFor="receipt-capture" className="flex-1 flex flex-col items-center justify-center gap-3 h-full bg-card shadow-sm border border-border rounded-2xl hover:bg-muted hover:border-primary/50 cursor-pointer transition-all">
+                                      <Camera className="h-7 w-7 text-muted-foreground" />
+                                      <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider text-center">Take Photo</span>
+                                   </label>
                                 </div>
                             )}
-                        </label>
+                        </div>
                     </div>
                 </div>
 

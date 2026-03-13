@@ -56,7 +56,9 @@ export default function Dashboard() {
     enabled: !!user
   });
 
-  const wallet = wallets?.[0] || { main_balance: 0 };
+  const tradingWallet = wallets?.find(w => w.currency === 'trading') || { main_balance: 0 };
+  const holdingWallet = wallets?.find(w => w.currency === 'holding') || { main_balance: 0 };
+
   const cryptoHoldings = portfolio?.filter(p => p.asset_type === 'crypto') || [];
   const stockHoldings = portfolio?.filter(p => p.asset_type === 'stock') || [];
 
@@ -67,8 +69,11 @@ export default function Dashboard() {
 
   const cryptoValue = calcValue(cryptoHoldings);
   const stockValue = calcValue(stockHoldings);
-  const mainBalance = wallet.main_balance || 0;
-  const totalBalance = mainBalance + cryptoValue + stockValue;
+  
+  const tradingBalance = (tradingWallet.main_balance || 0) + cryptoValue;
+  const holdingBalance = (holdingWallet.main_balance || 0) + stockValue;
+  
+  const totalBalance = tradingBalance + holdingBalance;
   const totalChange = 2.45;
   const isPositive = totalChange >= 0;
   const changeDollar = (totalBalance * totalChange) / 100;
@@ -140,9 +145,8 @@ export default function Dashboard() {
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <p className="font-bold text-base mb-3 text-foreground">Wallets</p>
           <WalletBreakdown
-            mainBalance={mainBalance}
-            cryptoValue={cryptoValue || 5420.5}
-            stockValue={stockValue || 3250.75}
+            tradingBalance={tradingBalance}
+            holdingBalance={holdingBalance}
             hideBalance={hideBalance}
           />
         </motion.div>

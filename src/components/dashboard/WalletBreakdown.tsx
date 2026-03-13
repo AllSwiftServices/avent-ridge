@@ -31,17 +31,15 @@ function WalletBreakdownCard({ title, balance, change, hideBalance, index }: Wal
 }
 
 interface WalletBreakdownProps {
-  mainBalance: number;
-  cryptoValue: number;
-  stockValue: number;
+  tradingBalance: number;
+  holdingBalance: number;
   hideBalance: boolean;
 }
 
-export default function WalletBreakdown({ mainBalance, cryptoValue, stockValue, hideBalance }: WalletBreakdownProps) {
+export default function WalletBreakdown({ tradingBalance, holdingBalance, hideBalance }: WalletBreakdownProps) {
   const cards = [
-    { title: 'Main Wallet', balance: mainBalance, change: 1.23 },
-    { title: 'Crypto Wallet', balance: cryptoValue, change: 3.45 },
-    { title: 'Stock Wallet', balance: stockValue, change: -0.82 },
+    { title: 'Trading Wallet', balance: tradingBalance, change: 3.45 },
+    { title: 'Holding Wallet', balance: holdingBalance, change: -0.82 },
   ];
 
   return (

@@ -6,6 +6,8 @@ import Sidebar from '@/components/navigation/Sidebar';
 import BottomNav from '@/components/navigation/BottomNav';
 import QuickTradeButton from '@/components/common/QuickTradeButton';
 import { createPageUrl } from '@/utils';
+import { useAuth } from '@/lib/AuthContext';
+import { useEffect } from 'react';
 
 const authPages = ['/'];
 const noNavPages = ['/verify-identity', '/admin-kyc'];
@@ -13,9 +15,16 @@ const noNavPages = ['/verify-identity', '/admin-kyc'];
 export default function AppContent({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
+    const { user, isLoadingAuth } = useAuth();
 
     const isAuthPage = authPages.includes(pathname);
     const isNoNavPage = noNavPages.some(path => pathname.startsWith(path));
+
+    useEffect(() => {
+        if (!isLoadingAuth && user && user.kyc_status !== 'approved' && !isNoNavPage && !isAuthPage) {
+            router.push('/verify-identity');
+        }
+    }, [user, isLoadingAuth, pathname, isNoNavPage, isAuthPage, router]);
 
     if (isAuthPage || isNoNavPage) {
         return (

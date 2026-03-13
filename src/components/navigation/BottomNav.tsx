@@ -13,8 +13,12 @@ const navItems = [
   { icon: Wallet, label: 'Wallet', page: 'wallet' },
 ];
 
+import { useAuth } from '@/lib/AuthContext';
+import { Shield } from 'lucide-react';
+
 export default function BottomNav() {
   const location = useLocation();
+  const { user } = useAuth();
   
   return (
     <nav className={cn(
@@ -30,7 +34,7 @@ export default function BottomNav() {
               key={item.page}
               to={createPageUrl(item.page)}
               className={cn(
-                'relative flex flex-col items-center py-2 px-4 rounded-2xl transition-all',
+                'relative flex flex-col items-center py-2 px-3 rounded-2xl transition-all',
                 isActive ? 'text-primary' : 'text-muted-foreground'
               )}
             >
@@ -45,12 +49,30 @@ export default function BottomNav() {
                 'h-5 w-5 relative z-10 transition-transform',
                 isActive && 'scale-110'
               )} />
-              <span className="text-[10px] mt-1 font-medium relative z-10">
+              <span className="text-[9px] min-[380px]:text-[10px] mt-1 font-medium relative z-10">
                 {item.label}
               </span>
             </Link>
           );
         })}
+
+        {user?.role === 'admin' && (
+            <Link
+              to={createPageUrl('Admin')}
+              className={cn(
+                'relative flex flex-col items-center py-2 px-3 rounded-2xl transition-all',
+                location.pathname === '/admin' ? 'text-primary' : 'text-muted-foreground'
+              )}
+            >
+              <Shield className={cn(
+                'h-5 w-5 relative z-10 transition-transform',
+                location.pathname === '/admin' && 'scale-110'
+              )} />
+              <span className="text-[9px] min-[380px]:text-[10px] mt-1 font-medium relative z-10">
+                Admin
+              </span>
+            </Link>
+        )}
       </div>
     </nav>
   );

@@ -153,33 +153,36 @@ export default function LiveTrading() {
     <div className="min-h-screen pb-24 md:pb-8 bg-background">
       {/* ── TOP BAR ── */}
       <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-xl border-b border-border">
-        <div className="flex items-center justify-between px-4 py-3 gap-3">
+        <div className="flex flex-wrap items-center justify-between px-2 sm:px-4 py-2 sm:py-3 gap-2 sm:gap-3">
           <AssetSelector selected={selectedAsset} onChange={handleAssetChange} />
-          <div className="flex items-center gap-2">
+          
+          <div className="flex items-center gap-1 sm:gap-2">
             {/* Mode toggle */}
             <div className="flex items-center rounded-xl overflow-hidden bg-muted">
               <button
                 onClick={() => setTradeMode('binary')}
                 className={cn(
-                  "flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold transition-all",
+                  "flex items-center gap-1 px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-semibold transition-all",
                   tradeMode === 'binary' ? "bg-primary text-primary-foreground" : "text-muted-foreground"
                 )}
               >
-                <Zap className="h-3.5 w-3.5" /> Binary
+                <Zap className="h-3 sm:h-3.5 w-3 sm:w-3.5" /> <span className="hidden min-[360px]:inline">Binary</span>
+                <span className="min-[360px]:hidden">Bin</span>
               </button>
               <button
                 onClick={() => setTradeMode('advanced')}
                 className={cn(
-                  "flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold transition-all",
+                  "flex items-center gap-1 px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-semibold transition-all",
                   tradeMode === 'advanced' ? "bg-primary text-primary-foreground" : "text-muted-foreground"
                 )}
               >
-                <BarChart2 className="h-3.5 w-3.5" /> Pro
+                <BarChart2 className="h-3 sm:h-3.5 w-3 sm:w-3.5" /> <span className="hidden min-[360px]:inline">Pro</span>
               </button>
             </div>
+            
             <button
               onClick={() => setHistoryOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
+              className="flex items-center justify-center p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-muted text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
             >
               <History className="h-4 w-4" />
               <span className="hidden sm:inline">History</span>
@@ -213,10 +216,9 @@ export default function LiveTrading() {
         </div>
       </header>
 
-      {/* ── MAIN CONTENT ── */}
       <AnimatePresence mode="wait">
         {tradeMode === 'binary' ? (
-          <motion.div key="binary" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="max-w-2xl mx-auto">
+          <motion.div key="binary" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full max-w-2xl mx-auto">
             {/* Chart */}
             <div className="px-3 pt-3">
               <AnimatePresence mode="wait">

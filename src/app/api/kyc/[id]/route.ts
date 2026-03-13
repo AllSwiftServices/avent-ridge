@@ -14,11 +14,16 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Role check
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
     // Security check: only allow users to fetch their own KYC or admins
-    if (user.id !== id) {
-      // In a real app we'd check for admin role here
-      // For now, strict ownership
-      // return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (user.id !== id && profile?.role !== "admin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { data, error } = await supabase
@@ -34,6 +39,55 @@ export async function GET(
     console.error("KYC fetch error:", error);
     return NextResponse.json(
       { message: error.message || "Failed to fetch KYC" },
+      { status: 500 }
+    );
+  }
+}
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const id = (await params).id;
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Role check
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.role !== "admin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { status, rejection_reason } = body;
+
+    const { data, error } = await supabase
+      .from("kyc")
+      .update({
+        status,
+        rejection_reason,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json(data);
+  } catch (error: any) {
+    console.error("KYC update error:", error);
+    return NextResponse.json(
+      { message: error.message || "Failed to update KYC status" },
       { status: 500 }
     );
   }

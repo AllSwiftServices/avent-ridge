@@ -14,8 +14,16 @@ const navItems = [
   { icon: User, label: 'Profile', page: 'profile' },
 ];
 
+const adminItems = [
+  { icon: Shield, label: 'Admin Dashboard', page: 'Admin' },
+];
+
+import { useAuth } from '@/lib/AuthContext';
+import { Shield } from 'lucide-react';
+
 export default function Sidebar() {
   const location = useLocation();
+  const { user } = useAuth();
 
   return (
     <aside className={cn(
@@ -54,6 +62,36 @@ export default function Sidebar() {
             </Link>
           );
         })}
+
+        {user?.role === 'admin' && (
+          <div className="pt-4 mt-4 border-t border-border">
+            <p className="px-4 mb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Admin</p>
+            {adminItems.map((item) => {
+              const isActive = location.pathname === createPageUrl(item.page);
+              return (
+                <Link
+                  key={item.page}
+                  to={createPageUrl(item.page)}
+                  className={cn(
+                    'relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all',
+                    'hover:bg-muted',
+                    isActive ? 'text-primary bg-primary/10' : 'text-muted-foreground'
+                  )}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeSidebar"
+                      className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full"
+                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                    />
+                  )}
+                  <item.icon className="h-5 w-5" />
+                  <span className="font-medium">{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </nav>
 
       <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20">

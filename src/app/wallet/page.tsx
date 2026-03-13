@@ -132,7 +132,7 @@ export default function WalletPage() {
             change={0}
             hideBalance={hideBalance}
             onToggleHide={() => setHideBalance(!hideBalance)}
-            onDeposit={() => showToast.info('Deposit feature coming soon!')}
+            onDeposit={() => navigate(createPageUrl('Wallet/Deposit'))}
             onWithdraw={() => showToast.info('Withdraw feature coming soon!')}
           />
           <WalletCard

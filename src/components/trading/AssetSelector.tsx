@@ -39,19 +39,19 @@ export default function AssetSelector({ selected, onChange }: { selected: any, o
       <button
         onClick={() => setOpen(!open)}
         className={cn(
-          'flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all',
+          'flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all',
           'bg-muted/60 hover:bg-muted border border-border/50',
           'text-left font-semibold'
         )}
       >
         <div className={cn(
-          'w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white',
-          selected?.type === 'crypto' ? 'bg-gradient-to-br from-orange-400 to-amber-500' : 'bg-gradient-to-br from-blue-500 to-indigo-600'
+          'w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-[10px] sm:text-xs font-bold text-white',
+          selected?.type === 'crypto' ? 'bg-linear-to-br from-orange-400 to-amber-500' : 'bg-linear-to-br from-blue-500 to-indigo-600'
         )}>
           {selected?.symbol?.slice(0, 2)}
         </div>
-        <span className="text-base">{displayName}</span>
-        <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', open && 'rotate-180')} />
+        <span className="text-sm sm:text-base">{displayName}</span>
+        <ChevronDown className={cn('h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground transition-transform', open && 'rotate-180')} />
       </button>
 
       <AnimatePresence>
@@ -62,7 +62,7 @@ export default function AssetSelector({ selected, onChange }: { selected: any, o
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
             transition={{ duration: 0.15 }}
             className={cn(
-              'absolute top-full left-0 mt-2 w-64 z-50',
+              'absolute top-full left-0 mt-2 w-[calc(100vw-2rem)] sm:w-64 z-50',
               'bg-card border border-border rounded-2xl shadow-2xl overflow-hidden'
             )}
           >
@@ -99,7 +99,7 @@ export default function AssetSelector({ selected, onChange }: { selected: any, o
                       >
                         <div className={cn(
                           'w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white',
-                          type === 'crypto' ? 'bg-gradient-to-br from-orange-400 to-amber-500' : 'bg-gradient-to-br from-blue-500 to-indigo-600'
+                          type === 'crypto' ? 'bg-linear-to-br from-orange-400 to-amber-500' : 'bg-linear-to-br from-blue-500 to-indigo-600'
                         )}>
                           {asset.symbol.slice(0, 2)}
                         </div>

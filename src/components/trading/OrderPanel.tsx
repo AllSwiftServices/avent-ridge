@@ -185,7 +185,7 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
         </div>
 
         {/* ── DURATION PILLS ── */}
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 min-[400px]:grid-cols-4 gap-2">
           {DURATIONS.map(d => (
             <button
               key={d.value}

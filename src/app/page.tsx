@@ -70,7 +70,7 @@ export default function Home() {
           otp,
           name: !isLogin ? name : undefined,
           type: isLogin ? 'login' : 'signup',
-          password: !isLogin ? password : undefined,
+          password: password, // Send password always to enable server-side sign-in
         }),
       });
 
@@ -282,7 +282,7 @@ export default function Home() {
                   className="space-y-8"
                 >
                   <div className="text-center">
-                    <h2 className="text-2xl font-bold mb-2">Verify Email</h2>
+                    <h2 className="text-2xl font-bold mb-2">{isLogin ? 'Enter OTP' : 'Verify Email'}</h2>
                     <p className="text-sm text-muted-foreground">
                       Enter the 6-digit code sent to <span className="text-foreground font-semibold">{email}</span>
                     </p>

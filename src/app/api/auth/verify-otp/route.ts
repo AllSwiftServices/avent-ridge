@@ -97,22 +97,23 @@ export async function POST(request: NextRequest) {
         .eq("email", normalizedEmail);
     }
 
-    // profile management... existing logic ...
-
     // NEW: Perform server-side sign-in to set session cookies
     // This is required because we are removing Supabase from the client
     if (password) {
-      const { error: signInError } = await (await import("@/lib/supabase-server")).createClient().then(auth => auth.auth.signInWithPassword({
-        email: normalizedEmail,
-        password: password,
-      }));
+      try {
+        const supabase = await (await import("@/lib/supabase-server")).createClient();
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password: password,
+        });
 
-      if (signInError) {
-        console.error(`[AUTH] Error setting session for ${normalizedEmail}:`, signInError);
-        // We don't want to fail the whole request if sign-in fails, 
-        // as the user is verified, but we should log it.
-      } else {
-        console.log(`[AUTH] Session cookies set for ${normalizedEmail}`);
+        if (signInError) {
+          console.error(`[AUTH] Error setting session for ${normalizedEmail}:`, signInError);
+        } else {
+          console.log(`[AUTH] Session cookies set for ${normalizedEmail}`);
+        }
+      } catch (err) {
+        console.error(`[AUTH] Unexpected error during server-side sign-in:`, err);
       }
     }
 

@@ -5,41 +5,39 @@ export async function GET() {
   try {
     const supabase = await createClient();
     
-    // Get the current session from Supabase SSR
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    // Get the current user from Supabase SSR
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     
-    if (sessionError || !session?.user) {
+    if (userError || !user) {
       return NextResponse.json(
         { success: true, user: null },
         { status: 200 }
       );
     }
 
-    // Fetch profile from public.users using admin client (bypass RLS if needed)
+    // Fetch profile from public.users
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('users')
       .select('*')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single();
 
-    if (profileError) {
-      console.error('[AUTH] Profile fetch error:', profileError);
-      // Return auth user even if profile fails
-      return NextResponse.json({
-        success: true,
-        user: {
-          ...session.user,
-          user_metadata: session.user.user_metadata
-        }
-      });
-    }
+    // Fetch KYC status
+    const { data: kycData } = await supabaseAdmin
+      .from('kyc')
+      .select('status')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    const userData = {
+      ...user,
+      ...(profile || {}),
+      kyc_status: kycData?.status || 'not_started'
+    };
 
     return NextResponse.json({
       success: true,
-      user: {
-        ...session.user,
-        ...profile
-      }
+      user: userData
     });
   } catch (error: any) {
     console.error('[AUTH] Unexpected session error:', error);

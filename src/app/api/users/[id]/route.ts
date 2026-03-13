@@ -32,6 +32,60 @@ export async function GET(
   }
 }
 
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const id = (await params).id;
+    const supabase = await createClient();
+    const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !currentUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Role check
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", currentUser.id)
+      .single();
+
+    // Only allow updating own profile or admin updating anyone
+    if (currentUser.id !== id && profile?.role !== "admin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const body = await request.json();
+    
+    // Safety check: only admins can update roles
+    if (body.role && profile?.role !== "admin") {
+      delete body.role;
+    }
+
+    const { data, error } = await supabase
+      .from("users")
+      .update({
+        ...body,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json(data);
+  } catch (error: any) {
+    console.error("User update error:", error);
+    return NextResponse.json(
+      { message: error.message || "Failed to update user" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

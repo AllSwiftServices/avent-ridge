@@ -103,14 +103,14 @@ export default function CandlestickChart({ basePrice, isPositive }: { basePrice:
   return (
     <div className="w-full">
       {/* Controls */}
-      <div className="flex items-center justify-between mb-3 gap-2">
-        <div className="flex gap-1">
+      <div className="flex flex-wrap items-center justify-between mb-3 gap-2">
+        <div className="flex gap-0.5 sm:gap-1">
           {TIME_FILTERS.map(tf => (
             <button
               key={tf}
               onClick={() => setTimeFilter(tf)}
               className={cn(
-                'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
+                'px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-semibold transition-all',
                 timeFilter === tf
                   ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -120,11 +120,11 @@ export default function CandlestickChart({ basePrice, isPositive }: { basePrice:
             </button>
           ))}
         </div>
-        <div className="flex gap-1 p-1 bg-muted rounded-xl">
+        <div className="flex gap-0.5 p-0.5 sm:p-1 bg-muted rounded-xl">
           <button
             onClick={() => setChartType('candle')}
             className={cn(
-              'px-3 py-1 rounded-lg text-xs font-medium transition-all',
+              'px-2 sm:px-3 py-1 rounded-lg text-[10px] sm:text-xs font-medium transition-all',
               chartType === 'candle' ? 'bg-background shadow text-foreground' : 'text-muted-foreground'
             )}
           >
@@ -133,7 +133,7 @@ export default function CandlestickChart({ basePrice, isPositive }: { basePrice:
           <button
             onClick={() => setChartType('line')}
             className={cn(
-              'px-3 py-1 rounded-lg text-xs font-medium transition-all',
+              'px-2 sm:px-3 py-1 rounded-lg text-[10px] sm:text-xs font-medium transition-all',
               chartType === 'line' ? 'bg-background shadow text-foreground' : 'text-muted-foreground'
             )}
           >

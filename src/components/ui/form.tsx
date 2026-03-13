@@ -22,7 +22,7 @@ const FormField = <
 >(
   {
     ...props
-  }: import("react-hook-form").UseControllerProps<TFieldValues, TName>
+  }: import("react-hook-form").ControllerProps<TFieldValues, TName>
 ) => {
   return (
     <FormFieldContext.Provider value={{ name: props.name }}>

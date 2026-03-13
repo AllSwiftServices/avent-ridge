@@ -212,8 +212,8 @@ const ChartTooltipContent = React.forwardRef<
                         style={
                           {
                             "--color-bg": indicatorColor,
-                            "--color-border": indicatorColor
-                          }
+                            "--color-border": indicatorColor,
+                          } as React.CSSProperties
                         } />
                     )
                   )}
@@ -249,11 +249,12 @@ const ChartLegend = RechartsPrimitive.Legend
 
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"div"> &
-    Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
-      hideIcon?: boolean
-      nameKey?: string
-    }
+  React.HTMLAttributes<HTMLDivElement> & {
+    payload?: any[]
+    verticalAlign?: "top" | "bottom"
+    hideIcon?: boolean
+    nameKey?: string
+  }
 >(
   (
     { className, hideIcon = false, payload, verticalAlign = "bottom", nameKey },
@@ -304,7 +305,7 @@ ChartLegendContent.displayName = "ChartLegend"
 // Helper to extract item config from a payload.
 function getPayloadConfigFromPayload(
   config: ChartConfig,
-  payload: unknown,
+  payload: any,
   key: string
 ) {
   if (typeof payload !== "object" || payload === null) {

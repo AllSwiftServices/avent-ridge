@@ -12,39 +12,87 @@ import { useNavigate } from '@/lib/react-router-shim';
 import { createPageUrl } from '@/utils';
 import { useTheme } from '@/components/ui/ThemeProvider';
 import { Switch } from '@/components/ui/switch';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
+import { showToast } from '@/lib/toast';
+
+const ProfileMenuItem = React.memo(({ item, isLast }: { item: any, isLast: boolean }) => {
+  return (
+    <div
+      onClick={() => item.action()}
+      className={cn(
+        'w-full flex items-center justify-between p-4 px-6 transition-all',
+        'hover:bg-muted/30 cursor-pointer active:scale-[0.99]',
+        !isLast && 'border-b border-border'
+      )}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          item.action();
+        }
+      }}
+    >
+      <div className="flex items-center gap-4">
+        <div className="w-10 h-10 rounded-2xl bg-muted/50 flex items-center justify-center">
+          <item.icon className="h-5 w-5 text-muted-foreground" />
+        </div>
+        <span className="font-semibold text-sm">{item.label}</span>
+      </div>
+      <div className="flex items-center gap-3">
+        {item.badge && (
+          <span className={cn('text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider', item.badgeColor)}>
+            {item.badge}
+          </span>
+        )}
+        {item.toggle ? (
+          <div onClick={(e) => e.stopPropagation()}>
+            <Switch 
+              checked={item.checked} 
+              onCheckedChange={item.action} 
+            />
+          </div>
+        ) : (
+          <ChevronRight className="h-4 w-4 text-muted-foreground opacity-50" />
+        )}
+      </div>
+    </div>
+  );
+});
+
+ProfileMenuItem.displayName = 'ProfileMenuItem';
 
 export default function ProfilePage() {
   const { user, logout, isLoadingAuth, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState<any>({});
+  const [formData, setFormData] = useState<any>({ name: '' });
   const [kycRecord, setKycRecord] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
   const { theme, toggleTheme } = useTheme();
-  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!isLoadingAuth && !user) {
       navigate(createPageUrl('Home'));
     } else if (user) {
       setFormData({
-        name: user.name || '',
+        name: user.name || user.user_metadata?.full_name || '',
         email: user.email || '',
       });
-      loadKyc(); // Keep loading KYC if user is available
+      loadKyc();
     }
   }, [user, isLoadingAuth, navigate]);
 
   const loadKyc = async () => {
     try {
       if (!user) return;
-      // Assuming KYC data is still fetched via direct supabase for now,
-      // or this would be replaced by an API call as well.
-      // For this specific instruction, only the user update part is changed.
-      const { data, error } = await api.get(`/kyc/${user.id}`); // Example API call for KYC
+      const { data } = await api.get(`/kyc/${user.id}`);
       if (data) setKycRecord(data);
-      if (error) throw error;
     } catch (error) {
       console.error('Error loading KYC:', error);
     }
@@ -54,22 +102,35 @@ export default function ProfilePage() {
     e.preventDefault();
     if (!user) return;
 
+    setSaving(true);
     try {
-      const { error } = await api.put(`/users/${user.id}`, formData);
+      const { error } = await api.put(`/users/${user.id}`, {
+        name: formData.name,
+      });
       if (error) throw error;
 
       await refreshUser();
       setIsEditing(false);
-      // toast.success('Profile updated successfully'); // Assuming toast is available
+      showToast.success('Profile updated successfully');
     } catch (error: any) {
-      // toast.error(error.message); // Assuming toast is available
+      showToast.error(error.message || 'Failed to update profile');
       console.error('Error updating profile:', error);
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleLogout = async () => {
-    await logout();
+    const toastId = showToast.loading('Logging out...');
+    try {
+      await logout();
+      showToast.success('Logged out', { id: toastId });
+    } catch (error) {
+      showToast.error('Logout failed', { id: toastId });
+    }
   };
+
+  const comingSoon = React.useCallback(() => showToast.info('This feature is coming soon!'), []);
 
   interface MenuItem {
     icon: any;
@@ -86,49 +147,57 @@ export default function ProfilePage() {
     items: MenuItem[];
   }
 
-  const menuItems: MenuSection[] = [
+  const menuItems = React.useMemo<MenuSection[]>(() => [
     {
       title: 'Account',
       items: [
-        { icon: User, label: 'Personal Information', action: () => router.push('/verify-identity') },
+        { icon: User, label: 'Personal Information', action: () => navigate(createPageUrl('verify-identity')) },
         {
           icon: Shield,
           label: 'KYC Verification',
           badge: kycRecord?.status === 'approved' ? '✔ Verified' : kycRecord?.status === 'pending' ? '⏳ Pending' : kycRecord?.status === 'rejected' ? '✖ Failed' : 'Not Started',
           badgeColor: kycRecord?.status === 'approved' ? 'text-primary bg-primary/10' : kycRecord?.status === 'rejected' ? 'text-destructive bg-destructive/10' : 'text-muted-foreground bg-muted',
-          action: () => router.push('/verify-identity')
+          action: () => navigate(createPageUrl('verify-identity'))
         },
-        { icon: Lock, label: 'Security Settings', action: () => { } },
+        { icon: Lock, label: 'Security Settings', action: comingSoon },
       ]
     },
     {
       title: 'Preferences',
       items: [
         {
-          icon: theme === 'dark' ? Moon : Sun,
+          icon: !mounted ? Moon : (theme === 'dark' ? Moon : Sun),
           label: 'Dark Mode',
           toggle: true,
-          checked: theme === 'dark',
+          checked: mounted && theme === 'dark',
           action: toggleTheme
         },
-        { icon: Bell, label: 'Notifications', action: () => { } },
+        { icon: Bell, label: 'Notifications', action: comingSoon },
       ]
     },
     {
       title: 'Support',
       items: [
-        { icon: HelpCircle, label: 'Help Center', action: () => { } },
-        { icon: FileText, label: 'Terms & Privacy', action: () => { } },
+        { icon: HelpCircle, label: 'Help Center', action: comingSoon },
+        { icon: FileText, label: 'Terms & Privacy', action: comingSoon },
       ]
     }
-  ];
+  ], [mounted, theme, kycRecord, navigate, toggleTheme, comingSoon]);
 
   return (
     <div className="min-h-screen pb-24 md:pb-8 bg-background text-foreground">
       {/* Header */}
       <header className="sticky top-0 z-30 backdrop-blur-xl border-b bg-background/95 border-border">
-        <div className="px-4 py-4">
+        <div className="px-4 py-4 flex items-center justify-between">
           <h1 className="font-bold text-2xl">Profile</h1>
+          {!isEditing && (
+            <button 
+              onClick={() => setIsEditing(true)}
+              className="px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-colors"
+            >
+              Edit
+            </button>
+          )}
         </div>
       </header>
 
@@ -137,24 +206,55 @@ export default function ProfilePage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-6 rounded-3xl bg-card border border-border"
+          className="p-6 rounded-3xl bg-card border border-border shadow-sm"
         >
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center font-bold text-2xl bg-primary text-primary-foreground">
-              {user?.user_metadata?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
-            </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-bold">{user?.user_metadata?.full_name || 'User'}</h2>
-              <p className="text-sm text-muted-foreground">{user?.email}</p>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-                {kycRecord?.status === 'approved' && <div className="flex items-center gap-1"><CheckCircle className="h-4 w-4 text-primary" /><span className="text-xs font-medium text-primary">Verified</span></div>}
-                {kycRecord?.status === 'pending' && <div className="flex items-center gap-1"><Clock className="h-4 w-4 text-primary" /><span className="text-xs font-medium text-primary">Pending AI Verification</span></div>}
-                {kycRecord?.status === 'rejected' && <div className="flex items-center gap-1"><X className="h-4 w-4 text-destructive" /><span className="text-xs font-medium text-destructive">Verification Failed</span></div>}
-                {(user as any)?.email_verified && <div className="flex items-center gap-1"><Mail className="h-4 w-4 text-primary" /><span className="text-xs font-semibold text-primary">Email Verified</span></div>}
-                {!kycRecord && !(user as any)?.email_verified && <div className="flex items-center gap-1"><Shield className="h-4 w-4 text-muted-foreground" /><span className="text-xs text-muted-foreground font-medium">Not Verified</span></div>}
+          {isEditing ? (
+            <form onSubmit={handleUpdateProfile} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Full Name</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full bg-muted/50 border border-border rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary transition-all"
+                  placeholder="Enter your name"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="flex-1 py-3 rounded-2xl border border-border font-bold text-sm hover:bg-muted transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 py-3 rounded-2xl bg-primary text-primary-foreground font-bold text-sm hover:opacity-90 transition-all disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-3xl flex items-center justify-center font-bold text-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+                {user?.user_metadata?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-xl font-bold truncate">{user?.user_metadata?.full_name || 'User'}</h2>
+                <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
+                  {kycRecord?.status === 'approved' && <div className="flex items-center gap-1"><CheckCircle className="h-4 w-4 text-primary" /><span className="text-[10px] font-bold text-primary uppercase tracking-wider">Verified</span></div>}
+                  {kycRecord?.status === 'pending' && <div className="flex items-center gap-1"><Clock className="h-4 w-4 text-amber-500" /><span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">Pending</span></div>}
+                  {kycRecord?.status === 'rejected' && <div className="flex items-center gap-1"><X className="h-4 w-4 text-destructive" /><span className="text-[10px] font-bold text-destructive uppercase tracking-wider">Failed</span></div>}
+                  {(user as any)?.email_verified && <div className="flex items-center gap-1 text-primary"><Mail className="h-4 w-4" /><span className="text-[10px] font-bold uppercase tracking-wider">Email Locked</span></div>}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </motion.div>
 
         {/* Menu Sections */}
@@ -170,46 +270,11 @@ export default function ProfilePage() {
             </h3>
             <div className="rounded-3xl bg-card border border-border overflow-hidden">
               {section.items.map((item, itemIndex) => (
-                <div
-                  key={item.label}
-                  onClick={(e) => {
-                    // Prevent double triggering if clicking the switch directly
-                    if (item.toggle && (e.target as HTMLElement).closest('button')) return;
-                    item.action();
-                  }}
-                  className={cn(
-                    'w-full flex items-center justify-between p-4 px-6',
-                    'hover:bg-muted/30 transition-colors cursor-pointer',
-                    itemIndex !== section.items.length - 1 && 'border-b border-border'
-                  )}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      item.action();
-                    }
-                  }}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-2xl bg-muted/50 flex items-center justify-center">
-                      <item.icon className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <span className="font-semibold text-sm">{item.label}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {item.badge && (
-                      <span className={cn('text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider', item.badgeColor)}>
-                        {item.badge}
-                      </span>
-                    )}
-                    {item.toggle ? (
-                      <Switch checked={item.checked} onCheckedChange={item.action} />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground opacity-50" />
-                    )}
-                  </div>
-                </div>
+                <ProfileMenuItem 
+                  key={item.label} 
+                  item={item} 
+                  isLast={itemIndex === section.items.length - 1} 
+                />
               ))}
             </div>
           </motion.div>

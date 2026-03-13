@@ -90,11 +90,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = useCallback(async () => {
     try {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' });
       setUser(null);
       router.push('/');
+      router.refresh();
     } catch (error: any) {
       console.error('Error logging out:', error);
+      setUser(null);
+      router.push('/');
     }
   }, [router]);
 

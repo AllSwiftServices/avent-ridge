@@ -7,6 +7,7 @@ import { CustomToast } from '@/components/ui/CustomToast';
 interface ToastOptions {
   description?: string;
   duration?: number;
+  id?: string | number;
 }
 
 export const toast = {
@@ -18,7 +19,7 @@ export const toast = {
         description={options?.description} 
         onClose={() => SonnerToast.dismiss(t)} 
       />
-    ), { duration: options?.duration || 4000 });
+    ), { duration: options?.duration || 4000, id: options?.id });
   },
   error: (message: string, options?: ToastOptions) => {
     SonnerToast.custom((t) => (
@@ -28,7 +29,7 @@ export const toast = {
         description={options?.description} 
         onClose={() => SonnerToast.dismiss(t)} 
       />
-    ), { duration: options?.duration || 5000 });
+    ), { duration: options?.duration || 5000, id: options?.id });
   },
   info: (message: string, options?: ToastOptions) => {
     SonnerToast.custom((t) => (
@@ -38,7 +39,7 @@ export const toast = {
         description={options?.description} 
         onClose={() => SonnerToast.dismiss(t)} 
       />
-    ), { duration: options?.duration || 4000 });
+    ), { duration: options?.duration || 4000, id: options?.id });
   },
   loading: (message: string, options?: ToastOptions) => {
     return SonnerToast.custom((t) => (
@@ -48,7 +49,7 @@ export const toast = {
         description={options?.description} 
         onClose={() => SonnerToast.dismiss(t)} 
       />
-    ), { duration: options?.duration || 100000 });
+    ), { duration: options?.duration || 100000, id: options?.id });
   },
   dismiss: (id?: string | number) => {
     SonnerToast.dismiss(id);

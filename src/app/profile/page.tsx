@@ -170,34 +170,46 @@ export default function ProfilePage() {
             </h3>
             <div className="rounded-3xl bg-card border border-border overflow-hidden">
               {section.items.map((item, itemIndex) => (
-                <button
+                <div
                   key={item.label}
-                  onClick={item.action}
+                  onClick={(e) => {
+                    // Prevent double triggering if clicking the switch directly
+                    if (item.toggle && (e.target as HTMLElement).closest('button')) return;
+                    item.action();
+                  }}
                   className={cn(
-                    'w-full flex items-center justify-between p-4',
-                    'hover:bg-muted/50 transition-colors',
+                    'w-full flex items-center justify-between p-4 px-6',
+                    'hover:bg-muted/30 transition-colors cursor-pointer',
                     itemIndex !== section.items.length - 1 && 'border-b border-border'
                   )}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      item.action();
+                    }
+                  }}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-2xl bg-muted/50 flex items-center justify-center">
                       <item.icon className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <span className="font-medium">{item.label}</span>
+                    <span className="font-semibold text-sm">{item.label}</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     {item.badge && (
-                      <span className={cn('text-xs font-medium px-2 py-1 rounded-full', item.badgeColor)}>
+                      <span className={cn('text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider', item.badgeColor)}>
                         {item.badge}
                       </span>
                     )}
                     {item.toggle ? (
                       <Switch checked={item.checked} onCheckedChange={item.action} />
                     ) : (
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                      <ChevronRight className="h-4 w-4 text-muted-foreground opacity-50" />
                     )}
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           </motion.div>

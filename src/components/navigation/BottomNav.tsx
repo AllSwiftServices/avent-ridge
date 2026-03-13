@@ -6,11 +6,11 @@ import { cn } from '@/lib/utils';
 import { createPageUrl } from '@/utils';
 
 const navItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', page: 'Dashboard' },
-  { icon: TrendingUp, label: 'Markets', page: 'Markets' },
-  { icon: Radio, label: 'Live', page: 'LiveTrading' },
-  { icon: PieChart, label: 'Portfolio', page: 'Portfolio' },
-  { icon: Wallet, label: 'Wallet', page: 'WalletPage' },
+  { icon: LayoutDashboard, label: 'Dashboard', page: 'dashboard' },
+  { icon: TrendingUp, label: 'Markets', page: 'markets' },
+  { icon: Radio, label: 'Live', page: 'live-trading' },
+  { icon: PieChart, label: 'Portfolio', page: 'portfolio' },
+  { icon: Wallet, label: 'Wallet', page: 'wallet' },
 ];
 
 export default function BottomNav() {

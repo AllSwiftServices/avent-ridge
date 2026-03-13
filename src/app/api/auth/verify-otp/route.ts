@@ -5,7 +5,7 @@ import { sendWelcomeEmail } from "@/lib/email";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, otp, type = "login", name } = body;
+    const { email, otp, type = "login", name, password } = body;
 
     if (!email || !otp) {
       return NextResponse.json(
@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+    console.log(`[AUTH] Verifying OTP for: ${normalizedEmail}`);
 
     // Verify OTP from verification_codes table
     const { data: otpRecord, error: otpError } = await supabaseAdmin
@@ -22,9 +23,18 @@ export async function POST(request: NextRequest) {
       .select("*")
       .eq("email", normalizedEmail)
       .eq("code", otp)
-      .single();
+      .maybeSingle();
 
-    if (otpError || !otpRecord) {
+    if (otpError) {
+      console.error(`[AUTH] Database error checking OTP for ${normalizedEmail}:`, otpError);
+      return NextResponse.json(
+        { success: false, error: "Database error. Please try again later." },
+        { status: 500 },
+      );
+    }
+
+    if (!otpRecord) {
+      console.warn(`[AUTH] Invalid OTP attempt for ${normalizedEmail}: ${otp}`);
       return NextResponse.json(
         { success: false, error: "Invalid or expired verification code" },
         { status: 401 },
@@ -45,26 +55,21 @@ export async function POST(request: NextRequest) {
 
     // Profile management
     if (type === "signup") {
+      console.log(`[AUTH] Creating new user for signup: ${normalizedEmail}`);
       // Create new user in Supabase Auth
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: normalizedEmail,
         email_confirm: true,
         user_metadata: { name },
-        // For simplicity in this demo, we use a generic password or the one provided
-        // In a real OTP-only flow, we would manage passwords/sessions differently
-        password: Math.random().toString(36).slice(-12), 
+        password: password || Math.random().toString(36).slice(-12), 
       });
 
       if (authError) {
-        // If user already exists in Auth but not in our users table, we try to fix it
-        if (authError.message.includes("already registered")) {
-            // Logic to handle existing auth user without profile
-        } else {
-            throw authError;
-        }
+        console.error(`[AUTH] Error creating auth user for ${normalizedEmail}:`, authError);
+        throw authError;
       }
-
       if (authData.user) {
+        console.log(`[AUTH] Auth user created: ${authData.user.id}. Creating profile...`);
         // Create user profile in public.users
         const { error: profileError } = await supabaseAdmin.from("users").insert({
           id: authData.user.id,
@@ -74,12 +79,17 @@ export async function POST(request: NextRequest) {
           role: "buyer",
         });
 
-        if (profileError) console.error("Error creating profile:", profileError);
+        if (profileError) {
+          console.error(`[AUTH] Error creating profile for ${authData.user.id}:`, profileError);
+        } else {
+          console.log(`[AUTH] Profile created successfully for ${authData.user.id}`);
+        }
 
         // Send welcome email
         await sendWelcomeEmail(normalizedEmail, name || "there");
       }
     } else {
+      console.log(`[AUTH] Login successful for: ${normalizedEmail}`);
       // Login: Update email_verified status if not already
       await supabaseAdmin
         .from("users")

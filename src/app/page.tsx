@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { AnimatePresence } from 'framer-motion';
-import toast from 'react-hot-toast';
+import { showToast } from '@/lib/toast';
 
 export default function Home() {
   const [isLogin, setIsLogin] = useState(true);
@@ -49,10 +49,10 @@ export default function Home() {
         throw new Error(data.error || 'Failed to send verification code');
       }
 
-      toast.success('Verification code sent to your email!');
+      showToast.success('Verification code sent to your email!');
       setStep('otp');
     } catch (error: any) {
-      toast.error(error.message || 'An unexpected error occurred.');
+      showToast.error(error.message || 'An unexpected error occurred.');
     } finally {
       setIsLoading(false);
     }
@@ -71,6 +71,7 @@ export default function Home() {
           otp,
           name: !isLogin ? name : undefined,
           type: isLogin ? 'login' : 'signup',
+          password: !isLogin ? password : undefined,
         }),
       });
 
@@ -88,11 +89,11 @@ export default function Home() {
 
       if (signInError) throw signInError;
 
-      toast.success('Success! Entering dashboard...');
+      showToast.success('Success! Entering dashboard...');
       await refreshUser();
       router.push('/dashboard');
     } catch (error: any) {
-      toast.error(error.message || 'Verification failed. Please check the code.');
+      showToast.error(error.message || 'Verification failed. Please check the code.');
     } finally {
       setIsLoading(false);
     }
@@ -105,7 +106,7 @@ export default function Home() {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
-    if (error) toast.error(error.message);
+    if (error) showToast.error(error.message);
   };
 
   if (isLoadingAuth) {

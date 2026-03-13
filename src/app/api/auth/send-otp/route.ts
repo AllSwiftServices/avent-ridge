@@ -22,18 +22,29 @@ export async function POST(request: NextRequest) {
 
     // If login, check if user exists first
     if (type === "login") {
+      console.log(`[AUTH] Checking if user exists: ${normalizedEmail}`);
       const { data: existingUser, error: userError } = await supabaseAdmin
         .from("users")
         .select("id")
         .eq("email", normalizedEmail)
-        .single();
+        .maybeSingle();
 
-      if (userError || !existingUser) {
+      if (userError) {
+        console.error(`[AUTH] Database error checking user ${normalizedEmail}:`, userError);
+        return NextResponse.json(
+          { success: false, error: "Database error. Please try again later." },
+          { status: 500 },
+        );
+      }
+
+      if (!existingUser) {
+        console.warn(`[AUTH] Login attempt for non-existent user: ${normalizedEmail}`);
         return NextResponse.json(
           { success: false, error: "No account found with this email. Please sign up first." },
           { status: 404 },
         );
       }
+      console.log(`[AUTH] User found: ${existingUser.id}`);
     }
 
     // Generate OTP
@@ -59,7 +70,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Send OTP email
+    console.log(`[AUTH] Sending OTP email to: ${normalizedEmail}`);
     await sendOtpEmail(normalizedEmail, otp);
+    console.log(`[AUTH] OTP email sent successfully to: ${normalizedEmail}`);
 
     return NextResponse.json({
       success: true,

@@ -5,6 +5,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from '@/components/navigation/Sidebar';
 import BottomNav from '@/components/navigation/BottomNav';
 import QuickTradeButton from '@/components/common/QuickTradeButton';
+import { PwaInstallPrompt } from '@/components/common/PwaInstallPrompt';
+import { NotificationPrompt } from '@/components/common/NotificationPrompt';
 import { createPageUrl } from '@/utils';
 import { useAuth } from '@/lib/AuthContext';
 import { useEffect } from 'react';
@@ -50,6 +52,8 @@ export default function AppContent({ children }: { children: React.ReactNode }) 
                 <BottomNav />
             </Suspense>
             <QuickTradeButton onClick={() => router.push(createPageUrl('Markets'))} />
+            <PwaInstallPrompt />
+            <NotificationPrompt />
         </div>
     );
 }

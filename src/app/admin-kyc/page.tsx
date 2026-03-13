@@ -79,7 +79,7 @@ export default function AdminKYCPage() {
 
     setIsVerifying(true);
     try {
-      const { error } = await api.patch(`/kyc/${id}`, {
+      const { error } = await api.post(`/kyc/${id}`, {
         status,
         rejection_reason: status === 'rejected' ? rejectReason : null
       });
@@ -329,14 +329,14 @@ export default function AdminKYCPage() {
                                     onClick={() => handleUpdateStatus(selectedSubmission.user_id, 'approved')}
                                     className="h-12 rounded-2xl bg-primary text-primary-foreground font-bold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-50"
                                 >
-                                    <CheckCircle className="h-5 w-5" /> Approve KYC
+                                    {isVerifying ? <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <CheckCircle className="h-5 w-5" />} Approve KYC
                                 </button>
                                 <button 
                                     disabled={isVerifying}
                                     onClick={() => handleUpdateStatus(selectedSubmission.user_id, 'rejected')}
                                     className="h-12 rounded-2xl bg-destructive text-destructive-foreground font-bold hover:bg-destructive/90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-destructive/20 disabled:opacity-50"
                                 >
-                                    <XCircle className="h-5 w-5" /> Reject KYC
+                                    {isVerifying ? <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <XCircle className="h-5 w-5" />} Reject KYC
                                 </button>
                             </div>
                         </section>

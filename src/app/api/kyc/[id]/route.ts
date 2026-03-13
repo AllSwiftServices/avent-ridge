@@ -110,3 +110,6 @@ export async function PATCH(
     );
   }
 }
+
+// POST is an alias for PATCH to support simpler admin clients
+export { PATCH as POST };

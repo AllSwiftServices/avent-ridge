@@ -137,7 +137,7 @@ export default function AdminDashboard() {
     }
     setProcessing(true);
     try {
-      const { error } = await api.patch(`/deposits/${id}`, { status, rejection_reason: rejectReason });
+      const { error } = await api.post(`/deposits/${id}`, { status, rejection_reason: rejectReason });
       if (error) throw error;
       toast.success(`Deposit ${status}`);
       setSelectedDeposit(null);
@@ -150,14 +150,14 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleUpdateKYC = async (id: string, status: 'approved' | 'rejected') => {
+  const handleUpdateKYC = async (userId: string, status: 'approved' | 'rejected') => {
       if (status === 'rejected' && !rejectReason) {
           toast.error("Please provide a rejection reason");
           return;
       }
       setProcessing(true);
       try {
-          const { error } = await api.patch(`/kyc/${id}`, { status, rejection_reason: rejectReason });
+          const { error } = await api.post(`/kyc/${userId}`, { status, rejection_reason: rejectReason });
           if (error) throw error;
           toast.success(`KYC ${status}`);
           setSelectedKYC(null);
@@ -624,8 +624,22 @@ export default function AdminDashboard() {
                                 className="w-full p-4 bg-muted/50 border border-border rounded-2xl text-sm min-h-[80px]"
                               />
                               <div className="grid grid-cols-2 gap-4">
-                                  <button onClick={() => handleUpdateKYC(selectedKYC.id, 'approved')} disabled={processing} className="h-12 bg-primary text-primary-foreground font-bold rounded-2xl">Approve</button>
-                                  <button onClick={() => handleUpdateKYC(selectedKYC.id, 'rejected')} disabled={processing} className="h-12 bg-destructive text-destructive-foreground font-bold rounded-2xl">Reject</button>
+                                  <button
+                                    onClick={() => handleUpdateKYC(selectedKYC.user_id, 'approved')}
+                                    disabled={processing}
+                                    className="h-12 bg-primary text-primary-foreground font-bold rounded-2xl flex items-center justify-center gap-2 disabled:opacity-60 hover:opacity-90 transition-all active:scale-95"
+                                  >
+                                    {processing ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                                    Approve
+                                  </button>
+                                  <button
+                                    onClick={() => handleUpdateKYC(selectedKYC.user_id, 'rejected')}
+                                    disabled={processing}
+                                    className="h-12 bg-destructive text-destructive-foreground font-bold rounded-2xl flex items-center justify-center gap-2 disabled:opacity-60 hover:opacity-90 transition-all active:scale-95"
+                                  >
+                                    {processing ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                                    Reject
+                                  </button>
                               </div>
                           </div>
                       ) : (

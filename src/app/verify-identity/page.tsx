@@ -38,7 +38,7 @@ function UploadBox({ label, value, onChange, hint }: { label: string, value: str
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Upload failed');
       
-      onChange(result.publicUrl);
+      onChange(result.url);
       toast.success('Uploaded!', { id: toastId });
     } catch (error: any) {
       toast.error('Upload failed: ' + error.message, { id: toastId });

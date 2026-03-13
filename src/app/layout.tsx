@@ -13,6 +13,19 @@ const geistMono = { variable: "--font-geist-mono" };
 export const metadata: Metadata = {
   title: "Avent Ridge",
   description: "Avent Ridge Trading Platform",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    title: "Avent Ridge",
+    statusBarStyle: "black-translucent",
+  },
+};
+
+export const viewport = {
+  themeColor: "#4f46e5",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

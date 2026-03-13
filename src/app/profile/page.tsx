@@ -12,6 +12,7 @@ import { useNavigate } from '@/lib/react-router-shim';
 import { createPageUrl } from '@/utils';
 import { useTheme } from '@/components/ui/ThemeProvider';
 import { Switch } from '@/components/ui/switch';
+import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { useAuth } from '@/lib/AuthContext';
 import { showToast } from '@/lib/toast';
 
@@ -71,6 +72,8 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+
+  const { isSubscribed, subscribeToPush, unsubscribeFromPush, isSupported } = usePushNotifications();
 
   useEffect(() => {
     setMounted(true);
@@ -140,6 +143,21 @@ export default function ProfilePage() {
 
   const comingSoon = React.useCallback(() => showToast.info('This feature is coming soon!'), []);
 
+  const handleNotificationToggle = async () => {
+    try {
+      if (isSubscribed) {
+        await unsubscribeFromPush();
+        showToast.success('Notifications disabled');
+      } else {
+        const toastId = showToast.loading('Enabling notifications...');
+        await subscribeToPush();
+        showToast.success('Notifications enabled', { id: toastId });
+      }
+    } catch (error: any) {
+      showToast.error(error.message || 'Failed to update notification settings');
+    }
+  };
+
   interface MenuItem {
     icon: any;
     label: string;
@@ -180,7 +198,13 @@ export default function ProfilePage() {
           checked: mounted && theme === 'dark',
           action: toggleTheme
         },
-        { icon: Bell, label: 'Notifications', action: comingSoon },
+        {
+          icon: Bell, 
+          label: 'Notifications', 
+          toggle: true,
+          checked: isSubscribed,
+          action: isSupported ? handleNotificationToggle : () => showToast.error('Push notifications are not supported on this browser.')
+        },
       ]
     },
     {
@@ -190,7 +214,7 @@ export default function ProfilePage() {
         { icon: FileText, label: 'Terms & Privacy', action: comingSoon },
       ]
     }
-  ], [mounted, theme, kycRecord, navigate, toggleTheme, comingSoon]);
+  ], [mounted, theme, kycRecord, navigate, toggleTheme, comingSoon, isSubscribed, isSupported]);
 
   return (
     <div className="min-h-screen pb-24 md:pb-8 bg-background text-foreground">

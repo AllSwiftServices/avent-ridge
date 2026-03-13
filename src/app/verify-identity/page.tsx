@@ -58,9 +58,6 @@ function UploadBox({ label, value, onChange, hint }: { label: string, value: str
         )}
         style={{ minHeight: 110 }}
       >
-        <input id={`upload-${label}`} type="file" accept="image/*" className="hidden" onChange={e => e.target.files && handleFile(e.target.files[0])} />
-        <input id={`capture-${label}`} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => e.target.files && handleFile(e.target.files[0])} />
-        
         {value ? (
           <div className="relative">
             <img src={value} alt="preview" className="w-full h-36 object-cover rounded-xl" />
@@ -74,11 +71,19 @@ function UploadBox({ label, value, onChange, hint }: { label: string, value: str
         ) : (
           <div className="flex flex-col items-center justify-center p-4 h-full w-full gap-3">
              <div className="flex gap-4 w-full max-w-xs mx-auto">
-               <label htmlFor={`upload-${label}`} className="flex-1 flex flex-col items-center justify-center gap-2 bg-muted/50 rounded-2xl hover:bg-muted cursor-pointer transition-colors p-3 border border-transparent hover:border-primary/20">
+               <label className="relative flex-1 flex flex-col items-center justify-center gap-2 bg-muted/50 rounded-2xl hover:bg-muted cursor-pointer transition-colors p-3 border border-transparent hover:border-primary/20">
+                  <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={e => {
+                    if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+                    e.target.value = '';
+                  }} />
                   <Upload className="h-6 w-6 text-muted-foreground" />
                   <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider text-center">Upload File</span>
                </label>
-               <label htmlFor={`capture-${label}`} className="flex-1 flex flex-col items-center justify-center gap-2 bg-muted/50 rounded-2xl hover:bg-muted cursor-pointer transition-colors p-3 border border-transparent hover:border-primary/20">
+               <label className="relative flex-1 flex flex-col items-center justify-center gap-2 bg-muted/50 rounded-2xl hover:bg-muted cursor-pointer transition-colors p-3 border border-transparent hover:border-primary/20">
+                  <input type="file" accept="image/*" capture="environment" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={e => {
+                    if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+                    e.target.value = '';
+                  }} />
                   <Camera className="h-6 w-6 text-muted-foreground" />
                   <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider text-center">Take Photo</span>
                </label>

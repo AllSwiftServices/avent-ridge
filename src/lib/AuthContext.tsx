@@ -1,13 +1,13 @@
-"use client";
-
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 export interface User {
   id: string;
   email: string;
   name?: string;
+  role?: string;
+  email_verified?: boolean;
   user_metadata?: any;
 }
 
@@ -17,7 +17,7 @@ interface AuthContextType {
   isLoadingAuth: boolean;
   authError: string | null;
   logout: () => Promise<void>;
-  navigateToLogin: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,43 +28,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authError, setAuthError] = useState<string | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    const checkUser = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          // Fetch extended profile from public.users
-          const { data: profile } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-
-          setUser({
-            ...session.user,
-            ...profile,
-          } as User);
-        } else {
-          setUser(null);
-        }
-      } catch (error: any) {
-        console.error('Error checking auth session:', error);
-        setAuthError(error.message);
-      } finally {
-        setIsLoadingAuth(false);
+  const fetchProfile = useCallback(async (userId: string) => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return null;
       }
-    };
+      return profile;
+    } catch (err) {
+      console.error('Unexpected error fetching profile:', err);
+      return null;
+    }
+  }, []);
 
-    checkUser();
+  const refreshUser = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const profile = await fetchProfile(session.user.id);
+        setUser({
+          ...session.user,
+          ...profile,
+        } as User);
+      } else {
+        setUser(null);
+      }
+    } catch (error: any) {
+      console.error('Error checking auth session:', error);
+      setAuthError(error.message);
+    } finally {
+      setIsLoadingAuth(false);
+    }
+  }, [fetchProfile]);
+
+  useEffect(() => {
+    refreshUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        const { data: profile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-
+        const profile = await fetchProfile(session.user.id);
         setUser({
           ...session.user,
           ...profile,
@@ -78,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [refreshUser, fetchProfile]);
 
   const logout = useCallback(async () => {
     try {
@@ -90,10 +98,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [router]);
 
-  const navigateToLogin = useCallback(() => {
-    router.push('/login');
-  }, [router]);
-
   return (
     <AuthContext.Provider value={{
       user,
@@ -101,7 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isLoadingAuth,
       authError,
       logout,
-      navigateToLogin
+      refreshUser
     }}>
       {children}
     </AuthContext.Provider>

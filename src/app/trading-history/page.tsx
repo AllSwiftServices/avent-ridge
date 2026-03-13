@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowUpRight, ArrowDownLeft, TrendingUp, TrendingDown, Search, Filter } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { api } from '@/lib/api';
+import { useNavigate } from '@/lib/react-router-shim';
+import { createPageUrl } from '@/utils';
 import { useAuth } from '@/lib/AuthContext';
 
 const TYPE_CONFIG: any = {
@@ -21,16 +23,19 @@ const TABS = ['all', 'buy', 'sell', 'deposit', 'withdraw'];
 export default function TradingHistory() {
   const [activeTab, setActiveTab] = useState('all');
   const [search, setSearch] = useState('');
-  const { user } = useAuth();
+  const { user, isLoadingAuth } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoadingAuth && !user) {
+      navigate(createPageUrl('Home'));
+    }
+  }, [user, isLoadingAuth, navigate]);
 
   const { data: transactions, isLoading } = useQuery({
-    queryKey: ['transactions-all'],
+    queryKey: ['transactions'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100);
+      const { data, error } = await api.get<any[]>('/transactions?order=created_at.desc');
       if (error) throw error;
       return data;
     },

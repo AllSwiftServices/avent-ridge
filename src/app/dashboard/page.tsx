@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, TrendingUp, TrendingDown, Bell, Search, Menu, Sun, Moon } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { api } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { useNavigate } from '@/lib/react-router-shim';
@@ -30,7 +30,7 @@ export default function Dashboard() {
   const { data: assets } = useQuery({
     queryKey: ['assets'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('assets').select('*');
+      const { data, error } = await api.get<any[]>('/assets');
       if (error) throw error;
       return data;
     }
@@ -39,7 +39,7 @@ export default function Dashboard() {
   const { data: wallets } = useQuery({
     queryKey: ['wallets'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('wallets').select('*');
+      const { data, error } = await api.get<any[]>('/wallets');
       if (error) throw error;
       return data;
     },
@@ -49,7 +49,7 @@ export default function Dashboard() {
   const { data: portfolio } = useQuery({
     queryKey: ['portfolio'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('portfolio').select('*');
+      const { data, error } = await api.get<any[]>('/portfolio');
       if (error) throw error;
       return data;
     },

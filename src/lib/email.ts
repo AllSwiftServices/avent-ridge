@@ -1,20 +1,33 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
-let resendClient: Resend | null = null;
+let transporter: nodemailer.Transporter | null = null;
 
-function getResend() {
-  if (!resendClient) {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-      throw new Error("Missing RESEND_API_KEY. Please set RESEND_API_KEY in your environment variables.");
+function getTransporter() {
+  if (!transporter) {
+    const host = process.env.SMTP_HOST;
+    const port = parseInt(process.env.SMTP_PORT || "465");
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
+
+    if (!host || !user || !pass) {
+      throw new Error("Missing SMTP configuration. Please set SMTP_HOST, SMTP_USER, and SMTP_PASS in your environment variables.");
     }
-    resendClient = new Resend(apiKey);
+
+    transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465, // true for 465, false for other ports
+      auth: {
+        user,
+        pass,
+      },
+    });
   }
-  return resendClient;
+  return transporter;
 }
 
 export async function sendOtpEmail(to: string, otp: string) {
-  console.log(`🚀 Attempting to send OTP email via Resend to: ${to}`);
+  console.log(`🚀 Attempting to send OTP email via SMTP to: ${to}`);
 
   const html = `
       <!DOCTYPE html>
@@ -64,26 +77,18 @@ export async function sendOtpEmail(to: string, otp: string) {
     `;
 
   try {
-    const resend = getResend();
-    const { data, error } = await resend.emails.send({
-      from:
-        process.env.RESEND_FROM_EMAIL || "Avent Ridge <noreply@aventridge.com>",
-      to: [to],
+    const mailer = getTransporter();
+    const info = await mailer.sendMail({
+      from: process.env.SMTP_USER,
+      to,
       subject: "Verify Your Email - Avent Ridge",
       html,
     });
 
-    if (error) {
-      console.error(`❌ Resend failed to send email to ${to}:`, error);
-      throw new Error(error.message);
-    }
-
-    console.log(
-      `✅ OTP email sent successfully via Resend to ${to}. MessageId: ${data?.id}`,
-    );
-    return data;
+    console.log(`✅ OTP email sent successfully via SMTP to ${to}. MessageId: ${info.messageId}`);
+    return info;
   } catch (error: any) {
-    console.error(`❌ Resend failed to send email to ${to}:`, error.message);
+    console.error(`❌ SMTP failed to send email to ${to}:`, error.message);
     throw error;
   }
 }
@@ -117,9 +122,9 @@ export async function sendWelcomeEmail(to: string, name: string) {
               <p class="text">Thank you for joining Avent Ridge! You're now part of our community of elite traders.</p>
               
               <div class="features">
-                <div class="feature"><span class="feature-icon">✓</span> Advanced trading tools & real-time analytics</div>
-                <div class="feature"><span class="feature-icon">✓</span> Access global markets effortlessly</div>
-                <div class="feature"><span class="feature-icon">✓</span> Secure platform and funds protection</div>
+                <p>✓ Advanced trading tools & real-time analytics</p>
+                <p>✓ Access global markets effortlessly</p>
+                <p>✓ Secure platform and funds protection</p>
               </div>
 
               <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://aventridge.com"}/dashboard" class="button">Go to Dashboard</a>
@@ -133,22 +138,16 @@ export async function sendWelcomeEmail(to: string, name: string) {
     `;
 
   try {
-    const resend = getResend();
-    const { data, error } = await resend.emails.send({
-      from:
-        process.env.RESEND_FROM_EMAIL || "Avent Ridge <noreply@aventridge.com>",
-      to: [to],
+    const mailer = getTransporter();
+    const info = await mailer.sendMail({
+      from: process.env.SMTP_USER,
+      to,
       subject: "Welcome to Avent Ridge! 🎉",
       html,
     });
 
-    if (error) {
-      console.error(`❌ Failed to send welcome email to ${to}:`, error);
-      return null;
-    }
-
-    console.log(`✅ Welcome email sent to ${to}. MessageId: ${data?.id}`);
-    return data;
+    console.log(`✅ Welcome email sent to ${to}. MessageId: ${info.messageId}`);
+    return info;
   } catch (error: any) {
     console.error(`❌ Error sending welcome email to ${to}:`, error.message);
     return null;

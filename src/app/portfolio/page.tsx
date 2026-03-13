@@ -1,35 +1,81 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
-import PortfolioItem from '@/components/portfolio/PortfolioItem';
-import AllocationChart from '@/components/portfolio/AllocationChart';
 import AnimatedNumber from '@/components/common/AnimatedNumber';
+import { api } from '@/lib/api';
+import { useNavigate } from '@/lib/react-router-shim';
+import { createPageUrl } from '@/utils';
+import { useAuth } from '@/lib/AuthContext';
+import AllocationChart from '@/components/portfolio/AllocationChart';
 import { CardSkeleton } from '@/components/common/LoadingSkeleton';
+
+interface PortfolioItemProps {
+  item: any;
+  currentPrice: number;
+  index: number;
+}
+
+function PortfolioItem({ item, currentPrice, index }: PortfolioItemProps) {
+  const profitLoss = (currentPrice - item.avg_buy_price) * item.quantity;
+  const profitLossPercent = ((currentPrice - item.avg_buy_price) / item.avg_buy_price) * 100;
+  const isPositive = profitLoss >= 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className="p-4 rounded-2xl bg-card border border-border flex items-center gap-4"
+    >
+      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
+        {item.asset_symbol.slice(0, 2)}
+      </div>
+      <div className="flex-1">
+        <p className="font-semibold text-sm">{item.asset_symbol}</p>
+        <p className="text-xs text-muted-foreground">{item.quantity} units</p>
+      </div>
+      <div className="text-right">
+        <p className="font-semibold text-sm">${(item.quantity * currentPrice).toLocaleString()}</p>
+        <p className={cn("text-xs font-medium", isPositive ? "text-primary" : "text-destructive")}>
+          {isPositive ? '+' : ''}{profitLossPercent.toFixed(2)}%
+        </p>
+      </div>
+    </motion.div>
+  );
+}
 
 export default function PortfolioPage() {
   const [activeTab, setActiveTab] = useState('all');
+  const { user, isLoadingAuth } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoadingAuth && !user) {
+      navigate(createPageUrl('Home'));
+    }
+  }, [user, isLoadingAuth, navigate]);
 
   const { data: assets } = useQuery({
-    queryKey: ['assets'],
+    queryKey: ['portfolio-assets'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('assets').select('*');
+      const { data, error } = await api.get<any[]>('/assets');
       if (error) throw error;
       return data;
-    },
+    }
   });
 
   const { data: portfolio, isLoading } = useQuery({
-    queryKey: ['portfolio'],
+    queryKey: ['portfolio-items'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('portfolio').select('*');
+      const { data, error } = await api.get<any[]>('/portfolio');
       if (error) throw error;
       return data;
     },
+    enabled: !!user
   });
 
   // Calculate portfolio metrics

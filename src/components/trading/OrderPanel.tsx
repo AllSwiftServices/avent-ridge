@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronLeft, ChevronRight, CheckCircle } from 'lucide-react';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@/components/ui/ThemeProvider';
 import { useAuth } from '@/lib/AuthContext';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 const DURATIONS = [
   { label: '30 secs', value: 30 },
@@ -28,19 +29,18 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
   const queryClient = useQueryClient();
   const dark = theme === 'dark';
 
-  // Manual tokens replaced by Tailwind classes
-
   const [optionType, setOptionType] = useState(OPTION_TYPES[0]);
   const [optionOpen, setOptionOpen] = useState(false);
   const [amount, setAmount] = useState(100);
   const [duration, setDuration] = useState(60);
   const [step, setStep] = useState('input'); // input | success
   const [lastSide, setLastSide] = useState('call');
+  const [isLoading, setIsLoading] = useState(false);
 
   const { data: wallets } = useQuery({
-    queryKey: ['wallets'],
+    queryKey: ['order-wallets'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('wallets').select('*');
+      const { data, error } = await api.get<any[]>('/wallets');
       if (error) throw error;
       return data;
     },
@@ -52,11 +52,7 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
   const { data: transactions } = useQuery({
     queryKey: ['transactions-all'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(20);
+      const { data, error } = await api.get<any[]>('/transactions?order=created_at.desc&limit=20');
       if (error) throw error;
       return data;
     },
@@ -65,11 +61,15 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
 
   const potentialProfit = +(amount * PROFIT_RATE).toFixed(2);
 
-  const handleTrade = async (side: 'call' | 'put') => {
-    if (amount <= 0 || amount > balance || !user) return;
+  const handleOrder = async (side: 'call' | 'put') => {
+    if (!user || !asset || amount <= 0 || amount > balance) {
+      toast.error("Invalid trade amount or user not logged in.");
+      return;
+    }
+    setIsLoading(true);
     setLastSide(side);
     try {
-      const { error } = await supabase.from('transactions').insert({
+      const { error } = await api.post('/transactions', {
         user_id: user.id,
         type: side === 'call' ? 'buy' : 'sell',
         asset_symbol: asset?.symbol,
@@ -83,11 +83,15 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
 
       queryClient.invalidateQueries({ queryKey: ['transactions-all'] });
       queryClient.invalidateQueries({ queryKey: ['wallets'] });
+      queryClient.invalidateQueries({ queryKey: ['order-wallets'] });
 
       setStep('success');
       setTimeout(() => setStep('input'), 2500);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      toast.error("Trade failed: " + (e.message || "Unknown error"));
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -214,14 +218,16 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
           ) : (
             <motion.div key="btns" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => handleTrade('call')}
-                className="py-4 rounded-2xl font-bold text-primary-foreground text-base flex items-center justify-center gap-2 transition-transform active:scale-95 bg-primary shadow-lg shadow-primary/20"
+                disabled={isLoading}
+                onClick={() => handleOrder('call')}
+                className="py-4 rounded-2xl font-bold text-primary-foreground text-base flex items-center justify-center gap-2 transition-transform active:scale-95 bg-primary shadow-lg shadow-primary/20 disabled:opacity-50"
               >
                 <span className="text-lg">⬆</span> Call
               </button>
               <button
-                onClick={() => handleTrade('put')}
-                className="py-4 rounded-2xl font-bold text-destructive-foreground text-base flex items-center justify-center gap-2 transition-transform active:scale-95 bg-destructive shadow-lg shadow-destructive/20"
+                disabled={isLoading}
+                onClick={() => handleOrder('put')}
+                className="py-4 rounded-2xl font-bold text-destructive-foreground text-base flex items-center justify-center gap-2 transition-transform active:scale-95 bg-destructive shadow-lg shadow-destructive/20 disabled:opacity-50"
               >
                 <span className="text-lg">⬇</span> Put
               </button>
@@ -235,7 +241,7 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
         <div className="mb-3">
           <h3 className="font-bold text-base text-foreground">Trading History</h3>
           <p className="text-xs mt-0.5 text-muted-foreground">
-            View all records and details of your past trading activities, records cannot be deleted.
+            View all records and details of your past trading activities.
           </p>
         </div>
 
@@ -250,7 +256,7 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className={cn("text-xs font-bold", isCall ? "text-success" : "text-destructive")}>
+                    <span className={cn("text-xs font-bold", isCall ? "text-primary" : "text-destructive")}>
                       {isCall ? 'Call' : 'Put'}
                     </span>
                     <span className="text-xs text-muted-foreground">
@@ -258,7 +264,7 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={cn("text-xs font-bold", profit >= 0 ? "text-success" : "text-destructive")}>
+                    <span className={cn("text-xs font-bold", profit >= 0 ? "text-primary" : "text-destructive")}>
                       {profit >= 0 ? '+' : ''}${Math.abs(profit).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -273,7 +279,7 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 12500 
                   <span
                     className={cn(
                       "text-[11px] font-semibold capitalize",
-                      tx.status === 'completed' ? 'text-success' : tx.status === 'failed' ? 'text-destructive' : 'text-amber-500'
+                      tx.status === 'completed' ? 'text-primary' : tx.status === 'failed' ? 'text-destructive' : 'text-amber-500'
                     )}
                   >
                     {tx.status === 'completed' ? 'Success' : tx.status === 'failed' ? 'Failed' : 'Pending'}

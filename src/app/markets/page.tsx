@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, SlidersHorizontal, TrendingUp, Flame } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { api } from '@/lib/api';
+import { useNavigate } from '@/lib/react-router-shim';
+import { createPageUrl } from '@/utils';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -13,25 +15,26 @@ import { AssetListSkeleton } from '@/components/common/LoadingSkeleton';
 import { useAuth } from '@/lib/AuthContext';
 
 export default function Markets() {
-  const [activeTab, setActiveTab] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [search, setSearch] = useState('');
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
   const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
   const { user } = useAuth();
+  const navigate = useNavigate();
 
-  const { data: assets, isLoading } = useQuery({
-    queryKey: ['assets'],
+  const { data: assets, isLoading: isLoadingAssets } = useQuery({
+    queryKey: ['markets-assets'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('assets').select('*');
+      const { data, error } = await api.get<any[]>('/assets');
       if (error) throw error;
       return data;
     },
   });
 
   const { data: wallets } = useQuery({
-    queryKey: ['wallets'],
+    queryKey: ['markets-wallets'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('wallets').select('*');
+      const { data, error } = await api.get<any[]>('/wallets');
       if (error) throw error;
       return data;
     },
@@ -39,9 +42,9 @@ export default function Markets() {
   });
 
   const { data: portfolio, refetch: refetchPortfolio } = useQuery({
-    queryKey: ['portfolio'],
+    queryKey: ['markets-portfolio'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('portfolio').select('*');
+      const { data, error } = await api.get<any[]>('/portfolio');
       if (error) throw error;
       return data;
     },
@@ -70,12 +73,12 @@ export default function Markets() {
 
   const filteredAssets = assets?.filter((asset: any) => {
     const matchesSearch =
-      asset.symbol?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      asset.name?.toLowerCase().includes(searchQuery.toLowerCase());
+      asset.symbol?.toLowerCase().includes(search.toLowerCase()) ||
+      asset.name?.toLowerCase().includes(search.toLowerCase());
 
-    if (activeTab === 'all') return matchesSearch;
-    if (activeTab === 'trending') return matchesSearch && Math.abs(asset.change_percent) > 2;
-    return matchesSearch && asset.type === activeTab;
+    if (activeCategory === 'all') return matchesSearch;
+    if (activeCategory === 'trending') return matchesSearch && Math.abs(asset.change_percent) > 2;
+    return matchesSearch && asset.type === activeCategory;
   }) || [];
 
   const wallet = wallets?.[0] || { main_balance: 10000 };
@@ -99,8 +102,8 @@ export default function Markets() {
             <Input
               type="text"
               placeholder="Search assets..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               className="pl-12 h-12 rounded-2xl"
             />
           </div>
@@ -110,11 +113,11 @@ export default function Markets() {
             {tabs.map((tab: any) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => setActiveCategory(tab.id)}
                 className={cn(
                   'px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all',
                   'flex items-center gap-1.5',
-                  activeTab === tab.id
+                  activeCategory === tab.id
                     ? 'font-semibold bg-primary text-primary-foreground shadow-sm'
                     : 'bg-muted text-muted-foreground hover:text-foreground'
                 )}
@@ -129,7 +132,7 @@ export default function Markets() {
 
       {/* Asset List */}
       <div className="px-4 py-4">
-        {isLoading ? (
+        {isLoadingAssets ? (
           <AssetListSkeleton />
         ) : filteredAssets.length === 0 ? (
           <div className="text-center py-12">

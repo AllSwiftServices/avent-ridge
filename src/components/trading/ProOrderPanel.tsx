@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, TrendingDown, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/lib/supabase';
+import { api } from '@/lib/api';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@/components/ui/ThemeProvider';
 import { useAuth } from '@/lib/AuthContext';
+import { toast } from 'sonner';
 
 export default function ProOrderPanel({ asset, price, balance: balanceProp = 12500, onOrderPlaced }: {
   asset: any,
@@ -17,7 +18,6 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 125
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const dark = theme === 'dark';
-  // Manual tokens replaced by Tailwind classes
 
   const [tab, setTab] = useState('buy');
   const [orderType, setOrderType] = useState('market');
@@ -25,11 +25,12 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 125
   const [limitPrice, setLimitPrice] = useState('');
   const [leverage, setLeverage] = useState(1);
   const [step, setStep] = useState('input');
+  const [isLoading, setIsLoading] = useState(false);
 
   const { data: wallets } = useQuery({
     queryKey: ['wallets'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('wallets').select('*');
+      const { data, error } = await api.get<any[]>('/wallets');
       if (error) throw error;
       return data;
     },
@@ -44,9 +45,16 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 125
 
   const handleSubmit = async () => {
     const qty = parseFloat(quantity);
-    if (!qty || qty <= 0 || !user) return;
+    if (!qty || qty <= 0 || !user) {
+      toast.error("Please enter a valid quantity.");
+      return;
+    }
+    
+    setIsLoading(true);
+    const toastId = toast.loading('Placing order...');
+    
     try {
-      const { error } = await supabase.from('transactions').insert({
+      const { data, error } = await api.post('/transactions', {
         user_id: user.id,
         type: isBuy ? 'buy' : 'sell',
         asset_symbol: asset?.symbol,
@@ -63,9 +71,16 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 125
 
       setStep('success');
       onOrderPlaced?.({ side: tab, quantity: qty, entryPrice: execPrice, leverage });
-      setTimeout(() => { setStep('input'); setQuantity(''); }, 2500);
-    } catch (e) {
+      toast.success('Order placed successfully!', { id: toastId });
+      setTimeout(() => { 
+        setStep('input'); 
+        setQuantity(''); 
+      }, 2500);
+    } catch (e: any) {
       console.error(e);
+      toast.error('Failed to place order: ' + (e.message || 'Unknown error'), { id: toastId });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -147,7 +162,10 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 125
           {pcts.map(pct => (
             <button
               key={pct}
-              onClick={() => setQuantity(((balance * pct / 100) / price).toFixed(6))}
+              onClick={() => {
+                const qtyValue = (balance * pct / 100) / price;
+                setQuantity(qtyValue.toFixed(6));
+              }}
               className="flex-1 py-1 rounded-lg text-xs font-semibold bg-muted text-muted-foreground hover:text-foreground"
             >
               {pct}%
@@ -165,7 +183,7 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 125
         <input
           type="range" min={1} max={100} value={leverage}
           onChange={e => setLeverage(Number(e.target.value))}
-          className="w-full accent-yellow-400"
+          className="w-full accent-primary"
         />
         <div className="flex justify-between text-[10px] mt-0.5 text-muted-foreground">
           <span>1x</span><span>25x</span><span>50x</span><span>100x</span>
@@ -198,8 +216,9 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 125
             key="btn"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             onClick={handleSubmit}
+            disabled={isLoading}
             className={cn(
-              "w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-transform active:scale-95",
+              "w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed",
               isBuy ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-destructive text-destructive-foreground shadow-lg shadow-destructive/20"
             )}
           >

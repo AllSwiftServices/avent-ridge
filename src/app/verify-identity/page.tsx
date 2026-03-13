@@ -1,13 +1,18 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, X, CheckCircle, Clock, ChevronLeft, FileText } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
+import { 
+  Shield, CheckCircle2, AlertCircle, User, 
+  FileText, Camera, Upload, ChevronRight, ChevronLeft,
+  Info, Lock, Zap, Clock, Globe, MapPin, Phone, X
+} from 'lucide-react';
+import { api } from '@/lib/api';
+import { useNavigate } from '@/lib/react-router-shim';
+import { createPageUrl } from '@/utils';
+import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/lib/AuthContext';
 
 const INPUT_CLASS = "w-full bg-card border border-border rounded-xl px-4 py-3 text-foreground text-sm placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-colors";
 const LABEL_CLASS = "block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5";
@@ -19,28 +24,24 @@ function UploadBox({ label, value, onChange, hint }: { label: string, value: str
 
   const handleFile = async (file: File) => {
     if (!file || !user) return;
-    toast.loading('Uploading...');
+    const toastId = toast.loading('Uploading...');
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('path', `kyc/${user.id}/${Math.random().toString(36).substring(7)}`);
 
-      const { data, error } = await supabase.storage
-        .from('kyc-documents')
-        .upload(filePath, file);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || '/api'}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
 
-      if (error) throw error;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('kyc-documents')
-        .getPublicUrl(filePath);
-
-      onChange(publicUrl);
-      toast.success('Uploaded!');
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Upload failed');
+      
+      onChange(result.publicUrl);
+      toast.success('Uploaded!', { id: toastId });
     } catch (error: any) {
-      toast.error('Upload failed: ' + error.message);
-    } finally {
-      toast.dismiss();
+      toast.error('Upload failed: ' + error.message, { id: toastId });
     }
   };
 
@@ -83,10 +84,10 @@ function UploadBox({ label, value, onChange, hint }: { label: string, value: str
 
 export default function VerifyIdentity() {
   const { user, isLoadingAuth } = useAuth();
+  const navigate = useNavigate();
   const [existing, setExisting] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const router = useRouter();
 
   const [form, setForm] = useState({
     first_name: '', last_name: '', date_of_birth: '', phone: '',
@@ -98,26 +99,41 @@ export default function VerifyIdentity() {
   useEffect(() => {
     if (isLoadingAuth) return;
     if (!user) {
-      router.push('/login');
+      navigate(createPageUrl('Home'));
       return;
     }
 
     (async () => {
       try {
-        const { data, error } = await supabase
-          .from('kyc')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
-
-        if (data) setExisting(data);
+        const { data } = await api.get<any>(`/kyc/${user.id}`);
+        if (data) {
+          setExisting(data);
+          if (data.status !== 'rejected') {
+            setForm({
+              first_name: data.first_name || '',
+              last_name: data.last_name || '',
+              date_of_birth: data.date_of_birth || '',
+              phone: data.phone || '',
+              address: data.address || '',
+              city: data.city || '',
+              state: data.state || '',
+              country: data.country || '',
+              postal_code: data.postal_code || '',
+              id_type: data.id_type || 'passport',
+              id_number: data.id_number || '',
+              id_front_image: data.id_front_image || '',
+              id_back_image: data.id_back_image || '',
+              selfie_image: data.selfie_image || '',
+            });
+          }
+        }
       } catch (error) {
         console.error('Error fetching KYC status:', error);
       } finally {
         setLoading(false);
       }
     })();
-  }, [user, isLoadingAuth, router]);
+  }, [user, isLoadingAuth, navigate]);
 
   const set = (k: string) => (e: any) => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -129,26 +145,22 @@ export default function VerifyIdentity() {
     if (!user) return;
 
     setSubmitting(true);
+    const toastId = toast.loading('Submitting verification...');
     try {
-      const { error } = await supabase.from('kyc').insert({
-        ...form,
+      const payload = {
         user_id: user.id,
         user_email: user.email,
         status: 'pending',
-      });
+        ...form,
+      };
 
+      const { data, error } = await api.post('/kyc', payload);
       if (error) throw error;
 
-      const { data } = await supabase
-        .from('kyc')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
       setExisting(data);
-      toast.success('Submitted successfully!');
+      toast.success('Submitted successfully!', { id: toastId });
     } catch (error: any) {
-      toast.error('Submission failed: ' + error.message);
+      toast.error('Submission failed: ' + error.message, { id: toastId });
     } finally {
       setSubmitting(false);
     }
@@ -159,7 +171,7 @@ export default function VerifyIdentity() {
   return (
     <div className="min-h-screen pb-24 md:pb-8 bg-background">
       <header className="sticky top-0 z-30 border-b flex items-center gap-3 px-4 py-4 bg-background/95 border-border">
-        <button onClick={() => router.back()} className="p-2 rounded-xl hover:bg-muted transition-colors">
+        <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-muted transition-colors">
           <ChevronLeft className="h-5 w-5 text-foreground" />
         </button>
         <div>
@@ -181,7 +193,7 @@ export default function VerifyIdentity() {
               "bg-muted border-border"
             )}
           >
-            {existing.status === 'approved' && <CheckCircle className="h-6 w-6 shrink-0 text-primary" />}
+            {existing.status === 'approved' && <CheckCircle2 className="h-6 w-6 shrink-0 text-primary" />}
             {existing.status === 'pending' && <Clock className="h-6 w-6 shrink-0 text-primary" />}
             {existing.status === 'rejected' && <X className="h-6 w-6 shrink-0 text-destructive" />}
             <div>
@@ -194,9 +206,8 @@ export default function VerifyIdentity() {
           </motion.div>
         )}
 
-        {!existing && (
+        {(!existing || existing.status === 'rejected') && (
           <>
-            {/* Section A */}
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl p-5 border space-y-4 bg-card border-border shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <FileText className="h-4 w-4 text-primary" />
@@ -222,7 +233,6 @@ export default function VerifyIdentity() {
               </div>
             </motion.div>
 
-            {/* Section B */}
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl p-5 border space-y-4 bg-card border-border shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <FileText className="h-4 w-4 text-primary" />
@@ -248,7 +258,6 @@ export default function VerifyIdentity() {
               <UploadBox label="Selfie *" value={form.selfie_image} onChange={v => setForm(f => ({ ...f, selfie_image: v }))} hint="Hold your ID next to your face" />
             </motion.div>
 
-            {/* Submit */}
             <motion.button
               initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
               whileTap={{ scale: 0.97 }}
@@ -256,7 +265,7 @@ export default function VerifyIdentity() {
               disabled={submitting}
               className={cn(
                 "w-full py-4 rounded-2xl font-bold text-base border-2 transition-all shadow-lg shadow-primary/20",
-                submitting ? "bg-muted border-muted-foreground text-muted-foreground" : "bg-primary text-primary-foreground border-primary hover:opacity-90"
+                submitting ? "bg-muted border-muted-foreground text-muted-foreground cursor-not-allowed" : "bg-primary text-primary-foreground border-primary hover:opacity-90"
               )}
             >
               {submitting ? 'Submitting...' : 'Submit for Verification'}

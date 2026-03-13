@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase-server";
 import { sendOtpEmail } from "@/lib/email";
-import { supabase } from "@/lib/supabase";
 
-// Generate a 6-digit OTP
 function generateOtp(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -21,20 +20,17 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Check if user exists for login
+    // If login, check if user exists first
     if (type === "login") {
-      const { data: existingUser, error: userError } = await supabase
+      const { data: existingUser, error: userError } = await supabaseAdmin
         .from("users")
-        .select("id, email, name")
+        .select("id")
         .eq("email", normalizedEmail)
         .single();
 
       if (userError || !existingUser) {
         return NextResponse.json(
-          {
-            success: false,
-            error: "No account found with this email. Please register first.",
-          },
+          { success: false, error: "No account found with this email. Please sign up first." },
           { status: 404 },
         );
       }
@@ -44,53 +40,30 @@ export async function POST(request: NextRequest) {
     const otp = generateOtp();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Delete any existing codes for this email first
-    await supabase
+    // Store OTP in Supabase
+    // We upsert to handle multiple requests
+    const { error: otpError } = await supabaseAdmin
       .from("verification_codes")
-      .delete()
-      .eq("email", normalizedEmail);
-
-    // Store OTP in verification_codes table
-    const { error: otpError } = await supabase
-      .from("verification_codes")
-      .insert({
-        email: normalizedEmail,
-        code: otp,
-        expires_at: expiresAt.toISOString(),
-      });
+      .upsert(
+        { 
+          email: normalizedEmail, 
+          code: otp, 
+          expires_at: expiresAt.toISOString() 
+        },
+        { onConflict: 'email' }
+      );
 
     if (otpError) {
       console.error("Error storing OTP:", otpError);
-      return NextResponse.json(
-        { success: false, error: "Failed to generate verification code" },
-        { status: 500 },
-      );
+      throw new Error("Failed to generate verification code");
     }
 
     // Send OTP email
-    try {
-      await sendOtpEmail(normalizedEmail, otp);
-    } catch (emailError: any) {
-      console.error("Email send error:", emailError);
-      // In development, continue even if email fails (log the OTP)
-      if (process.env.NODE_ENV === "development") {
-        console.log(`[DEV] OTP for ${normalizedEmail}: ${otp}`);
-      } else {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "Failed to send verification email. Please try again.",
-          },
-          { status: 500 },
-        );
-      }
-    }
+    await sendOtpEmail(normalizedEmail, otp);
 
     return NextResponse.json({
       success: true,
       message: "Verification code sent successfully",
-      // In development, return OTP for testing
-      ...(process.env.NODE_ENV === "development" && { otp }),
     });
   } catch (error: any) {
     console.error("Send OTP error:", error);

@@ -4,7 +4,17 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
 export const useNavigate = () => {
   const router = useRouter();
-  return (path: string) => router.push(path);
+  return (to: string | number) => {
+    if (typeof to === 'number') {
+      if (to === -1) {
+        router.back();
+      } else if (to === 1) {
+        router.forward();
+      }
+    } else {
+      router.push(to);
+    }
+  };
 };
 
 export const useLocation = () => {

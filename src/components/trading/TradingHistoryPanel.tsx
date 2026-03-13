@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, TrendingUp } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { api } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '@/components/ui/ThemeProvider';
 import { useAuth } from '@/lib/AuthContext';
@@ -21,16 +21,10 @@ export default function TradingHistoryPanel({ isOpen, onClose }: { isOpen: boole
   const { user } = useAuth();
   const dark = theme === 'dark';
 
-  // No manual tokens needed, we'll use Tailwind classes
-
   const { data: transactions, isLoading } = useQuery({
     queryKey: ['transactions-all'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(200);
+      const { data, error } = await api.get<any[]>('/transactions?order=created_at.desc&limit=200');
       if (error) throw error;
       return data;
     },
@@ -143,9 +137,7 @@ export default function TradingHistoryPanel({ isOpen, onClose }: { isOpen: boole
                 </div>
               ) : (
                 filtered.map((tx: any, i: number) => {
-                  const isBuy = tx.type === 'buy';
-                  const isDeposit = tx.type === 'deposit';
-                  const isProfit = isBuy || isDeposit;
+                  const isPositive = tx.type === 'buy' || tx.type === 'deposit';
 
                   return (
                     <motion.div
@@ -161,13 +153,13 @@ export default function TradingHistoryPanel({ isOpen, onClose }: { isOpen: boole
                           <span className="font-bold text-sm text-foreground">
                             {tx.asset_symbol || tx.type}
                           </span>
-                          <span className={cn("text-xs font-bold uppercase", isBuy || isDeposit ? "text-success" : "text-destructive")}>
-                            {tx.type === 'buy' ? 'buy' : tx.type === 'sell' ? 'sell' : tx.type}
+                          <span className={cn("text-xs font-bold uppercase", isPositive ? "text-primary" : "text-destructive")}>
+                            {tx.type}
                             {tx.quantity ? ` ${tx.quantity}` : ''}
                           </span>
                         </div>
-                        <span className={cn("font-bold text-sm", isProfit ? "text-success" : "text-destructive")}>
-                          {isProfit ? '+' : '-'}{tx.amount?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '0.00'}
+                        <span className={cn("font-bold text-sm", isPositive ? "text-primary" : "text-destructive")}>
+                          {isPositive ? '+' : '-'}{tx.amount?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '0.00'}
                         </span>
                       </div>
 

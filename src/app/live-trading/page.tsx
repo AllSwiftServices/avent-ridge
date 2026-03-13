@@ -2,11 +2,19 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { History, BarChart2, Zap } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { 
+  TrendingUp, TrendingDown, Zap, Shield, BarChart3, 
+  History, Settings, Bell, Search, Menu, Sun, Moon,
+  ArrowUpRight, ArrowDownRight, Share2, Info, ChevronDown,
+  Volume2, VolumeX, Timer, Target, PieChart, Activity, BarChart2
+} from 'lucide-react';
+import { api } from '@/lib/api';
 import TradingHistoryPanel from '@/components/trading/TradingHistoryPanel';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { useNavigate } from '@/lib/react-router-shim';
+import { createPageUrl } from '@/utils';
 import AssetSelector from '@/components/trading/AssetSelector';
 import LivePriceHeader from '@/components/trading/LivePriceHeader';
 import CandlestickChart from '@/components/trading/CandlestickChart';
@@ -34,7 +42,22 @@ const ASSET_DEFAULTS: Record<string, { price: number, type: string }> = {
 const DEFAULT_ASSET = { symbol: 'BTC', name: 'Bitcoin', type: 'crypto', pair: 'BTC/USDT' };
 
 export default function LiveTrading() {
-  const [selectedAsset, setSelectedAsset] = useState(DEFAULT_ASSET);
+  const searchParams = useSearchParams();
+  const initialAssetSymbol = searchParams.get('asset') || 'BTC';
+  const [selectedAsset, setSelectedAsset] = useState<any>(
+    ASSET_DEFAULTS[initialAssetSymbol] 
+      ? { symbol: initialAssetSymbol, ...ASSET_DEFAULTS[initialAssetSymbol] }
+      : DEFAULT_ASSET
+  );
+  const { user, isLoadingAuth } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoadingAuth && !user) {
+      navigate(createPageUrl('Home'));
+    }
+  }, [user, isLoadingAuth, navigate]);
+
   const [livePrice, setLivePrice] = useState<number | null>(null);
   const prevPriceRef = useRef<number | null>(null);
   const [prevPrice, setPrevPrice] = useState<number | null>(null);
@@ -46,21 +69,20 @@ export default function LiveTrading() {
   const [soundOn, setSoundOn] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [tradeMode, setTradeMode] = useState<'binary' | 'advanced'>('binary');
-  const { user } = useAuth();
 
   const { data: assets } = useQuery({
-    queryKey: ['assets'],
+    queryKey: ['trading-assets'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('assets').select('*');
+      const { data, error } = await api.get<any[]>('/assets');
       if (error) throw error;
       return data;
-    },
+    }
   });
 
   const { data: wallets } = useQuery({
-    queryKey: ['wallets'],
+    queryKey: ['trading-wallets'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('wallets').select('*');
+      const { data, error } = await api.get<any[]>('/wallets');
       if (error) throw error;
       return data;
     },

@@ -1,23 +1,12 @@
+import React from 'react';
 import { useLocation } from '@/lib/react-router-shim';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 
 export default function PageNotFound({ }) {
     const location = useLocation();
     const pageName = location.pathname.substring(1);
-
-    const { data: authData, isFetched } = useQuery({
-        queryKey: ['user'],
-        queryFn: async () => {
-            try {
-                const { data: { user }, error } = await supabase.auth.getUser();
-                if (error || !user) throw error || new Error('No user');
-                return { user, isAuthenticated: true };
-            } catch (error) {
-                return { user: null, isAuthenticated: false };
-            }
-        }
-    });
+    const { user, isLoadingAuth } = useAuth();
 
     return (
         <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
@@ -40,7 +29,7 @@ export default function PageNotFound({ }) {
                     </div>
 
                     {/* Admin Note */}
-                    {isFetched && authData?.isAuthenticated && (authData.user as any)?.user_metadata?.role === 'admin' && (
+                    {!isLoadingAuth && user && (user as any)?.user_metadata?.role === 'admin' && (
                         <div className="mt-8 p-4 bg-slate-100 rounded-lg border border-slate-200">
                             <div className="flex items-start space-x-3">
                                 <div className="shrink-0 w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center mt-0.5">

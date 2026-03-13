@@ -89,7 +89,7 @@ export default function LiveTrading() {
     enabled: !!user
   });
 
-  const walletBalance = wallets?.[0]?.main_balance ?? 12500;
+  const walletBalance = wallets?.[0]?.main_balance ?? 0;
 
   // Initialize price from DB or fallback
   useEffect(() => {

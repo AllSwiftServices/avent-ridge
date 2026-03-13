@@ -13,7 +13,8 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 
-type DepositStep = 'selection' | 'address' | 'evidence';
+type DepositStep = 'wallet_selection' | 'crypto_selection' | 'address' | 'evidence';
+type WalletType = 'trading' | 'holding';
 
 interface CryptoOption {
   id: string;
@@ -45,7 +46,8 @@ const CRYPTO_OPTIONS: CryptoOption[] = [
 
 export default function DepositPage() {
   const navigate = useNavigate();
-  const [step, setStep] = useState<DepositStep>('selection');
+  const [step, setStep] = useState<DepositStep>('wallet_selection');
+  const [selectedWallet, setSelectedWallet] = useState<WalletType | null>(null);
   const [selectedCrypto, setSelectedCrypto] = useState<CryptoOption | null>(null);
   const [amount, setAmount] = useState("");
   const [txHash, setTxHash] = useState("");
@@ -104,6 +106,7 @@ export default function DepositPage() {
         address: selectedCrypto?.address,
         receipt_url: receiptUrl,
         tx_hash: txHash,
+        wallet_type: selectedWallet,
       });
 
       if (error) throw error;
@@ -123,7 +126,12 @@ export default function DepositPage() {
       <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border px-6 py-4">
         <div className="max-w-xl mx-auto flex items-center gap-4">
           <button 
-            onClick={() => step === 'selection' ? navigate(createPageUrl('Wallet')) : setStep(step === 'evidence' ? 'address' : 'selection')}
+            onClick={() => {
+                if (step === 'wallet_selection') navigate(createPageUrl('Wallet'));
+                else if (step === 'crypto_selection') setStep('wallet_selection');
+                else if (step === 'address') setStep('crypto_selection');
+                else if (step === 'evidence') setStep('address');
+            }}
             className="p-2 -ml-2 rounded-xl hover:bg-muted transition-all"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -134,9 +142,57 @@ export default function DepositPage() {
 
       <main className="max-w-xl mx-auto px-6 mt-8">
         <AnimatePresence mode="wait">
-          {step === 'selection' && (
+          {step === 'wallet_selection' && (
             <motion.div 
-              key="selection"
+              key="wallet_selection"
+              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              <div className="bg-primary/5 border border-primary/20 p-6 rounded-3xl">
+                <div className="flex items-start gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <Wallet className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm">Target Wallet</h3>
+                    <p className="text-xs text-muted-foreground mt-1">Select the wallet you wish to fund. This will determine where your deposit is credited after approval.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider px-1">Select Destination</p>
+                {[
+                    { id: 'trading', name: 'Trading Wallet', desc: 'For active trading', icon: '⚡' },
+                    { id: 'holding', name: 'Holding Wallet', desc: 'For buying and holding assets', icon: '💎' }
+                ].map((wallet) => (
+                  <button
+                    key={wallet.id}
+                    onClick={() => {
+                        setSelectedWallet(wallet.id as WalletType);
+                        setStep('crypto_selection');
+                    }}
+                    className="w-full flex items-center justify-between p-5 rounded-3xl bg-card border border-border hover:border-primary/50 transition-all group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-2xl bg-muted group-hover:bg-primary/10 flex items-center justify-center font-bold text-xl group-hover:text-primary transition-all">
+                        {wallet.icon}
+                      </div>
+                      <div className="text-left">
+                        <p className="font-bold">{wallet.name}</p>
+                        <p className="text-xs text-muted-foreground">{wallet.desc}</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-all" />
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {step === 'crypto_selection' && (
+            <motion.div 
+              key="crypto_selection"
               initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
               className="space-y-6"
             >
@@ -146,8 +202,8 @@ export default function DepositPage() {
                     <Info className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm">Secure Deposits</h3>
-                    <p className="text-xs text-muted-foreground mt-1">Select your preferred cryptocurrency to generate a unique deposit address. Your funds will be credited after admin verification.</p>
+                    <h3 className="font-bold text-sm">Payment Method</h3>
+                    <p className="text-xs text-muted-foreground mt-1">Select your preferred cryptocurrency to generate a unique deposit address for your {selectedWallet} wallet.</p>
                   </div>
                 </div>
               </div>

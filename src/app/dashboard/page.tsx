@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, TrendingUp, TrendingDown, Bell, Search, Menu, Sun, Moon } from 'lucide-react';
+import { Eye, EyeOff, TrendingUp, TrendingDown, Bell, Search, User, Sun, Moon } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
@@ -56,7 +56,7 @@ export default function Dashboard() {
     enabled: !!user
   });
 
-  const wallet = wallets?.[0] || { main_balance: 10000 };
+  const wallet = wallets?.[0] || { main_balance: 0 };
   const cryptoHoldings = portfolio?.filter(p => p.asset_type === 'crypto') || [];
   const stockHoldings = portfolio?.filter(p => p.asset_type === 'stock') || [];
 
@@ -67,7 +67,7 @@ export default function Dashboard() {
 
   const cryptoValue = calcValue(cryptoHoldings);
   const stockValue = calcValue(stockHoldings);
-  const mainBalance = wallet.main_balance || 10000;
+  const mainBalance = wallet.main_balance || 0;
   const totalBalance = mainBalance + cryptoValue + stockValue;
   const totalChange = 2.45;
   const isPositive = totalChange >= 0;
@@ -82,7 +82,7 @@ export default function Dashboard() {
         <div className="flex items-center gap-3 px-4 py-3">
           {/* Menu icon → Profile */}
           <button onClick={() => navigate(createPageUrl('Profile'))} className="p-2 rounded-xl transition-colors shrink-0 text-muted-foreground">
-            <Menu className="h-5 w-5" />
+            <User className="h-5 w-5" />
           </button>
 
           {/* Search bar */}

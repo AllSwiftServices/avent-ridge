@@ -130,9 +130,11 @@ export default function ProfilePage() {
     const toastId = showToast.loading('Logging out...');
     try {
       await logout();
-      showToast.success('Logged out', { id: toastId });
+      showToast.dismiss(toastId);
+      showToast.success('Logged out');
     } catch (error) {
-      showToast.error('Logout failed', { id: toastId });
+      showToast.dismiss(toastId);
+      showToast.error('Logout failed');
     }
   };
 

@@ -8,7 +8,7 @@ import { useTheme } from '@/components/ui/ThemeProvider';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
 
-export default function ProOrderPanel({ asset, price, balance: balanceProp = 12500, onOrderPlaced }: {
+export default function ProOrderPanel({ asset, price, balance: balanceProp = 0, onOrderPlaced }: {
   asset: any,
   price: number,
   balance?: number,

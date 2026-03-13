@@ -17,20 +17,30 @@ export async function GET() {
 
     if (error) throw error;
 
-    // If no wallet exists, create a default one for the user
+    // If wallets don't exist, create default trading and holding wallets
     if (!data || data.length === 0) {
-      const { data: newWallet, error: createError } = await supabase
-        .from("wallets")
-        .insert({
+      const walletsToCreate = [
+        {
           user_id: user.id,
-          currency: "USD",
-          main_balance: 10000,
-          available_balance: 10000,
-        })
+          currency: "trading",
+          main_balance: 0,
+          available_balance: 0,
+        },
+        {
+          user_id: user.id,
+          currency: "holding",
+          main_balance: 0,
+          available_balance: 0,
+        }
+      ];
+
+      const { data: newWallets, error: createError } = await supabase
+        .from("wallets")
+        .insert(walletsToCreate)
         .select();
 
       if (createError) throw createError;
-      return NextResponse.json(newWallet);
+      return NextResponse.json(newWallets);
     }
 
     return NextResponse.json(data);

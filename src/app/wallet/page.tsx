@@ -78,7 +78,6 @@ export default function WalletPage() {
     enabled: !!user
   });
 
-  const wallet = wallets?.[0] || { main_balance: 0 };
   const cryptoHoldings = portfolio?.filter(p => p.asset_type === 'crypto') || [];
   const stockHoldings = portfolio?.filter(p => p.asset_type === 'stock') || [];
 
@@ -87,9 +86,14 @@ export default function WalletPage() {
     return sum + (h.quantity * (asset?.price || h.avg_buy_price));
   }, 0);
 
-  const cryptoValue = calcValue(cryptoHoldings);
-  const stockValue = calcValue(stockHoldings);
-  const mainBalance = wallet.main_balance || 0;
+  const cryptoAssetsValue = calcValue(cryptoHoldings);
+  const stockAssetsValue = calcValue(stockHoldings);
+
+  const tradingWallet = wallets?.find(w => w.currency === 'trading') || { main_balance: 0 };
+  const holdingWallet = wallets?.find(w => w.currency === 'holding') || { main_balance: 0 };
+
+  const totalTradingValue = (tradingWallet.main_balance || 0) + cryptoAssetsValue;
+  const totalHoldingValue = (holdingWallet.main_balance || 0) + stockAssetsValue;
 
   const filteredTransactions = transactions?.filter(tx => {
     if (activeTab === 'all') return true;
@@ -124,32 +128,26 @@ export default function WalletPage() {
 
       <div className="px-4 py-6 space-y-8">
         {/* Balances Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <WalletCard
-            type="main"
-            title="Fiat Wallet"
-            balance={mainBalance}
-            change={0}
+            type="crypto"
+            title="Trading Wallet"
+            balance={totalTradingValue}
+            change={2.5}
             hideBalance={hideBalance}
             onToggleHide={() => setHideBalance(!hideBalance)}
             onDeposit={() => navigate(createPageUrl('Wallet/Deposit'))}
             onWithdraw={() => showToast.info('Withdraw feature coming soon!')}
           />
           <WalletCard
-            type="crypto"
-            title="Crypto Wallet"
-            balance={cryptoValue}
-            change={2.5}
-            hideBalance={hideBalance}
-            onToggleHide={() => setHideBalance(!hideBalance)}
-          />
-          <WalletCard
             type="stocks"
-            title="Stocks Wallet"
-            balance={stockValue}
+            title="Holding Wallet"
+            balance={totalHoldingValue}
             change={-1.2}
             hideBalance={hideBalance}
             onToggleHide={() => setHideBalance(!hideBalance)}
+            onDeposit={() => navigate(createPageUrl('Wallet/Deposit'))}
+            onWithdraw={() => showToast.info('Withdraw feature coming soon!')}
           />
         </div>
 

@@ -81,7 +81,7 @@ export default function Markets() {
     return matchesSearch && asset.type === activeCategory;
   }) || [];
 
-  const wallet = wallets?.[0] || { main_balance: 10000 };
+  const wallet = wallets?.[0] || { main_balance: 0 };
 
   const handleTrade = async (trade: any) => {
     // In a real app, you would process the trade here
@@ -164,7 +164,7 @@ export default function Markets() {
           setSelectedAsset(null);
         }}
         onTrade={handleTrade}
-        balance={wallet.main_balance || 10000}
+        balance={wallet.main_balance || 0}
       />
     </div>
   );

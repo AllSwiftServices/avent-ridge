@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { showToast } from '@/lib/toast';
 
 export interface User {
   id: string;
@@ -55,11 +56,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await api.post('/auth/logout', {});
       setUser(null);
+      showToast.dismiss();
       router.push('/');
       router.refresh();
     } catch (error: any) {
       console.error('Error logging out:', error);
       setUser(null);
+      showToast.dismiss();
       router.push('/');
     }
   }, [router]);

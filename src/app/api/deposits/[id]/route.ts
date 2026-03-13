@@ -75,14 +75,16 @@ export async function PATCH(
         }
     }
 
-    // 3. If approved, update wallet balance and confirm transaction
+      // 3. If approved, update wallet balance and confirm transaction
     if (status === 'approved') {
+      const targetWallet = deposit.wallet_type || 'trading';
+      
       // Get current wallet
       const { data: wallet, error: walletError } = await supabase
         .from("wallets")
         .select("*")
         .eq("user_id", deposit.user_id)
-        .eq("currency", "USD") // Assuming all deposits fund the main USD balance
+        .eq("currency", targetWallet) 
         .single();
 
       if (walletError && walletError.code !== 'PGRST116') throw walletError;
@@ -105,7 +107,7 @@ export async function PATCH(
           .from("wallets")
           .insert({
             user_id: deposit.user_id,
-            currency: "USD",
+            currency: targetWallet,
             main_balance: newBalance,
             available_balance: newAvailable,
           });

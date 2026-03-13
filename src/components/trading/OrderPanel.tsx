@@ -23,7 +23,7 @@ const DURATIONS = [
 const OPTION_TYPES = ['High / Low', 'Touch / No Touch', 'In / Out'];
 const PROFIT_RATE = 0.85; // 85% profit
 
-export default function OrderPanel({ asset, price, balance: balanceProp = 12500 }: any) {
+export default function OrderPanel({ asset, price, balance: balanceProp = 0 }: any) {
   const { theme } = useTheme();
   const { user } = useAuth();
   const queryClient = useQueryClient();

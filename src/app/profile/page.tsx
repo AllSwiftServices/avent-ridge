@@ -250,7 +250,7 @@ export default function ProfilePage() {
                 {user?.user_metadata?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-xl font-bold truncate">{user?.user_metadata?.full_name || 'User'}</h2>
+                <h2 className="text-xl font-bold truncate">{user?.user_metadata?.name || 'User'}</h2>
                 <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
                   {kycRecord?.status === 'approved' && <div className="flex items-center gap-1"><CheckCircle className="h-4 w-4 text-primary" /><span className="text-[10px] font-bold text-primary uppercase tracking-wider">Verified</span></div>}

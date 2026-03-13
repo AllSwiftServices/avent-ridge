@@ -31,11 +31,13 @@ export async function GET() {
       .eq('id', user.id)
       .single();
 
-    // Fetch KYC status
+    // Fetch KYC status — get most recent record to handle any legacy duplicates
     const { data: kycData } = await supabaseAdmin
       .from('kyc')
       .select('status')
       .eq('user_id', user.id)
+      .order('updated_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     const userData = {

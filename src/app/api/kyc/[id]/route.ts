@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase-server";
+import { createClient, supabaseAdmin } from "@/lib/supabase-server";
 import { sendPushNotification } from "@/lib/push-notifications";
 
 export async function GET(
@@ -71,18 +71,23 @@ export async function PATCH(
     const body = await request.json();
     const { status, rejection_reason } = body;
 
-    const { data, error } = await supabase
+    // Use supabaseAdmin to bypass RLS — the admin session client cannot update other users' rows
+    const { error } = await supabaseAdmin
       .from("kyc")
       .update({
         status,
         rejection_reason,
         updated_at: new Date().toISOString(),
       })
-      .eq("user_id", id)
-      .select()
-      .single();
+      .eq("user_id", id);
 
     if (error) throw error;
+
+    // Sync the kyc_status column in the users table
+    await supabaseAdmin
+      .from('users')
+      .update({ kyc_status: status })
+      .eq('id', id);
 
     try {
         await sendPushNotification(id, {
@@ -96,7 +101,7 @@ export async function PATCH(
         console.error("Failed to send push notification", e);
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("KYC update error:", error);
     return NextResponse.json(

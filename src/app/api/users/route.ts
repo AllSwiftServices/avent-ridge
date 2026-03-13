@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase-server";
+import { createClient, supabaseAdmin } from "@/lib/supabase-server";
 
 export async function GET(request: Request) {
   try {
@@ -21,14 +21,37 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { data, error } = await supabase
+    // Fetch all users
+    const { data: usersData, error } = await supabaseAdmin
       .from("users")
       .select("*")
       .order("created_at", { ascending: false });
 
     if (error) throw error;
 
-    return NextResponse.json(data);
+    // Fetch all KYC records to get the most up-to-date status
+    const { data: kycRecords } = await supabaseAdmin
+      .from("kyc")
+      .select("user_id, status, updated_at")
+      .order("updated_at", { ascending: false });
+
+    // Build a map of user_id -> latest kyc status
+    const kycMap = new Map<string, string>();
+    if (kycRecords) {
+      for (const kyc of kycRecords) {
+        if (!kycMap.has(kyc.user_id)) {
+          kycMap.set(kyc.user_id, kyc.status);
+        }
+      }
+    }
+
+    // Merge real-time kyc_status into each user object
+    const enrichedUsers = (usersData || []).map(u => ({
+      ...u,
+      kyc_status: kycMap.get(u.id) || u.kyc_status || 'not_started',
+    }));
+
+    return NextResponse.json(enrichedUsers);
   } catch (error: any) {
     console.error("Users fetch error:", error);
     return NextResponse.json(
@@ -37,3 +60,4 @@ export async function GET(request: Request) {
     );
   }
 }
+

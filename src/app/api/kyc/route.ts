@@ -50,8 +50,7 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     
-    // Logic: If KYC already exists, update it. Otherwise insert.
-    // Upsert works well here.
+    // Safe upsert: Update if exists, insert if not, using user_id as the conflict target
     const { data, error } = await supabase
       .from("kyc")
       .upsert({
@@ -59,9 +58,9 @@ export async function POST(request: Request) {
         user_id: user.id,
         user_email: user.email,
         updated_at: new Date().toISOString(),
-      })
+      }, { onConflict: 'user_id' })
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
 

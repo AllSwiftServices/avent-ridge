@@ -97,7 +97,7 @@ function UploadBox({ label, value, onChange, hint }: { label: string, value: str
 }
 
 export default function VerifyIdentity() {
-  const { user, isLoadingAuth } = useAuth();
+  const { user, isLoadingAuth, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [existing, setExisting] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -173,6 +173,8 @@ export default function VerifyIdentity() {
 
       setExisting(data);
       toast.success('Submitted successfully!', { id: toastId });
+      // Refresh auth context so the KYC gate reads the new 'pending' status
+      await refreshUser();
     } catch (error: any) {
       toast.error('Submission failed: ' + error.message, { id: toastId });
     } finally {

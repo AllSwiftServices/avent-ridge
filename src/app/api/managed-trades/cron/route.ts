@@ -2,12 +2,28 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { processTradePayout } from "@/lib/managed-trades";
 
-// POST /api/managed-trades/cron — Automated payout for expired trades
+// GET or POST /api/managed-trades/cron — Automated payout for expired trades
+export async function GET(request: Request) {
+  return handleCron(request);
+}
+
 export async function POST(request: Request) {
+  return handleCron(request);
+}
+
+async function handleCron(request: Request) {
   try {
-    // Check for Vercel Cron header to prevent unauthorized calls
+    const { searchParams } = new URL(request.url);
+    const key = searchParams.get('key');
     const authHeader = request.headers.get('authorization');
-    if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    
+    // Check for secret key (either via header or query param)
+    const isValid = (process.env.CRON_SECRET && (
+      authHeader === `Bearer ${process.env.CRON_SECRET}` || 
+      key === process.env.CRON_SECRET
+    ));
+
+    if (process.env.CRON_SECRET && !isValid) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -35,11 +51,12 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({
+      success: true,
       processed: results.length,
       details: results
     });
   } catch (error: any) {
     console.error("Managed trades cron error:", error);
-    return NextResponse.json({ message: error.message || "Cron failed" }, { status: 500 });
+    return NextResponse.json({ success: false, message: error.message || "Cron failed" }, { status: 500 });
   }
 }

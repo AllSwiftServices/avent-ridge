@@ -45,13 +45,15 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
+    console.log("Creating managed trade with body:", body);
+
     const { 
       asset_symbol, asset_name, asset_type, 
       profit_percent, min_stake, ends_at, 
       scope, target_user_id 
     } = body;
 
-    if (!asset_symbol || !profit_percent || !ends_at) {
+    if (!asset_symbol || profit_percent === undefined || !ends_at) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -61,8 +63,8 @@ export async function POST(request: Request) {
         asset_symbol,
         asset_name,
         asset_type,
-        profit_percent,
-        min_stake: min_stake || 10,
+        profit_percent: Number(profit_percent),
+        min_stake: min_stake !== undefined ? Number(min_stake) : 10,
         ends_at,
         scope: scope || 'all',
         target_user_id,

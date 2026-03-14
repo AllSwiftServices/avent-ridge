@@ -156,6 +156,7 @@ export default function Dashboard() {
           <QuickActions
             onDeposit={() => navigate(createPageUrl('wallet'))}
             onTrade={() => navigate(createPageUrl('live-trading'))}
+            onWinningTrades={() => navigate(createPageUrl('trades'))}
             onWithdraw={() => navigate(createPageUrl('wallet'))}
           />
         </motion.div>

@@ -1,14 +1,14 @@
 import React from 'react';
 import { Link, useLocation } from '@/lib/react-router-shim';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, TrendingUp, PieChart, Wallet, Radio } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, PieChart, Wallet, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createPageUrl } from '@/utils';
 
 const navItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', page: 'dashboard' },
+  { icon: LayoutDashboard, label: 'Home', page: 'dashboard' },
   { icon: TrendingUp, label: 'Markets', page: 'markets' },
-  { icon: Radio, label: 'Live', page: 'live-trading' },
+  { icon: Zap, label: 'Trades', page: 'trades' },
   { icon: PieChart, label: 'Portfolio', page: 'portfolio' },
   { icon: Wallet, label: 'Wallet', page: 'wallet' },
 ];

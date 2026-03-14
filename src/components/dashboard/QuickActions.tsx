@@ -1,22 +1,24 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowDownToLine, ArrowUpFromLine, Zap } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, Zap, Radio } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const actions = [
   { label: 'Deposit', icon: ArrowDownToLine },
-  { label: 'Trade', icon: Zap },
+  { label: 'Live Trade', icon: Radio },
+  { label: 'Winning Trades', icon: Zap },
   { label: 'Withdraw', icon: ArrowUpFromLine },
 ];
 
 interface QuickActionsProps {
   onDeposit: () => void;
   onTrade: () => void;
+  onWinningTrades: () => void;
   onWithdraw: () => void;
 }
 
-export default function QuickActions({ onDeposit, onTrade, onWithdraw }: QuickActionsProps) {
-  const handlers = [onDeposit, onTrade, onWithdraw];
+export default function QuickActions({ onDeposit, onTrade, onWinningTrades, onWithdraw }: QuickActionsProps) {
+  const handlers = [onDeposit, onTrade, onWinningTrades, onWithdraw];
 
   return (
     <div className="flex items-center justify-center gap-8">

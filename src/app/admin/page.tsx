@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
-type AdminTab = 'overview' | 'users' | 'deposits' | 'kyc' | 'assets' | 'trades';
+type AdminTab = 'overview' | 'users' | 'deposits' | 'withdrawals' | 'kyc' | 'assets' | 'trades';
 
 interface UserData {
   id: string;
@@ -92,6 +92,23 @@ interface ManagedTrade {
   created_at: string;
 }
 
+interface Withdrawal {
+  id: string;
+  user_id: string;
+  wallet_id: string;
+  amount: number;
+  currency: string;
+  network: string;
+  address: string;
+  status: 'pending' | 'approved' | 'rejected';
+  admin_feedback?: string;
+  created_at: string;
+  users?: {
+    email: string;
+    name: string;
+  };
+}
+
 export default function AdminDashboard() {
   const { user, isLoadingAuth } = useAuth();
   const navigate = useNavigate();
@@ -109,8 +126,10 @@ export default function AdminDashboard() {
   // Selection states
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [selectedDeposit, setSelectedDeposit] = useState<Deposit | null>(null);
+  const [selectedWithdrawal, setSelectedWithdrawal] = useState<Withdrawal | null>(null);
   const [selectedKYC, setSelectedKYC] = useState<KYCSubmission | null>(null);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
 
   const [processing, setProcessing] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -142,12 +161,13 @@ export default function AdminDashboard() {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      const [uRes, dRes, kRes, aRes, tRes] = await Promise.all([
+      const [uRes, dRes, kRes, aRes, tRes, wRes] = await Promise.all([
         api.get<UserData[]>('/users'),
         api.get<Deposit[]>('/deposits'),
         api.get<KYCSubmission[]>('/kyc'),
         api.get<Asset[]>('/assets'),
-        api.get<ManagedTrade[]>('/managed-trades')
+        api.get<ManagedTrade[]>('/managed-trades'),
+        api.get<Withdrawal[]>('/withdrawals')
       ]);
 
       setUsers(uRes.data || []);
@@ -155,6 +175,7 @@ export default function AdminDashboard() {
       setKycSubmissions(kRes.data || []);
       setAssets(aRes.data || []);
       setManagedTrades(tRes.data || []);
+      setWithdrawals(wRes.data || []);
     } catch (err: any) {
       toast.error("Failed to load dashboard data");
     } finally {
@@ -189,6 +210,25 @@ export default function AdminDashboard() {
       if (error) throw error;
       toast.success(`Deposit ${status}`);
       setSelectedDeposit(null);
+      setRejectReason("");
+      fetchAllData();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setProcessing(false);
+    }
+  };
+  const handleUpdateWithdrawal = async (id: string, status: 'approved' | 'rejected') => {
+    if (status === 'rejected' && !rejectReason) {
+      toast.error("Please provide a rejection reason");
+      return;
+    }
+    setProcessing(true);
+    try {
+      const { error } = await api.patch(`/withdrawals/${id}`, { status, admin_feedback: rejectReason });
+      if (error) throw error;
+      toast.success(`Withdrawal ${status}`);
+      setSelectedWithdrawal(null);
       setRejectReason("");
       fetchAllData();
     } catch (err: any) {
@@ -378,7 +418,7 @@ export default function AdminDashboard() {
       {/* ── NAVIGATION TABS ── */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-6">
         <div className="flex items-center gap-1 p-1 bg-muted rounded-2xl w-full md:w-fit overflow-x-auto scrollbar-hide">
-          {(['overview', 'users', 'deposits', 'kyc', 'assets', 'trades'] as const).map((tab) => (
+          {(['overview', 'users', 'deposits', 'withdrawals', 'kyc', 'assets', 'trades'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -563,6 +603,81 @@ export default function AdminDashboard() {
                                              </td>
                                              <td className="px-6 py-4 text-[10px] text-muted-foreground">
                                                  {format(new Date(d.created_at), 'MMM dd, HH:mm')}
+                                             </td>
+                                             <td className="px-6 py-4 text-right">
+                                                 <button className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
+                                                     <ChevronRight className="h-4 w-4" />
+                                                 </button>
+                                             </td>
+                                         </tr>
+                                     ))}
+                                 </tbody>
+                             </table>
+                         </div>
+                    </motion.div>
+               )}
+
+               {activeTab === 'withdrawals' && (
+                    <motion.div key="withdrawals" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                         {/* Mobile Card View */}
+                         <div className="grid grid-cols-1 gap-4 md:hidden">
+                             {withdrawals.map(w => (
+                                 <div key={w.id} onClick={() => setSelectedWithdrawal(w)} className="bg-card border border-border p-4 rounded-3xl flex items-center justify-between group active:scale-[0.98] transition-all">
+                                     <div className="flex flex-col gap-1">
+                                         <div className="flex items-center gap-2">
+                                             <span className="text-sm font-bold">${w.amount} {w.currency}</span>
+                                             <span className={cn(
+                                                 "px-2 py-0.5 rounded-full text-[8px] font-bold uppercase",
+                                                 w.status === 'approved' ? 'bg-success/10 text-success' : 
+                                                 w.status === 'rejected' ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/10 text-amber-500'
+                                             )}>{w.status}</span>
+                                         </div>
+                                         <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[200px]">{w.users?.email}</span>
+                                         <span className="text-[9px] text-muted-foreground">{w.network} • {format(new Date(w.created_at), 'MMM dd, HH:mm')}</span>
+                                     </div>
+                                     <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                                 </div>
+                             ))}
+                         </div>
+
+                         {/* Desktop Table View */}
+                         <div className="hidden md:block bg-card border border-border rounded-3xl overflow-hidden">
+                             <table className="w-full text-left">
+                                 <thead>
+                                     <tr className="bg-muted/30 border-b border-border">
+                                         <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">User</th>
+                                         <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Amount</th>
+                                         <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Asset</th>
+                                         <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Status</th>
+                                         <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Date</th>
+                                         <th className="px-6 py-4 text-right"></th>
+                                     </tr>
+                                 </thead>
+                                 <tbody className="divide-y divide-border">
+                                     {withdrawals.map(w => (
+                                         <tr key={w.id} className="hover:bg-muted/10 transition-colors cursor-pointer" onClick={() => setSelectedWithdrawal(w)}>
+                                             <td className="px-6 py-4">
+                                               <div className="flex flex-col">
+                                                 <span className="text-sm font-bold">{w.users?.name || 'User'}</span>
+                                                 <span className="text-[10px] font-mono text-muted-foreground">{w.users?.email}</span>
+                                               </div>
+                                             </td>
+                                             <td className="px-6 py-4 text-sm font-bold">${w.amount.toLocaleString()}</td>
+                                             <td className="px-6 py-4">
+                                               <div className="flex flex-col">
+                                                 <span className="text-xs font-bold">{w.currency}</span>
+                                                 <span className="text-[9px] text-muted-foreground">{w.network}</span>
+                                               </div>
+                                             </td>
+                                             <td className="px-6 py-4">
+                                                 <span className={cn(
+                                                     "px-2 py-0.5 rounded-full text-[9px] font-bold uppercase",
+                                                     w.status === 'approved' ? 'bg-success/10 text-success' : 
+                                                     w.status === 'rejected' ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/10 text-amber-500'
+                                                 )}>{w.status}</span>
+                                             </td>
+                                             <td className="px-6 py-4 text-[10px] text-muted-foreground">
+                                                 {format(new Date(w.created_at), 'MMM dd, HH:mm')}
                                              </td>
                                              <td className="px-6 py-4 text-right">
                                                  <button className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
@@ -1167,6 +1282,88 @@ export default function AdminDashboard() {
                           </div>
                       </div>
                   )}
+              </DetailModal>
+          )}
+
+
+          {selectedWithdrawal && (
+              <DetailModal title="Process Withdrawal" onClose={() => setSelectedWithdrawal(null)}>
+                  <div className="space-y-6">
+                      <div className="grid grid-cols-2 gap-4">
+                          <InfoItem label="Amount" value={`$${selectedWithdrawal.amount.toLocaleString()}`} />
+                          <InfoItem label="Asset" value={`${selectedWithdrawal.currency} (${selectedWithdrawal.network})`} />
+                      </div>
+
+                      <div className="space-y-2">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Recipient Address</label>
+                          <div className="flex items-center gap-2">
+                              <code className="flex-1 p-3 bg-muted border border-border rounded-xl text-xs font-mono break-all leading-relaxed">
+                                  {selectedWithdrawal.address}
+                              </code>
+                              <button 
+                                onClick={() => { navigator.clipboard.writeText(selectedWithdrawal.address); toast.success("Address copied"); }}
+                                className="p-3 bg-muted hover:bg-muted/80 border border-border rounded-xl transition-colors shrink-0"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </button>
+                          </div>
+                      </div>
+
+                      <div className="space-y-2">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">User Information</label>
+                          <div className="p-4 rounded-2xl bg-muted/30 border border-border flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary italic">
+                                  {selectedWithdrawal.users?.name?.charAt(0) || 'U'}
+                              </div>
+                              <div className="min-w-0">
+                                  <p className="text-sm font-bold truncate">{selectedWithdrawal.users?.name || 'Unknown User'}</p>
+                                  <p className="text-[10px] text-muted-foreground truncate">{selectedWithdrawal.users?.email}</p>
+                              </div>
+                          </div>
+                      </div>
+
+                      {selectedWithdrawal.status === 'pending' ? (
+                          <div className="space-y-4 pt-2">
+                              <div className="space-y-2">
+                                  <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Admin Feedback / Notes</label>
+                                  <textarea
+                                      placeholder="Add rejection reason or approval notes..."
+                                      value={rejectReason}
+                                      onChange={(e) => setRejectReason(e.target.value)}
+                                      className="w-full h-24 p-4 bg-muted/50 border border-border rounded-2xl text-sm focus:outline-none transition-all focus:ring-2 focus:ring-primary/20"
+                                  />
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                  <button
+                                      onClick={() => handleUpdateWithdrawal(selectedWithdrawal.id, 'rejected')}
+                                      disabled={processing}
+                                      className="h-12 border border-destructive/50 text-destructive font-bold rounded-2xl hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                                  >
+                                      Reject Request
+                                  </button>
+                                  <button
+                                      onClick={() => handleUpdateWithdrawal(selectedWithdrawal.id, 'approved')}
+                                      disabled={processing}
+                                      className="h-12 bg-primary text-primary-foreground font-bold rounded-2xl hover:opacity-90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
+                                  >
+                                      Approve & Finalize
+                                  </button>
+                              </div>
+                          </div>
+                      ) : (
+                          <div className={cn(
+                              "p-4 rounded-2xl border flex items-center gap-3",
+                              selectedWithdrawal.status === 'approved' ? 'bg-success/10 border-success/50 text-success' : 'bg-destructive/10 border-destructive/50 text-destructive'
+                          )}>
+                              {selectedWithdrawal.status === 'approved' ? <CheckCircle className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
+                              <div>
+                                  <p className="text-xs font-bold uppercase tracking-wide">This withdrawal was {selectedWithdrawal.status}</p>
+                                  {selectedWithdrawal.admin_feedback && <p className="text-[10px] opacity-80 mt-1 leading-relaxed">{selectedWithdrawal.admin_feedback}</p>}
+                                  <p className="text-[9px] opacity-60 mt-1 uppercase font-bold">{format(new Date(selectedWithdrawal.created_at), 'MMM dd, yyyy HH:mm')}</p>
+                              </div>
+                          </div>
+                      )}
+                  </div>
               </DetailModal>
           )}
 

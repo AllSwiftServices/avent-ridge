@@ -32,6 +32,8 @@ export default function WalletPage() {
   const queryClient = useQueryClient();
   const [hideBalance, setHideBalance] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'deposits' | 'withdrawals'>('all');
+  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+  const [selectedWithdrawWallet, setSelectedWithdrawWallet] = useState<any>(null);
 
   useEffect(() => {
     if (!isLoadingAuth && !user) {
@@ -78,6 +80,32 @@ export default function WalletPage() {
     enabled: !!user
   });
 
+  const withdrawMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const { error } = await api.post('/withdrawals', data);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      showToast.success('Withdrawal request submitted!');
+      setIsWithdrawModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['wallets'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    },
+    onError: (error: any) => {
+      showToast.error(error.message || 'Failed to submit withdrawal');
+    }
+  });
+
+  const handleWithdrawClick = (wallet: any) => {
+    if (user?.kyc_status !== 'approved') {
+      showToast.error('Please complete KYC verification to withdraw funds');
+      navigate(createPageUrl('VerifyIdentity'));
+      return;
+    }
+    setSelectedWithdrawWallet(wallet);
+    setIsWithdrawModalOpen(true);
+  };
+
   const cryptoHoldings = portfolio?.filter(p => p.asset_type === 'crypto') || [];
   const stockHoldings = portfolio?.filter(p => p.asset_type === 'stock') || [];
 
@@ -92,8 +120,8 @@ export default function WalletPage() {
   const tradingWallet = wallets?.find(w => w.currency === 'trading') || { main_balance: 0 };
   const holdingWallet = wallets?.find(w => w.currency === 'holding') || { main_balance: 0 };
 
-  const totalTradingValue = (tradingWallet.main_balance || 0) + cryptoAssetsValue;
-  const totalHoldingValue = (holdingWallet.main_balance || 0) + stockAssetsValue;
+  const totalTradingValue = (Number(tradingWallet.main_balance) || 0) + cryptoAssetsValue;
+  const totalHoldingValue = (Number(holdingWallet.main_balance) || 0) + stockAssetsValue;
 
   const filteredTransactions = transactions?.filter(tx => {
     if (activeTab === 'all') return true;
@@ -137,7 +165,7 @@ export default function WalletPage() {
             hideBalance={hideBalance}
             onToggleHide={() => setHideBalance(!hideBalance)}
             onDeposit={() => navigate(createPageUrl('Wallet/Deposit'))}
-            onWithdraw={() => showToast.info('Withdraw feature coming soon!')}
+            onWithdraw={() => handleWithdrawClick(tradingWallet)}
           />
           <WalletCard
             type="stocks"
@@ -147,7 +175,7 @@ export default function WalletPage() {
             hideBalance={hideBalance}
             onToggleHide={() => setHideBalance(!hideBalance)}
             onDeposit={() => navigate(createPageUrl('Wallet/Deposit'))}
-            onWithdraw={() => showToast.info('Withdraw feature coming soon!')}
+            onWithdraw={() => handleWithdrawClick(holdingWallet)}
           />
         </div>
 
@@ -258,6 +286,133 @@ export default function WalletPage() {
           </div>
         </div>
       </div>
+
+      <WithdrawalModal 
+        isOpen={isWithdrawModalOpen}
+        onClose={() => setIsWithdrawModalOpen(false)}
+        wallet={selectedWithdrawWallet}
+        onSubmit={(data: any) => withdrawMutation.mutate(data)}
+        isSubmitting={withdrawMutation.isPending}
+      />
     </div>
+  );
+}
+
+function WithdrawalModal({ isOpen, onClose, wallet, onSubmit, isSubmitting }: any) {
+  const [amount, setAmount] = useState('');
+  const [currency, setCurrency] = useState<'BTC' | 'USDT'>('USDT');
+  const [address, setAddress] = useState('');
+
+  if (!isOpen || !wallet) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({
+      wallet_id: wallet.id,
+      amount: parseFloat(amount),
+      currency,
+      network: currency === 'BTC' ? 'BTC' : 'TRC20',
+      address
+    });
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            className="relative w-full max-w-md bg-card border border-border rounded-[2.5rem] shadow-2xl p-8"
+          >
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-2xl font-bold">Withdraw funds</h2>
+                <p className="text-sm text-muted-foreground">From your {wallet.currency} wallet</p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
+                <XCircle className="h-6 w-6 text-muted-foreground" />
+              </Button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="p-4 rounded-2xl bg-muted/30 border border-border flex items-center justify-between">
+                <span className="text-sm font-medium text-muted-foreground">Available Balance</span>
+                <span className="font-bold">${Number(wallet.main_balance || 0).toLocaleString()}</span>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Withdrawal Amount ($)</label>
+                <input
+                  type="number"
+                  placeholder="0.00"
+                  required
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="w-full h-14 px-4 bg-muted/50 border border-border rounded-2xl text-xl font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Select Asset</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { id: 'BTC', label: 'Bitcoin', network: 'BTC' },
+                    { id: 'USDT', label: 'USDT', network: 'TRC20' },
+                  ].map((asset) => (
+                    <button
+                      key={asset.id}
+                      type="button"
+                      onClick={() => setCurrency(asset.id as any)}
+                      className={cn(
+                        "p-4 rounded-2xl border text-left transition-all",
+                        currency === asset.id 
+                          ? "bg-primary/5 border-primary shadow-sm ring-1 ring-primary/20" 
+                          : "bg-card border-border hover:border-primary/50"
+                      )}
+                    >
+                      <p className="font-bold text-sm">{asset.label}</p>
+                      <p className="text-[10px] text-muted-foreground">{asset.network}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Recipient Address ({currency === 'BTC' ? 'BTC' : 'TRC20'})</label>
+                <input
+                  type="text"
+                  placeholder={`Enter your ${currency} address`}
+                  required
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  className="w-full h-14 px-4 bg-muted/50 border border-border rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-mono"
+                />
+              </div>
+
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || !amount || parseFloat(amount) <= 0 || parseFloat(amount) > wallet.main_balance || !address}
+                className="w-full h-14 rounded-2xl font-bold text-lg shadow-lg shadow-primary/20"
+              >
+                {isSubmitting ? "Processing..." : "Confirm Withdrawal"}
+              </Button>
+
+              <p className="text-[10px] text-center text-muted-foreground font-medium">
+                Withdrawals are processed manually by our finance team and may take up to 24 hours to reflect on the blockchain.
+              </p>
+            </form>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 }

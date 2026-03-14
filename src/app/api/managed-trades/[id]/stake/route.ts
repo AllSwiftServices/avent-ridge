@@ -99,6 +99,18 @@ export async function POST(
       description: `Stake in ${trade.asset_symbol} managed trade`
     });
 
+    // 4. Notify User
+    try {
+      const { sendPushNotification } = await import("@/lib/push-notifications");
+      await sendPushNotification(user.id, {
+        title: "Stake Successful",
+        body: `You've successfully staked $${amount.toLocaleString()} in ${trade.asset_symbol} managed trade.`,
+        url: "/trades"
+      });
+    } catch (pushErr) {
+      console.error("Failed to send stake notification:", pushErr);
+    }
+
     return NextResponse.json(stake);
   } catch (error: any) {
     console.error("Staking error:", error);

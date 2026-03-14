@@ -77,6 +77,18 @@ export async function processTradePayout(tradeId: string) {
         description: `Payout from ${trade.asset_symbol} managed trade (+${trade.profit_percent}% profit)`
       });
 
+      // 4. Notify User
+      try {
+        const { sendPushNotification } = await import("./push-notifications");
+        await sendPushNotification(stake.user_id, {
+          title: "Trade Payout Received",
+          body: `Your $${stakeAmount.toLocaleString()} stake in ${trade.asset_symbol} has matured! $${totalPayout.toLocaleString()} has been credited to your trading wallet.`,
+          url: "/wallet"
+        });
+      } catch (pushErr) {
+        console.error("Failed to send payout notification:", pushErr);
+      }
+
       results.paidOut++;
     } catch (e) {
       console.error(`Failed to pay out stake ${stake.id}:`, e);

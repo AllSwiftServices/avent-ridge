@@ -11,6 +11,7 @@ const navItems = [
   { icon: Radio, label: 'Live Trading', page: 'live-trading' },
   { icon: PieChart, label: 'Portfolio', page: 'portfolio' },
   { icon: Wallet, label: 'Wallet', page: 'wallet' },
+  { icon: Zap, label: 'Winning Trades', page: 'trades' },
   { icon: User, label: 'Profile', page: 'profile' },
 ];
 

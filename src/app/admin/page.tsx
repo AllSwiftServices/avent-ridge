@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
-type AdminTab = 'overview' | 'users' | 'deposits' | 'kyc' | 'assets';
+type AdminTab = 'overview' | 'users' | 'deposits' | 'kyc' | 'assets' | 'trades';
 
 interface UserData {
   id: string;
@@ -77,6 +77,21 @@ interface Asset {
   updated_at: string;
 }
 
+interface ManagedTrade {
+  id: string;
+  asset_symbol: string;
+  asset_name: string;
+  asset_type: string;
+  profit_percent: number;
+  min_stake: number;
+  starts_at: string;
+  ends_at: string;
+  scope: 'all' | 'user';
+  target_user_id?: string;
+  status: 'active' | 'completed' | 'cancelled';
+  created_at: string;
+}
+
 export default function AdminDashboard() {
   const { user, isLoadingAuth } = useAuth();
   const navigate = useNavigate();
@@ -89,6 +104,7 @@ export default function AdminDashboard() {
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [kycSubmissions, setKycSubmissions] = useState<KYCSubmission[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [managedTrades, setManagedTrades] = useState<ManagedTrade[]>([]);
   
   // Selection states
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
@@ -105,6 +121,13 @@ export default function AdminDashboard() {
   const [userDetail, setUserDetail] = useState<any>(null);
   const [userDetailLoading, setUserDetailLoading] = useState(false);
   const [editForm, setEditForm] = useState<{ name: string; role: string; status: string }>({ name: '', role: '', status: '' });
+  const [newTrade, setNewTrade] = useState<Partial<ManagedTrade>>({
+    asset_symbol: '',
+    profit_percent: 10,
+    min_stake: 10,
+    scope: 'all',
+    ends_at: format(new Date(Date.now() + 86400000), "yyyy-MM-dd'T'HH:mm")
+  });
 
   useEffect(() => {
     if (!isLoadingAuth) {
@@ -119,17 +142,19 @@ export default function AdminDashboard() {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      const [uRes, dRes, kRes, aRes] = await Promise.all([
+      const [uRes, dRes, kRes, aRes, tRes] = await Promise.all([
         api.get<UserData[]>('/users'),
         api.get<Deposit[]>('/deposits'),
         api.get<KYCSubmission[]>('/kyc'),
-        api.get<Asset[]>('/assets')
+        api.get<Asset[]>('/assets'),
+        api.get<ManagedTrade[]>('/managed-trades')
       ]);
 
       setUsers(uRes.data || []);
       setDeposits(dRes.data || []);
       setKycSubmissions(kRes.data || []);
       setAssets(aRes.data || []);
+      setManagedTrades(tRes.data || []);
     } catch (err: any) {
       toast.error("Failed to load dashboard data");
     } finally {
@@ -260,6 +285,50 @@ export default function AdminDashboard() {
       }
   };
 
+  const handleCreateTrade = async () => {
+    if (!newTrade.asset_symbol || !newTrade.profit_percent || !newTrade.ends_at) {
+      toast.error("Please fill all required fields");
+      return;
+    }
+    const asset = assets.find(a => a.symbol === newTrade.asset_symbol);
+    setProcessing(true);
+    try {
+      const { error } = await api.post('/managed-trades', {
+        ...newTrade,
+        asset_name: asset?.name || newTrade.asset_symbol,
+        asset_type: asset?.type || 'crypto'
+      });
+      if (error) throw error;
+      toast.success("Managed trade created");
+      setNewTrade({
+        asset_symbol: '',
+        profit_percent: 10,
+        min_stake: 10,
+        scope: 'all',
+        ends_at: format(new Date(Date.now() + 86400000), "yyyy-MM-dd'T'HH:mm")
+      });
+      fetchAllData();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleCompleteTrade = async (id: string) => {
+    setProcessing(true);
+    try {
+      const { data, error } = await api.post<any>(`/managed-trades/${id}/complete`, {});
+      if (error) throw error;
+      toast.success(data.message || "Trade completed and stakers paid out");
+      fetchAllData();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
 
   if (isLoadingAuth || (user && user.role !== 'admin')) {
     return (
@@ -309,7 +378,7 @@ export default function AdminDashboard() {
       {/* ── NAVIGATION TABS ── */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-6">
         <div className="flex items-center gap-1 p-1 bg-muted rounded-2xl w-full md:w-fit overflow-x-auto scrollbar-hide">
-          {(['overview', 'users', 'deposits', 'kyc', 'assets'] as const).map((tab) => (
+          {(['overview', 'users', 'deposits', 'kyc', 'assets', 'trades'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -576,58 +645,158 @@ export default function AdminDashboard() {
                   </motion.div>
               )}
 
-              {activeTab === 'assets' && (
-                  <motion.div key="assets" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                      {/* Sync header */}
-                      <div className="flex items-center justify-between mb-6">
-                          <div>
-                              <p className="text-xs text-muted-foreground">
-                                  {lastSynced ? `Last synced: ${lastSynced.toLocaleTimeString()}` : 'Prices are manually seeded — sync to get live data'}
-                              </p>
-                          </div>
-                          <button
-                              onClick={handleSyncPrices}
-                              disabled={syncing}
-                              className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-2xl text-sm font-bold hover:opacity-90 transition-all disabled:opacity-60 shadow-lg shadow-primary/20"
-                          >
-                              <RefreshCcw className={cn("h-4 w-4", syncing && "animate-spin")} />
-                              {syncing ? 'Syncing...' : 'Sync Prices'}
-                          </button>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                          {assets.map(asset => (
-                              <div key={asset.id} className="bg-card border border-border p-6 rounded-3xl group hover:border-primary/30 transition-all">
-                                  <div className="flex justify-between items-start mb-4">
-                                      <div className="h-12 w-12 rounded-2xl bg-muted flex items-center justify-center font-bold text-lg group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                                          {asset.symbol.slice(0, 1)}
-                                      </div>
-                                      <button 
-                                        onClick={() => setEditingAsset(asset)}
-                                        className="p-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl bg-muted hover:bg-muted/80"
-                                      >
-                                          <Settings className="h-4 w-4" />
-                                      </button>
-                                  </div>
-                                  <h3 className="font-bold text-lg">{asset.name}</h3>
-                                  <p className="text-xs text-muted-foreground mb-4">{asset.symbol} • {asset.type}</p>
-                                  
-                                  <div className="flex items-end justify-between">
-                                      <div>
-                                          <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Price</p>
-                                          <p className="text-2xl font-bold tracking-tight">${asset.price.toLocaleString()}</p>
-                                      </div>
-                                      <div className={cn(
-                                          "flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg",
-                                          asset.change_percent >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
-                                      )}>
-                                          {asset.change_percent >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                                          {Math.abs(asset.change_percent)}%
-                                      </div>
-                                  </div>
-                              </div>
+              {activeTab === 'trades' && (
+                <motion.div key="trades" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+                  {/* Create Trade Form */}
+                  <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
+                    <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
+                       <TrendingUp className="h-5 w-5 text-primary" /> Create New Managed Trade
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Select Asset</label>
+                        <select 
+                          value={newTrade.asset_symbol}
+                          onChange={(e) => setNewTrade({...newTrade, asset_symbol: e.target.value})}
+                          className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
+                        >
+                          <option value="">Choose an asset...</option>
+                          {assets.map(a => (
+                            <option key={a.id} value={a.symbol}>{a.symbol} - {a.name}</option>
                           ))}
+                        </select>
                       </div>
-                  </motion.div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Profit Percentage (%)</label>
+                        <input 
+                          type="number"
+                          placeholder="e.g. 35"
+                          value={newTrade.profit_percent}
+                          onChange={(e) => setNewTrade({...newTrade, profit_percent: parseFloat(e.target.value)})}
+                          className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Minimum Stake ($)</label>
+                        <input 
+                          type="number"
+                          placeholder="e.g. 10"
+                          value={newTrade.min_stake}
+                          onChange={(e) => setNewTrade({...newTrade, min_stake: parseFloat(e.target.value)})}
+                          className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">End Time (UTC)</label>
+                        <input 
+                          type="datetime-local"
+                          value={newTrade.ends_at}
+                          onChange={(e) => setNewTrade({...newTrade, ends_at: e.target.value})}
+                          className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Scope</label>
+                        <select 
+                          value={newTrade.scope}
+                          onChange={(e) => setNewTrade({...newTrade, scope: e.target.value as any})}
+                          className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
+                        >
+                          <option value="all">All Users</option>
+                          <option value="user">Specific User</option>
+                        </select>
+                      </div>
+
+                      {newTrade.scope === 'user' && (
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Select User</label>
+                          <select 
+                            value={newTrade.target_user_id}
+                            onChange={(e) => setNewTrade({...newTrade, target_user_id: e.target.value})}
+                            className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
+                          >
+                            <option value="">Choose a user...</option>
+                            {users.map(u => (
+                              <option key={u.id} value={u.id}>{u.email}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      <div className="flex items-end">
+                        <button 
+                          onClick={handleCreateTrade}
+                          disabled={processing}
+                          className="w-full h-11 bg-primary text-primary-foreground font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 transition-all shadow-lg shadow-primary/20"
+                        >
+                          {processing ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <TrendingUp className="h-4 w-4" />}
+                          Create Trade
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Active Trades List */}
+                  <div className="space-y-4">
+                    <h3 className="font-bold text-lg px-1">Active Managed Trades</h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      {managedTrades.length === 0 ? (
+                        <div className="bg-card border border-border rounded-3xl p-12 text-center text-muted-foreground">
+                          No managed trades found
+                        </div>
+                      ) : managedTrades.map(t => (
+                        <div key={t.id} className="bg-card border border-border p-6 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+                          <div className="flex items-center gap-4">
+                            <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center font-bold text-primary">
+                              {t.asset_symbol.slice(0, 1)}
+                            </div>
+                            <div>
+                              <h4 className="font-bold flex items-center gap-2">
+                                {t.asset_symbol} 
+                                <span className="px-2 py-0.5 rounded-full bg-success/10 text-success text-[10px] font-bold">+{t.profit_percent}%</span>
+                              </h4>
+                              <p className="text-xs text-muted-foreground">{t.asset_name} • Min Stake: ${t.min_stake}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-8">
+                            <div>
+                              <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Ends At</p>
+                              <p className="text-xs font-medium">{format(new Date(t.ends_at), 'MMM dd, HH:mm')}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Scope</p>
+                              <p className="text-xs font-medium capitalize">{t.scope}{t.scope === 'user' ? ' (targeted)' : ''}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Status</p>
+                              <span className={cn(
+                                "px-2 py-0.5 rounded-full text-[10px] font-bold capitalize",
+                                t.status === 'active' ? 'bg-primary/10 text-primary' : 
+                                t.status === 'completed' ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'
+                              )}>{t.status}</span>
+                            </div>
+                          </div>
+
+                          {t.status === 'active' && (
+                            <button
+                              onClick={() => handleCompleteTrade(t.id)}
+                              disabled={processing}
+                              className="px-6 h-11 bg-success text-success-foreground font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 transition-all shadow-lg shadow-success/10"
+                            >
+                              {processing ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                              Complete & Payout
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
               )}
           </AnimatePresence>
       </main>

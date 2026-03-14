@@ -645,7 +645,111 @@ export default function AdminDashboard() {
                   </motion.div>
               )}
 
-              {activeTab === 'trades' && (
+              {activeTab === 'assets' && (
+                  <motion.div key="assets" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                           <TrendingUp className="h-5 w-5 text-primary" />
+                           <h3 className="font-bold text-lg">Market Assets</h3>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button 
+                                onClick={handleSyncPrices}
+                                disabled={syncing}
+                                className="h-11 px-6 bg-primary text-primary-foreground font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 transition-all shadow-lg shadow-primary/20"
+                            >
+                                {syncing ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
+                                Sync Prices
+                            </button>
+                        </div>
+                      </div>
+
+                      {/* Mobile Card View */}
+                      <div className="grid grid-cols-1 gap-4 md:hidden">
+                          {assets.filter(a => a.symbol.toLowerCase().includes(searchQuery.toLowerCase()) || a.name?.toLowerCase().includes(searchQuery.toLowerCase())).map(a => (
+                              <div key={a.id} onClick={() => setEditingAsset(a)} className="bg-card border border-border p-4 rounded-3xl flex items-center justify-between group active:scale-[0.98] transition-all">
+                                  <div className="flex items-center gap-4">
+                                      <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center font-bold text-xs">
+                                          {a.symbol.slice(0, 2)}
+                                      </div>
+                                      <div className="flex flex-col">
+                                          <div className="flex items-center gap-2">
+                                              <span className="text-sm font-bold">{a.symbol}</span>
+                                              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground uppercase font-bold">{a.type}</span>
+                                          </div>
+                                          <span className="text-xs text-muted-foreground">{a.name}</span>
+                                      </div>
+                                  </div>
+                                  <div className="text-right flex flex-col items-end gap-1">
+                                      <span className="text-sm font-bold">${a.price.toLocaleString()}</span>
+                                      <span className={cn(
+                                          "text-[10px] font-bold",
+                                          a.change_percent >= 0 ? "text-success" : "text-destructive"
+                                      )}>
+                                          {a.change_percent >= 0 ? "+" : ""}{a.change_percent}%
+                                      </span>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+
+                      {/* Desktop Table View */}
+                      <div className="hidden md:block bg-card border border-border rounded-3xl overflow-hidden shadow-sm">
+                          <table className="w-full text-left">
+                              <thead>
+                                  <tr className="bg-muted/30 border-b border-border">
+                                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Asset</th>
+                                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Type</th>
+                                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Price</th>
+                                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">24h Change</th>
+                                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Last Updated</th>
+                                      <th className="px-6 py-4 text-right"></th>
+                                  </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border">
+                                  {assets.filter(a => a.symbol.toLowerCase().includes(searchQuery.toLowerCase()) || a.name?.toLowerCase().includes(searchQuery.toLowerCase())).map(a => (
+                                      <tr key={a.id} className="hover:bg-muted/10 transition-colors">
+                                          <td className="px-6 py-4">
+                                              <div className="flex items-center gap-3">
+                                                  <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center font-bold text-[10px]">{a.symbol.slice(0, 2)}</div>
+                                                  <div className="flex flex-col">
+                                                      <span className="text-sm font-bold">{a.symbol}</span>
+                                                      <span className="text-[10px] text-muted-foreground">{a.name}</span>
+                                                  </div>
+                                              </div>
+                                          </td>
+                                          <td className="px-6 py-4">
+                                              <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px] font-bold uppercase">{a.type}</span>
+                                          </td>
+                                          <td className="px-6 py-4 text-sm font-bold">${a.price.toLocaleString()}</td>
+                                          <td className="px-6 py-4">
+                                              <span className={cn(
+                                                  "px-2 py-0.5 rounded-full text-[10px] font-bold",
+                                                  a.change_percent >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
+                                              )}>
+                                                  {a.change_percent >= 0 ? "+" : ""}{a.change_percent}%
+                                              </span>
+                                          </td>
+                                          <td className="px-6 py-4 text-[10px] text-muted-foreground">
+                                              {a.updated_at ? format(new Date(a.updated_at), 'MMM dd, HH:mm') : 'Never'}
+                                          </td>
+                                          <td className="px-6 py-4 text-right">
+                                              <button 
+                                                onClick={() => setEditingAsset(a)}
+                                                className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors group"
+                                              >
+                                                  <Settings className="h-4 w-4 group-hover:text-primary transition-colors" />
+                                              </button>
+                                          </td>
+                                      </tr>
+                                  ))}
+                              </tbody>
+                          </table>
+                      </div>
+                  </motion.div>
+              )}
+
+               {activeTab === 'trades' && (
                 <motion.div key="trades" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
                   {/* Create Trade Form */}
                   <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">

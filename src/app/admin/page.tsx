@@ -99,6 +99,8 @@ export default function AdminDashboard() {
   const [processing, setProcessing] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [balanceAdjust, setBalanceAdjust] = useState('');
+  const [syncing, setSyncing] = useState(false);
+  const [lastSynced, setLastSynced] = useState<Date | null>(null);
 
   useEffect(() => {
     if (!isLoadingAuth) {
@@ -202,6 +204,21 @@ export default function AdminDashboard() {
       } finally {
           setProcessing(false);
       }
+  };
+
+  const handleSyncPrices = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await api.post<{ updated: number; failed: string[] }>('/assets/sync', {});
+      if (error) throw error;
+      toast.success(`Prices synced! Updated ${data?.updated} assets${data?.failed?.length ? `, ${data.failed.length} failed: ${data.failed.join(', ')}` : ''}`);
+      setLastSynced(new Date());
+      fetchAllData();
+    } catch (err: any) {
+      toast.error('Sync failed: ' + err.message);
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const handleUpdateAsset = async () => {
@@ -541,6 +558,22 @@ export default function AdminDashboard() {
 
               {activeTab === 'assets' && (
                   <motion.div key="assets" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                      {/* Sync header */}
+                      <div className="flex items-center justify-between mb-6">
+                          <div>
+                              <p className="text-xs text-muted-foreground">
+                                  {lastSynced ? `Last synced: ${lastSynced.toLocaleTimeString()}` : 'Prices are manually seeded — sync to get live data'}
+                              </p>
+                          </div>
+                          <button
+                              onClick={handleSyncPrices}
+                              disabled={syncing}
+                              className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-2xl text-sm font-bold hover:opacity-90 transition-all disabled:opacity-60 shadow-lg shadow-primary/20"
+                          >
+                              <RefreshCcw className={cn("h-4 w-4", syncing && "animate-spin")} />
+                              {syncing ? 'Syncing...' : 'Sync Prices'}
+                          </button>
+                      </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                           {assets.map(asset => (
                               <div key={asset.id} className="bg-card border border-border p-6 rounded-3xl group hover:border-primary/30 transition-all">

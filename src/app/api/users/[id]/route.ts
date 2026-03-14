@@ -14,23 +14,34 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", id)
-      .single();
+    // Only the user themselves or an admin may fetch full details
+    const { data: callerProfile } = await supabase.from("users").select("role").eq("id", user.id).single();
+    const isAdmin = callerProfile?.role === "admin";
+    if (user.id !== id && !isAdmin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
+    // Fetch user profile
+    const { data: profile, error } = await supabaseAdmin.from("users").select("*").eq("id", id).single();
     if (error) throw error;
 
-    return NextResponse.json(data);
+    // For admin, also fetch wallets + holdings
+    if (isAdmin) {
+      const [{ data: wallets }, { data: holdings }, { data: kyc }] = await Promise.all([
+        supabaseAdmin.from("wallets").select("*").eq("user_id", id),
+        supabaseAdmin.from("holdings").select("*").eq("user_id", id).order("created_at", { ascending: false }),
+        supabaseAdmin.from("kyc").select("*").eq("user_id", id).order("updated_at", { ascending: false }).limit(1),
+      ]);
+      return NextResponse.json({ ...profile, wallets: wallets || [], holdings: holdings || [], kyc: kyc?.[0] || null });
+    }
+
+    return NextResponse.json(profile);
   } catch (error: any) {
     console.error("User fetch error:", error);
-    return NextResponse.json(
-      { message: error.message || "Failed to fetch user" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: error.message || "Failed to fetch user" }, { status: 500 });
   }
 }
+
 
 export async function PATCH(
   request: Request,

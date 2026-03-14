@@ -101,6 +101,10 @@ export default function AdminDashboard() {
   const [balanceAdjust, setBalanceAdjust] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
+  const [userTab, setUserTab] = useState<'overview'|'balances'|'holdings'|'edit'>('overview');
+  const [userDetail, setUserDetail] = useState<any>(null);
+  const [userDetailLoading, setUserDetailLoading] = useState(false);
+  const [editForm, setEditForm] = useState<{ name: string; role: string; status: string }>({ name: '', role: '', status: '' });
 
   useEffect(() => {
     if (!isLoadingAuth) {
@@ -130,6 +134,22 @@ export default function AdminDashboard() {
       toast.error("Failed to load dashboard data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openUserDetail = async (u: UserData) => {
+    setSelectedUser(u);
+    setUserTab('overview');
+    setEditForm({ name: u.name || '', role: u.role || 'buyer', status: u.status || 'active' });
+    setUserDetailLoading(true);
+    setUserDetail(null);
+    try {
+      const { data } = await api.get<any>(`/users/${u.id}`);
+      setUserDetail(data);
+    } catch (e) {
+      console.error('Failed to load user detail', e);
+    } finally {
+      setUserDetailLoading(false);
     }
   };
 
@@ -351,7 +371,7 @@ export default function AdminDashboard() {
                       {/* Mobile Card View */}
                       <div className="grid grid-cols-1 gap-4 md:hidden">
                           {users.filter(u => u.email.includes(searchQuery) || u.name?.includes(searchQuery)).map(u => (
-                              <div key={u.id} onClick={() => setSelectedUser(u)} className="bg-card border border-border p-4 rounded-3xl flex items-center justify-between group active:scale-[0.98] transition-all">
+                              <div key={u.id} onClick={() => openUserDetail(u)} className="bg-card border border-border p-4 rounded-3xl flex items-center justify-between group active:scale-[0.98] transition-all">
                                   <div className="flex flex-col gap-1">
                                       <span className="text-sm font-bold">{u.name || 'Anonymous'}</span>
                                       <span className="text-[10px] text-muted-foreground font-mono">{u.email}</span>
@@ -704,81 +724,179 @@ export default function AdminDashboard() {
               </DetailModal>
           )}
           {selectedUser && (
-              <DetailModal title="User Management" onClose={() => setSelectedUser(null)}>
-                  <div className="space-y-6">
-                      <div className="flex items-center gap-4 p-4 rounded-3xl bg-muted/30 border border-border">
-                          <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                              <Users className="h-6 w-6 text-primary" />
-                          </div>
-                          <div>
-                              <h3 className="font-bold">{selectedUser.name || 'Anonymous'}</h3>
-                              <p className="text-xs text-muted-foreground">{selectedUser.email}</p>
-                          </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Role</label>
-                              <select 
-                                value={selectedUser.role}
-                                onChange={(e) => handleUpdateUser(selectedUser.id, { role: e.target.value })}
-                                className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
-                              >
-                                  <option value="buyer">Buyer</option>
-                                  <option value="admin">Admin</option>
-                              </select>
-                          </div>
-                          <div className="space-y-2">
-                              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Status</label>
-                              <select 
-                                value={selectedUser.status}
-                                onChange={(e) => handleUpdateUser(selectedUser.id, { status: e.target.value })}
-                                className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
-                              >
-                                  <option value="active">Active</option>
-                                  <option value="suspended">Suspended</option>
-                              </select>
-                          </div>
-                      </div>
-
-                      <div className="space-y-3 pt-4 border-t border-border">
-                          <label className="text-[10px] font-bold text-muted-foreground uppercase px-1 flex items-center gap-2">
-                              <Wallet className="h-3.5 w-3.5" /> Adjust Holding Balance
-                          </label>
-                          <input
-                              type="number"
-                              placeholder="Amount (USD)"
-                              value={balanceAdjust}
-                              onChange={(e) => setBalanceAdjust(e.target.value)}
-                              className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
-                          />
-                          <div className="grid grid-cols-2 gap-3">
-                              <button
-                                  onClick={() => handleAdjustBalance(selectedUser.id, 'add')}
-                                  disabled={processing || !balanceAdjust}
-                                  className="h-11 rounded-xl bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:opacity-90 transition-all"
-                              >
-                                  {processing ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <ArrowUpRight className="h-4 w-4" />} Add
-                              </button>
-                              <button
-                                  onClick={() => handleAdjustBalance(selectedUser.id, 'remove')}
-                                  disabled={processing || !balanceAdjust}
-                                  className="h-11 rounded-xl bg-destructive text-destructive-foreground font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:opacity-90 transition-all"
-                              >
-                                  {processing ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <ArrowDownRight className="h-4 w-4" />} Remove
-                              </button>
-                          </div>
-                      </div>
-
-                      <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20">
-                          <p className="text-xs font-bold text-amber-500 flex items-center gap-2 mb-1">
-                              <AlertCircle className="h-4 w-4" /> Warning
-                          </p>
-                          <p className="text-[10px] text-muted-foreground">Changing user roles or suspending accounts takes immediate effect. Users may be logged out or restricted from trading tasks.</p>
-                      </div>
+              <DetailModal title="User Detail" onClose={() => { setSelectedUser(null); setUserDetail(null); }}>
+                  {/* Tab nav */}
+                  <div className="flex gap-1 p-1 bg-muted rounded-2xl mb-6">
+                      {(['overview','balances','holdings','edit'] as const).map(tab => (
+                          <button key={tab} onClick={() => setUserTab(tab)}
+                              className={cn('flex-1 py-2 rounded-xl text-xs font-bold capitalize transition-all',
+                                  userTab === tab ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
+                              )}>{tab}</button>
+                      ))}
                   </div>
+
+                  {userDetailLoading && (
+                      <div className="flex justify-center py-8"><RefreshCcw className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                  )}
+
+                  {!userDetailLoading && userTab === 'overview' && (
+                      <div className="space-y-5">
+                          <div className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 border border-border">
+                              <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-xl font-bold text-primary">
+                                  {(selectedUser.name || selectedUser.email)?.[0]?.toUpperCase()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                  <p className="font-bold truncate">{selectedUser.name || 'Anonymous'}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{selectedUser.email}</p>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">Joined {format(new Date(selectedUser.created_at), 'MMM dd, yyyy')}</p>
+                              </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                              <div className="p-3 rounded-2xl bg-muted/30 border border-border">
+                                  <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Role</p>
+                                  <p className="text-sm font-bold capitalize">{selectedUser.role}</p>
+                              </div>
+                              <div className="p-3 rounded-2xl bg-muted/30 border border-border">
+                                  <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Status</p>
+                                  <p className={cn('text-sm font-bold capitalize', selectedUser.status === 'active' ? 'text-success' : 'text-destructive')}>{selectedUser.status || 'active'}</p>
+                              </div>
+                              <div className="p-3 rounded-2xl bg-muted/30 border border-border">
+                                  <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">KYC Status</p>
+                                  <p className={cn('text-sm font-bold capitalize', selectedUser.kyc_status === 'approved' ? 'text-success' : selectedUser.kyc_status === 'rejected' ? 'text-destructive' : 'text-amber-500')}>{selectedUser.kyc_status || 'not_started'}</p>
+                              </div>
+                              <div className="p-3 rounded-2xl bg-muted/30 border border-border">
+                                  <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">User ID</p>
+                                  <p className="text-[10px] font-mono text-muted-foreground truncate">{selectedUser.id}</p>
+                              </div>
+                          </div>
+                          {userDetail?.kyc && (
+                              <div className="space-y-2">
+                                  <p className="text-[10px] font-bold text-muted-foreground uppercase">KYC Info</p>
+                                  <div className="grid grid-cols-2 gap-2">
+                                      <InfoItem label="Full Name" value={`${userDetail.kyc.first_name} ${userDetail.kyc.last_name}`} />
+                                      <InfoItem label="Phone" value={userDetail.kyc.phone} />
+                                      <div className="col-span-2"><InfoItem label="Address" value={`${userDetail.kyc.address}, ${userDetail.kyc.city}, ${userDetail.kyc.country}`} /></div>
+                                  </div>
+                              </div>
+                          )}
+                      </div>
+                  )}
+
+                  {!userDetailLoading && userTab === 'balances' && (
+                      <div className="space-y-4">
+                          {(userDetail?.wallets?.length ?? 0) === 0 ? (
+                              <p className="text-sm text-muted-foreground text-center py-6">No wallets found</p>
+                          ) : userDetail?.wallets?.map((w: any) => (
+                              <div key={w.id} className="p-4 rounded-2xl bg-muted/30 border border-border flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                      <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                          <Wallet className="h-5 w-5 text-primary" />
+                                      </div>
+                                      <div>
+                                          <p className="text-sm font-bold capitalize">{w.currency} Wallet</p>
+                                          <p className="text-[10px] text-muted-foreground">Available: ${Number(w.available_balance).toLocaleString('en-US', {minimumFractionDigits:2})}</p>
+                                      </div>
+                                  </div>
+                                  <p className="text-lg font-bold">${Number(w.main_balance).toLocaleString('en-US', {minimumFractionDigits:2})}</p>
+                              </div>
+                          ))}
+                          <div className="pt-4 border-t border-border space-y-3">
+                              <p className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-2"><Wallet className="h-3.5 w-3.5" /> Adjust Holding Balance</p>
+                              <input type="number" placeholder="Amount (USD)" value={balanceAdjust} onChange={(e) => setBalanceAdjust(e.target.value)}
+                                  className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none" />
+                              <div className="grid grid-cols-2 gap-3">
+                                  <button onClick={() => handleAdjustBalance(selectedUser.id, 'add')} disabled={processing || !balanceAdjust}
+                                      className="h-11 rounded-xl bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:opacity-90 transition-all">
+                                      {processing ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <ArrowUpRight className="h-4 w-4" />} Add
+                                  </button>
+                                  <button onClick={() => handleAdjustBalance(selectedUser.id, 'remove')} disabled={processing || !balanceAdjust}
+                                      className="h-11 rounded-xl bg-destructive text-destructive-foreground font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:opacity-90 transition-all">
+                                      {processing ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <ArrowDownRight className="h-4 w-4" />} Remove
+                                  </button>
+                              </div>
+                          </div>
+                      </div>
+                  )}
+
+                  {!userDetailLoading && userTab === 'holdings' && (
+                      <div className="space-y-3">
+                          {(userDetail?.holdings?.length ?? 0) === 0 ? (
+                              <div className="text-center py-8">
+                                  <TrendingUp className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                                  <p className="text-sm text-muted-foreground">No holdings yet</p>
+                              </div>
+                          ) : userDetail?.holdings?.map((h: any) => {
+                              const asset = assets.find((a: any) => a.symbol === h.asset_symbol);
+                              const currentPrice = asset?.price || h.avg_buy_price;
+                              const currentValue = h.quantity * currentPrice;
+                              const pnl = currentValue - h.total_invested;
+                              const pnlPct = h.total_invested > 0 ? (pnl / h.total_invested) * 100 : 0;
+                              return (
+                                  <div key={h.id} className="p-4 rounded-2xl bg-muted/30 border border-border">
+                                      <div className="flex items-center justify-between mb-2">
+                                          <div className="flex items-center gap-3">
+                                              <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center font-bold text-primary text-sm">{h.asset_symbol.slice(0,2)}</div>
+                                              <div>
+                                                  <p className="text-sm font-bold">{h.asset_symbol}</p>
+                                                  <p className="text-[10px] text-muted-foreground">{Number(h.quantity).toFixed(6)} units</p>
+                                              </div>
+                                          </div>
+                                          <div className="text-right">
+                                              <p className="text-sm font-bold">${currentValue.toLocaleString('en-US', {minimumFractionDigits:2})}</p>
+                                              <p className={cn('text-[10px] font-bold', pnl >= 0 ? 'text-success' : 'text-destructive')}>{pnl >= 0 ? '+' : ''}{pnlPct.toFixed(2)}%</p>
+                                          </div>
+                                      </div>
+                                      <div className="flex justify-between text-[10px] text-muted-foreground">
+                                          <span>Avg buy: ${Number(h.avg_buy_price).toFixed(2)}</span>
+                                          <span>Invested: ${Number(h.total_invested).toLocaleString('en-US', {minimumFractionDigits:2})}</span>
+                                      </div>
+                                  </div>
+                              );
+                          })}
+                      </div>
+                  )}
+
+                  {!userDetailLoading && userTab === 'edit' && (
+                      <div className="space-y-5">
+                          <div className="space-y-2">
+                              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Full Name</label>
+                              <input value={editForm.name} onChange={(e) => setEditForm(f => ({...f, name: e.target.value}))}
+                                  className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none" placeholder="Full name" />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                  <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Role</label>
+                                  <select value={editForm.role} onChange={(e) => setEditForm(f => ({...f, role: e.target.value}))}
+                                      className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none">
+                                      <option value="buyer">Buyer</option>
+                                      <option value="admin">Admin</option>
+                                  </select>
+                              </div>
+                              <div className="space-y-2">
+                                  <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Status</label>
+                                  <select value={editForm.status} onChange={(e) => setEditForm(f => ({...f, status: e.target.value}))}
+                                      className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none">
+                                      <option value="active">Active</option>
+                                      <option value="suspended">Suspended</option>
+                                  </select>
+                              </div>
+                          </div>
+                          <button
+                              onClick={() => handleUpdateUser(selectedUser.id, { name: editForm.name, role: editForm.role, status: editForm.status })}
+                              disabled={processing}
+                              className="w-full h-12 bg-primary text-primary-foreground font-bold rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50 hover:opacity-90 transition-all"
+                          >
+                              {processing ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save Changes
+                          </button>
+                          <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20">
+                              <p className="text-xs font-bold text-amber-500 flex items-center gap-2 mb-1"><AlertCircle className="h-4 w-4" /> Warning</p>
+                              <p className="text-[10px] text-muted-foreground">Changes take immediate effect and may log the user out.</p>
+                          </div>
+                      </div>
+                  )}
               </DetailModal>
           )}
+
 
           {selectedDeposit && (
               <DetailModal title="Review Deposit" onClose={() => setSelectedDeposit(null)}>

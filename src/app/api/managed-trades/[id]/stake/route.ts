@@ -50,16 +50,16 @@ export async function POST(
       return NextResponse.json({ error: "You are not eligible for this trade" }, { status: 403 });
     }
 
-    // 2. Check user holding balance
+    // 2. Check user trading balance
     const { data: wallet, error: walletErr } = await supabaseAdmin
       .from("wallets")
       .select("*")
       .eq("user_id", user.id)
-      .eq("currency", "USD")
+      .eq("currency", "trading")
       .single();
-
+ 
     if (walletErr || !wallet || Number(wallet.main_balance) < amount) {
-      return NextResponse.json({ error: "Insufficient holding balance" }, { status: 400 });
+      return NextResponse.json({ error: "Insufficient trading balance" }, { status: 400 });
     }
 
     // 3. Perform transaction: Deduct balance + Create stake

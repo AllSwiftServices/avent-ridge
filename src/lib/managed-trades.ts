@@ -47,7 +47,7 @@ export async function processTradePayout(tradeId: string) {
         .from("wallets")
         .select("*")
         .eq("user_id", stake.user_id)
-        .eq("currency", "USD")
+        .eq("currency", "trading")
         .single();
 
       if (walletErr || !wallet) throw new Error(`Wallet not found for user ${stake.user_id}`);

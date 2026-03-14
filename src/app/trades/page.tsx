@@ -37,13 +37,13 @@ export default function TradesPage() {
   });
 
   const { data: wallet } = useQuery({
-    queryKey: ['holding-wallet'],
+    queryKey: ['trading-wallet'],
     queryFn: async () => {
-      const { data, error } = await api.get<any>('/api/wallets?currency=USD');
+      const { data, error } = await api.get<any>('/api/wallets?currency=trading');
       // If direct API fails, try the generic wallets endpoint
       if (error || !data) {
         const res = await api.get<any[]>('/wallets');
-        return res.data?.find((w: any) => w.currency === 'USD');
+        return res.data?.find((w: any) => w.currency === 'trading');
       }
       return data;
     },
@@ -66,7 +66,7 @@ export default function TradesPage() {
       setSelectedTrade(null);
       setStakeAmount('');
       queryClient.invalidateQueries({ queryKey: ['managed-trades'] });
-      queryClient.invalidateQueries({ queryKey: ['holding-wallet'] });
+      queryClient.invalidateQueries({ queryKey: ['trading-wallet'] });
     } catch (err: any) {
       toast.error(err.message || "Failed to stake");
     } finally {
@@ -171,7 +171,7 @@ export default function TradesPage() {
           <div className="flex flex-col gap-2">
             <Clock className="h-5 w-5 text-primary" />
             <p className="font-bold text-sm">Automated Payout</p>
-            <p className="text-xs text-muted-foreground text-balance">Profits are credited to your holding balance automatically on expiry.</p>
+            <p className="text-xs text-muted-foreground text-balance">Profits are credited to your trading balance automatically on expiry.</p>
           </div>
         </div>
       </div>
@@ -208,9 +208,9 @@ export default function TradesPage() {
               </div>
 
               <div className="space-y-6">
-                <div className="p-4 rounded-2xl bg-muted/30 border border-border flex items-center justify-between">
+                 <div className="p-4 rounded-2xl bg-muted/30 border border-border flex items-center justify-between">
                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase">Holding Balance</span>
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase">Trading Balance</span>
                       <span className="font-bold">${Number(wallet?.main_balance || 0).toLocaleString()}</span>
                    </div>
                    <div className="text-right flex flex-col gap-0.5">

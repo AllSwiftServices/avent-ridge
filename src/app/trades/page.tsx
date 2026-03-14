@@ -9,7 +9,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { useNavigate } from '@/lib/react-router-shim';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 
 export default function TradesPage() {
@@ -45,6 +45,16 @@ export default function TradesPage() {
         const res = await api.get<any[]>('/wallets');
         return res.data?.find((w: any) => w.currency === 'trading');
       }
+      return data;
+    },
+    enabled: !!user
+  });
+
+  const { data: myStakes, isLoading: loadingStakes } = useQuery({
+    queryKey: ['my-managed-stakes'],
+    queryFn: async () => {
+      const { data, error } = await api.get<any[]>('/managed-trades/my-stakes');
+      if (error) throw error;
       return data;
     },
     enabled: !!user
@@ -155,6 +165,67 @@ export default function TradesPage() {
             </motion.div>
           ))}
         </div>
+
+        {/* My Stakes Section */}
+        {myStakes && myStakes.length > 0 && (
+          <div className="mt-16 space-y-8">
+            <div>
+              <h2 className="text-2xl font-bold flex items-center gap-2">
+                <ShieldCheck className="h-6 w-6 text-primary" /> My Active Trades
+              </h2>
+              <p className="text-muted-foreground text-sm">Monitor your current trade positions and expected profits.</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+               {myStakes.filter(s => s.status === 'active').length === 0 ? (
+                 <div className="p-8 rounded-3xl border border-dashed border-border text-center grayscale opacity-50">
+                    <p className="text-sm font-medium">No active stakes</p>
+                 </div>
+               ) : myStakes.filter(s => s.status === 'active').map((stake) => (
+                 <div key={stake.id} className="bg-card/50 border border-border p-6 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="flex items-center gap-4">
+                       <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                          <Zap className="h-6 w-6 text-primary" />
+                       </div>
+                       <div>
+                          <p className="font-bold">{stake.managed_trades?.asset_symbol} Managed Trade</p>
+                          <p className="text-xs text-muted-foreground">Staked ${stake.stake_amount} • {stake.managed_trades?.profit_percent}% Profit</p>
+                       </div>
+                    </div>
+                    <div className="flex flex-col md:items-end gap-1">
+                       <span className="text-[10px] font-bold text-muted-foreground uppercase">Expected Payout</span>
+                       <span className="text-lg font-bold text-success">
+                          ${(stake.stake_amount * (1 + stake.managed_trades?.profit_percent / 100)).toLocaleString()}
+                       </span>
+                    </div>
+                 </div>
+               ))}
+            </div>
+
+            {/* Past Trades */}
+            <div className="pt-8">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Clock className="h-5 w-5 text-muted-foreground" /> Trade History
+              </h2>
+              <div className="space-y-3">
+                {myStakes.filter(s => s.status === 'paid_out').map((stake) => (
+                  <div key={stake.id} className="bg-muted/30 border border-border/50 p-4 rounded-2xl flex items-center justify-between opacity-80">
+                    <div className="flex items-center gap-3">
+                       <CheckCircle className="h-4 w-4 text-success" />
+                       <div className="flex flex-col">
+                          <span className="text-sm font-bold">{stake.managed_trades?.asset_symbol} Payout</span>
+                          <span className="text-[10px] text-muted-foreground">{format(new Date(stake.paid_out_at || stake.created_at), 'MMM dd, yyyy')}</span>
+                       </div>
+                    </div>
+                    <div className="text-right">
+                       <span className="text-sm font-bold text-success">+${(stake.stake_amount * (1 + stake.managed_trades?.profit_percent / 100)).toLocaleString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Benefits Card */}
         <div className="mt-12 p-6 rounded-3xl bg-primary/5 border border-primary/10 grid grid-cols-1 md:grid-cols-3 gap-6">

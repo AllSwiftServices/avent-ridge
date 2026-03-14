@@ -315,11 +315,18 @@ export default function TradesPage() {
 
                 <button
                   onClick={handleStake}
-                  disabled={staking || !stakeAmount || parseFloat(stakeAmount) < selectedTrade.min_stake || parseFloat(stakeAmount) > (wallet?.main_balance || 0)}
+                  disabled={staking || !stakeAmount || parseFloat(stakeAmount) < selectedTrade.min_stake || parseFloat(stakeAmount) > (wallet?.main_balance || 0) || user?.kyc_status !== 'approved'}
                   className="w-full h-14 bg-primary text-primary-foreground font-bold rounded-2xl flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 transition-all shadow-lg shadow-primary/20 active:scale-[0.98]"
                 >
                   {staking ? <RefreshCcw className="h-5 w-5 animate-spin" /> : "Confirm Stake"}
                 </button>
+
+                {user?.kyc_status !== 'approved' && (
+                  <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 flex items-center gap-2 text-[10px] text-destructive font-bold uppercase">
+                    <AlertCircle className="h-4 w-4" />
+                    KYC Verification required to stake
+                  </div>
+                )}
 
                 <div className="flex items-center gap-2 justify-center text-[10px] text-muted-foreground font-bold uppercase">
                    <AlertCircle className="h-3.5 w-3.5" />

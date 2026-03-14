@@ -20,15 +20,26 @@ export default function AppContent({ children }: { children: React.ReactNode }) 
 
     const isAuthPage = authPages.includes(pathname);
     const isNoNavPage = noNavPages.some(path => pathname.startsWith(path));
+    const isPublicPath = isAuthPage || isNoNavPage;
+    
+    // Paths that are accessible even without approved KYC
+    const isAllowedWithoutKyc = pathname.startsWith('/wallet') || pathname.startsWith('/profile');
 
     useEffect(() => {
         // Don't gate while auth is loading, on auth pages, or on no-nav pages
-        if (isLoadingAuth || isNoNavPage || isAuthPage) return;
-        // If user is logged in, only gate if KYC is not approved AND not rejected (rejected means they can come to resubmit)
-        if (user && user.kyc_status !== 'approved' && user.kyc_status !== 'rejected') {
-            router.push('/verify-identity');
+        if (isLoadingAuth || isPublicPath) return;
+
+        if (user) {
+            // Allow access to wallet and profile without KYC
+            if (isAllowedWithoutKyc) return;
+
+            // If user is logged in, gate other pages if KYC is not approved AND not rejected 
+            // (rejected means they can come to resubmit)
+            if (user.kyc_status !== 'approved' && user.kyc_status !== 'rejected') {
+                router.push('/verify-identity');
+            }
         }
-    }, [user, isLoadingAuth, pathname, isNoNavPage, isAuthPage, router]);
+    }, [user, isLoadingAuth, pathname, isPublicPath, isAllowedWithoutKyc, router]);
 
     if (isAuthPage || isNoNavPage) {
         return (

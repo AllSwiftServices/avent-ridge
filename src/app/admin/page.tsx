@@ -98,6 +98,7 @@ export default function AdminDashboard() {
 
   const [processing, setProcessing] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [balanceAdjust, setBalanceAdjust] = useState('');
 
   useEffect(() => {
     if (!isLoadingAuth) {
@@ -185,6 +186,24 @@ export default function AdminDashboard() {
       }
   };
 
+  const handleAdjustBalance = async (userId: string, direction: 'add' | 'remove') => {
+      const amount = parseFloat(balanceAdjust);
+      if (!amount || amount <= 0) { toast.error('Enter a valid amount'); return; }
+      setProcessing(true);
+      try {
+          const delta = direction === 'add' ? amount : -amount;
+          const { error } = await api.post('/portfolio/admin-adjust', { user_id: userId, delta });
+          if (error) throw error;
+          toast.success(`Successfully ${direction === 'add' ? 'added' : 'removed'} $${amount} ${direction === 'add' ? 'to' : 'from'} holding balance`);
+          setBalanceAdjust('');
+          setSelectedUser(null);
+      } catch (err: any) {
+          toast.error(err.message);
+      } finally {
+          setProcessing(false);
+      }
+  };
+
   const handleUpdateAsset = async () => {
       if (!editingAsset) return;
       setProcessing(true);
@@ -203,6 +222,7 @@ export default function AdminDashboard() {
           setProcessing(false);
       }
   };
+
 
   if (isLoadingAuth || (user && user.role !== 'admin')) {
     return (
@@ -685,6 +705,35 @@ export default function AdminDashboard() {
                                   <option value="active">Active</option>
                                   <option value="suspended">Suspended</option>
                               </select>
+                          </div>
+                      </div>
+
+                      <div className="space-y-3 pt-4 border-t border-border">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase px-1 flex items-center gap-2">
+                              <Wallet className="h-3.5 w-3.5" /> Adjust Holding Balance
+                          </label>
+                          <input
+                              type="number"
+                              placeholder="Amount (USD)"
+                              value={balanceAdjust}
+                              onChange={(e) => setBalanceAdjust(e.target.value)}
+                              className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
+                          />
+                          <div className="grid grid-cols-2 gap-3">
+                              <button
+                                  onClick={() => handleAdjustBalance(selectedUser.id, 'add')}
+                                  disabled={processing || !balanceAdjust}
+                                  className="h-11 rounded-xl bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:opacity-90 transition-all"
+                              >
+                                  {processing ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <ArrowUpRight className="h-4 w-4" />} Add
+                              </button>
+                              <button
+                                  onClick={() => handleAdjustBalance(selectedUser.id, 'remove')}
+                                  disabled={processing || !balanceAdjust}
+                                  className="h-11 rounded-xl bg-destructive text-destructive-foreground font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:opacity-90 transition-all"
+                              >
+                                  {processing ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <ArrowDownRight className="h-4 w-4" />} Remove
+                              </button>
                           </div>
                       </div>
 

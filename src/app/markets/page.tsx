@@ -13,6 +13,7 @@ import AssetCard from '@/components/market/AssetCard';
 import TradeModal from '@/components/trade/TradeModal';
 import { AssetListSkeleton } from '@/components/common/LoadingSkeleton';
 import { useAuth } from '@/lib/AuthContext';
+import { toast } from 'sonner';
 
 export default function Markets() {
   const [activeCategory, setActiveCategory] = useState('all');
@@ -81,12 +82,37 @@ export default function Markets() {
     return matchesSearch && asset.type === activeCategory;
   }) || [];
 
-  const wallet = wallets?.[0] || { main_balance: 0 };
+  // Find the holding wallet (currency = 'holding')
+  const holdingWallet = wallets?.find((w: any) => w.currency === 'holding') || { available_balance: 0 };
+
+  // Find user's current position in the selected asset (for sell mode)
+  const currentPosition = portfolio?.find((p: any) => p.asset_symbol === selectedAsset?.symbol);
 
   const handleTrade = async (trade: any) => {
-    // In a real app, you would process the trade here
-    console.log('Trade executed:', trade);
-    refetchPortfolio();
+    const toastId = toast.loading(trade.type === 'buy' ? 'Buying...' : 'Selling...');
+    try {
+      if (trade.type === 'buy') {
+        const { error } = await api.post('/portfolio/buy', {
+          asset_symbol: trade.asset.symbol,
+          asset_name: trade.asset.name,
+          asset_type: trade.asset.type,
+          quantity: trade.quantity,
+          price_per_unit: trade.price,
+        });
+        if (error) throw error;
+        toast.success(`Bought ${trade.quantity.toFixed(6)} ${trade.asset.symbol}!`, { id: toastId });
+      } else {
+        const { error } = await api.post('/portfolio/sell', {
+          asset_symbol: trade.asset.symbol,
+          quantity: trade.quantity,
+        });
+        if (error) throw error;
+        toast.success(`Sold ${trade.quantity.toFixed(6)} ${trade.asset.symbol}!`, { id: toastId });
+      }
+      refetchPortfolio();
+    } catch (err: any) {
+      toast.error(err.message || 'Trade failed', { id: toastId });
+    }
   };
 
   return (
@@ -164,7 +190,8 @@ export default function Markets() {
           setSelectedAsset(null);
         }}
         onTrade={handleTrade}
-        balance={wallet.main_balance || 0}
+        balance={holdingWallet.available_balance || 0}
+        currentPosition={currentPosition}
       />
     </div>
   );

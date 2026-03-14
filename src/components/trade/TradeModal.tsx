@@ -6,12 +6,13 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 
-export default function TradeModal({ asset, isOpen, onClose, onTrade, balance = 0 }: {
+export default function TradeModal({ asset, isOpen, onClose, onTrade, balance = 0, currentPosition }: {
   asset: any,
   isOpen: boolean,
   onClose: () => void,
   onTrade: (trade: any) => void,
-  balance?: number
+  balance?: number,
+  currentPosition?: { quantity: number; avg_buy_price: number; total_invested: number } | null
 }) {
   const [tradeType, setTradeType] = useState('buy');
   const [amount, setAmount] = useState('');
@@ -20,9 +21,10 @@ export default function TradeModal({ asset, isOpen, onClose, onTrade, balance = 
   if (!asset) return null;
 
   const numAmount = parseFloat(amount) || 0;
-  const quantity = numAmount / asset.price;
+  const quantity = numAmount / (asset?.price || 1);
   const isPositive = asset.change_percent >= 0;
-  const canAfford = tradeType === 'buy' ? numAmount <= balance : true;
+  const maxSellQty = currentPosition?.quantity || 0;
+  const canAfford = tradeType === 'buy' ? numAmount <= balance : numAmount <= maxSellQty;
 
   const chartData = asset.price_history?.length > 0 
     ? asset.price_history 
@@ -208,16 +210,34 @@ export default function TradeModal({ asset, isOpen, onClose, onTrade, balance = 
                     ))}
                   </div>
 
-                  {/* Balance Info */}
-                  <div className="flex justify-between text-sm mb-6 px-1">
-                    <span className="text-muted-foreground">Available Balance</span>
-                    <span className="font-medium">${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                  {/* Balance / Position Info */}
+                  <div className="space-y-2 mb-6 px-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {tradeType === 'buy' ? 'Holding Balance' : 'Your Position'}
+                      </span>
+                      <span className="font-medium">
+                        {tradeType === 'buy'
+                          ? `$${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+                          : `${maxSellQty.toFixed(6)} ${asset.symbol}`
+                        }
+                      </span>
+                    </div>
+                    {tradeType === 'sell' && currentPosition && (
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Avg buy price</span>
+                        <span>${currentPosition.avg_buy_price.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {tradeType === 'sell' && !currentPosition && (
+                      <p className="text-xs text-destructive">You don't hold any {asset.symbol}</p>
+                    )}
                   </div>
 
                   {!canAfford && numAmount > 0 && (
                     <div className="flex items-center gap-2 p-3 mb-4 bg-destructive/10 text-destructive rounded-xl text-sm">
                       <AlertCircle className="h-4 w-4" />
-                      Insufficient balance
+                      {tradeType === 'buy' ? 'Insufficient balance' : `Insufficient ${asset.symbol} holdings`}
                     </div>
                   )}
 

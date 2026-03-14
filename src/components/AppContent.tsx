@@ -4,7 +4,6 @@ import { Suspense } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from '@/components/navigation/Sidebar';
 import BottomNav from '@/components/navigation/BottomNav';
-import QuickTradeButton from '@/components/common/QuickTradeButton';
 import { PwaInstallPrompt } from '@/components/common/PwaInstallPrompt';
 import { NotificationPrompt } from '@/components/common/NotificationPrompt';
 import { createPageUrl } from '@/utils';
@@ -54,7 +53,6 @@ export default function AppContent({ children }: { children: React.ReactNode }) 
             <Suspense fallback={null}>
                 <BottomNav />
             </Suspense>
-            <QuickTradeButton onClick={() => router.push(createPageUrl('Markets'))} />
             <PwaInstallPrompt />
             <NotificationPrompt />
         </div>

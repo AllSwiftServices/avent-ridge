@@ -16,9 +16,11 @@ const TYPE_CONFIG: any = {
   sell: { label: 'Sell', icon: ArrowUpRight, color: 'text-destructive', bg: 'bg-destructive/10' },
   deposit: { label: 'Deposit', icon: ArrowDownLeft, color: 'text-primary', bg: 'bg-primary/10' },
   withdraw: { label: 'Withdraw', icon: ArrowUpRight, color: 'text-destructive', bg: 'bg-destructive/10' },
+  managed_trade_stake: { label: 'Trade Stake', icon: ArrowUpRight, color: 'text-destructive', bg: 'bg-destructive/10' },
+  managed_trade_payout: { label: 'Trade Payout', icon: ArrowDownLeft, color: 'text-primary', bg: 'bg-primary/10' },
 };
 
-const TABS = ['all', 'buy', 'sell', 'deposit', 'withdraw'];
+const TABS = ['all', 'buy', 'sell', 'deposit', 'withdraw', 'trades'];
 
 export default function TradingHistory() {
   const [activeTab, setActiveTab] = useState('all');
@@ -43,16 +45,20 @@ export default function TradingHistory() {
   });
 
   const filtered = (transactions || []).filter((tx: any) => {
-    const matchTab = activeTab === 'all' || tx.type === activeTab;
+    const isTrade = tx.type === 'managed_trade_stake' || tx.type === 'managed_trade_payout';
+    const matchTab = activeTab === 'all' || (activeTab === 'trades' && isTrade) || tx.type === activeTab;
     const matchSearch = !search ||
       tx.asset_symbol?.toLowerCase().includes(search.toLowerCase()) ||
-      tx.type?.toLowerCase().includes(search.toLowerCase());
+      tx.type?.toLowerCase().includes(search.toLowerCase()) ||
+      tx.description?.toLowerCase().includes(search.toLowerCase());
     return matchTab && matchSearch;
   });
 
   const totalBuys = (transactions || []).filter((t: any) => t.type === 'buy').reduce((s: number, t: any) => s + (t.amount || 0), 0);
   const totalSells = (transactions || []).filter((t: any) => t.type === 'sell').reduce((s: number, t: any) => s + (t.amount || 0), 0);
-  const totalDeposits = (transactions || []).filter((t: any) => t.type === 'deposit').reduce((s: number, t: any) => s + (t.amount || 0), 0);
+  const totalPayouts = (transactions || []).filter((t: any) => t.type === 'managed_trade_payout').reduce((s: number, t: any) => s + (t.amount || 0), 0);
+  const totalStakes = (transactions || []).filter((t: any) => t.type === 'managed_trade_stake').reduce((s: number, t: any) => s + Math.abs(t.amount || 0), 0);
+  const tradeProfit = totalPayouts - totalStakes;
 
   return (
     <div className="min-h-screen pb-24 md:pb-8 bg-background text-foreground">
@@ -90,11 +96,11 @@ export default function TradingHistory() {
 
       <div className="px-4 py-5 space-y-5">
         {/* Summary Cards */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
             { label: 'Total Bought', value: totalBuys, color: 'text-primary' },
             { label: 'Total Sold', value: totalSells, color: 'text-destructive' },
-            { label: 'Deposited', value: totalDeposits, color: 'text-primary' },
+            { label: 'Trade Profit', value: tradeProfit, color: tradeProfit >= 0 ? 'text-success' : 'text-destructive' },
           ].map(({ label, value, color }) => (
             <div key={label} className="rounded-2xl p-3 border text-center bg-card border-border shadow-sm">
               <p className="text-[10px] text-muted-foreground font-medium mb-1">{label}</p>
@@ -118,7 +124,7 @@ export default function TradingHistory() {
             {filtered.map((tx: any, i: number) => {
               const cfg = TYPE_CONFIG[tx.type] || TYPE_CONFIG.buy;
               const Icon = cfg.icon;
-              const isIncome = tx.type === 'buy' || tx.type === 'deposit';
+              const isIncome = tx.type === 'buy' || tx.type === 'deposit' || tx.type === 'managed_trade_payout';
               return (
                 <motion.div
                   key={tx.id}

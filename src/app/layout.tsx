@@ -3,7 +3,6 @@ import "./globals.css";
 import { Providers } from "@/components/Providers";
 import Sidebar from "@/components/navigation/Sidebar";
 import BottomNav from "@/components/navigation/BottomNav";
-import QuickTradeButton from "@/components/common/QuickTradeButton";
 import AppContent from "@/components/AppContent";
 
 // Using system font families for build stability

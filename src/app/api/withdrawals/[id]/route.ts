@@ -5,9 +5,10 @@ import { sendPushNotification } from "@/lib/push-notifications";
 // PATCH /api/withdrawals/[id] — Admin processes a withdrawal
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
@@ -29,7 +30,7 @@ export async function PATCH(
     const { data: withdrawal, error: fetchError } = await supabaseAdmin
       .from("withdrawals")
       .select("*")
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (fetchError || !withdrawal) {
@@ -48,7 +49,7 @@ export async function PATCH(
         admin_feedback,
         updated_at: new Date().toISOString()
       })
-      .eq("id", params.id)
+      .eq("id", id)
       .select()
       .single();
 

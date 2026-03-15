@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Zap, Clock, TrendingUp, AlertCircle, CheckCircle, 
+import {
+  Zap, Clock, TrendingUp, AlertCircle, CheckCircle,
   RefreshCcw, ArrowRight, ShieldCheck, X, Activity,
-  LineChart, LayoutDashboard, History, Wallet, 
+  LineChart, LayoutDashboard, History, Wallet,
   ArrowUpCircle, Info, Timer, Target
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -101,9 +101,9 @@ export default function TradesPage() {
 
     setIsTrading(true);
     try {
-      const { error } = await api.post(`/managed-trades/${selectedTrade.id}/enter`, { 
+      const { error } = await api.post(`/managed-trades/${selectedTrade.id}/enter`, {
         amount,
-        direction 
+        direction
       });
       if (error) throw error;
       toast.success("Trade position opened successfully!");
@@ -160,7 +160,7 @@ export default function TradesPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button 
+            <button
               onClick={() => setViewMode('dashboard')}
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all",
@@ -169,7 +169,7 @@ export default function TradesPage() {
             >
               <LayoutDashboard className="h-4 w-4" /> Chart
             </button>
-            <button 
+            <button
               onClick={() => setViewMode('history')}
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all",
@@ -185,7 +185,7 @@ export default function TradesPage() {
       <main className="max-w-7xl mx-auto p-4 lg:p-8">
         <AnimatePresence mode="wait">
           {viewMode === 'dashboard' ? (
-            <motion.div 
+            <motion.div
               key="dashboard"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -207,75 +207,38 @@ export default function TradesPage() {
                     {/* Header + Selector */}
                     <div className="bg-card border border-border rounded-[2.5rem] p-6 lg:p-8">
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                         <div className="space-y-1">
-                            <AssetSelector 
-                              selected={selectedTrade ? { symbol: selectedTrade.asset_symbol, type: selectedTrade.asset_type } : null} 
-                              assets={tradeAssets}
-                              onChange={handleAssetChange} 
-                            />
-                            <p className="text-sm text-muted-foreground px-1">{selectedTrade?.asset_name} • Managed Trade</p>
-                         </div>
-                         <div className="flex items-center gap-6">
-                            <div className="text-right">
-                               <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Profit Target</p>
-                               <span className="text-2xl font-black text-success">+{selectedTrade?.profit_percent}%</span>
-                            </div>
-                            <div className="h-10 w-px bg-border hidden md:block" />
-                            <div className="text-right">
-                               <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Ends In</p>
-                               <span className="text-lg font-bold">
-                                 {selectedTrade?.ends_at ? formatDistanceToNow(new Date(selectedTrade.ends_at)) : 'N/A'}
-                               </span>
-                            </div>
-                         </div>
+                        <div className="space-y-1">
+                          <AssetSelector
+                            selected={selectedTrade ? { symbol: selectedTrade.asset_symbol, type: selectedTrade.asset_type } : null}
+                            assets={tradeAssets}
+                            onChange={handleAssetChange}
+                          />
+                          <p className="text-sm text-muted-foreground px-1">{selectedTrade?.asset_name} • Managed Trade</p>
+                        </div>
+                        <div className="flex items-center gap-6">
+                          <div className="text-right">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Profit Target</p>
+                            <span className="text-2xl font-black text-success">+{selectedTrade?.profit_percent}%</span>
+                          </div>
+                          <div className="h-10 w-px bg-border hidden md:block" />
+                          <div className="text-right">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Ends In</p>
+                            <span className="text-lg font-bold">
+                              {selectedTrade?.ends_at ? formatDistanceToNow(new Date(selectedTrade.ends_at)) : 'N/A'}
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Chart */}
                       <div className="rounded-3xl bg-muted/30 border border-border p-4">
-                        <CandlestickChart 
-                          basePrice={selectedTrade?.entry_price || 100} 
-                          isPositive={selectedTrade?.signal_type === 'call'} 
+                        <CandlestickChart
+                          basePrice={selectedTrade?.entry_price || 100}
+                          isPositive={selectedTrade?.signal_type === 'call'}
                         />
                       </div>
                     </div>
 
-                    {/* Signal Intel */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                       <div className="bg-card border border-border rounded-3xl p-6">
-                          <div className="flex items-center gap-3 mb-4">
-                             <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                                <Activity className="h-5 w-5 text-primary" />
-                             </div>
-                             <h4 className="font-bold">Signal Logic</h4>
-                          </div>
-                          <p className="text-xs text-muted-foreground leading-relaxed">
-                            Position opened based on high-probability technical breakout. Expected to hit target within {selectedTrade?.duration || 'the specified timeframe'}.
-                          </p>
-                       </div>
-                       <div className="bg-card border border-border rounded-3xl p-6">
-                          <div className="flex items-center gap-3 mb-4">
-                             <div className="h-10 w-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
-                                <Target className="h-5 w-5 text-orange-500" />
-                             </div>
-                             <h4 className="font-bold">Entry Point</h4>
-                          </div>
-                          <p className="text-xl font-bold text-foreground">
-                            {selectedTrade?.signal_type === 'call' ? 'UP' : 'DOWN'} @ ${selectedTrade?.entry_price?.toLocaleString()}
-                          </p>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Target Entry Execution</p>
-                       </div>
-                       <div className="bg-card border border-border rounded-3xl p-6">
-                          <div className="flex items-center gap-3 mb-4">
-                             <div className="h-10 w-10 rounded-xl bg-success/10 flex items-center justify-center">
-                                <ShieldCheck className="h-5 w-5 text-success" />
-                             </div>
-                             <h4 className="font-bold">Risk Management</h4>
-                          </div>
-                          <p className="text-xs text-muted-foreground leading-relaxed">
-                            Managed by internal trading desk. Original trade amount is fully insured by platform liquidity pool.
-                          </p>
-                       </div>
-                    </div>
                   </>
                 )}
               </div>
@@ -300,10 +263,10 @@ export default function TradesPage() {
                     {/* Asset Type */}
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Asset Type</label>
-                      <AssetSelector 
-                        selected={selectedTrade ? { symbol: selectedTrade.asset_symbol, type: selectedTrade.asset_type } : null} 
+                      <AssetSelector
+                        selected={selectedTrade ? { symbol: selectedTrade.asset_symbol, type: selectedTrade.asset_type } : null}
                         assets={tradeAssets}
-                        onChange={handleAssetChange} 
+                        onChange={handleAssetChange}
                       />
                     </div>
 
@@ -313,14 +276,14 @@ export default function TradesPage() {
                         <span className="text-[10px] font-bold text-muted-foreground uppercase">Fixed Time</span>
                         <Info className="h-3 w-3 text-muted-foreground cursor-help" />
                       </div>
-                      <button 
+                      <button
                         onClick={() => setIsFixedTime(!isFixedTime)}
                         className={cn(
                           "w-10 h-5 rounded-full p-1 transition-colors relative",
                           isFixedTime ? "bg-primary" : "bg-muted"
                         )}
                       >
-                        <motion.div 
+                        <motion.div
                           animate={{ x: isFixedTime ? 20 : 0 }}
                           className="w-3 h-3 bg-white rounded-full shadow-sm"
                         />
@@ -335,7 +298,7 @@ export default function TradesPage() {
                       </div>
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold opacity-40">$</span>
-                        <input 
+                        <input
                           type="number"
                           value={tradeAmount}
                           onChange={(e) => setTradeAmount(e.target.value)}
@@ -362,8 +325,8 @@ export default function TradesPage() {
                       </div>
                       <div className="w-full h-12 bg-success/5 border border-success/20 rounded-xl flex items-center justify-between px-4">
                         <span className="text-lg font-black text-success">
-                          ${tradeAmount && !isNaN(parseFloat(tradeAmount)) 
-                            ? (parseFloat(tradeAmount) * (selectedTrade?.profit_percent / 100)).toLocaleString() 
+                          ${tradeAmount && !isNaN(parseFloat(tradeAmount))
+                            ? (parseFloat(tradeAmount) * (selectedTrade?.profit_percent / 100)).toLocaleString()
                             : '0.00'}
                         </span>
                         <span className="text-[10px] font-bold text-muted-foreground uppercase">USD</span>
@@ -372,7 +335,7 @@ export default function TradesPage() {
 
                     {/* Call / Put Buttons */}
                     <div className="grid grid-cols-2 gap-3 pt-2">
-                      <button 
+                      <button
                         onClick={() => handleTrade('call')}
                         disabled={isTrading || !tradeAmount || !selectedTrade}
                         className={cn(
@@ -380,15 +343,15 @@ export default function TradesPage() {
                           "bg-success text-white shadow-success/20 hover:opacity-90 disabled:opacity-50"
                         )}
                       >
-                         {isTrading ? (
-                           <RefreshCcw className="h-4 w-4 animate-spin" />
-                         ) : (
-                           <>
-                             <ArrowUpCircle className="h-5 w-5" /> Call
-                           </>
-                         )}
+                        {isTrading ? (
+                          <RefreshCcw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            <ArrowUpCircle className="h-5 w-5" /> Call
+                          </>
+                        )}
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleTrade('put')}
                         disabled={isTrading || !tradeAmount || !selectedTrade}
                         className={cn(
@@ -396,63 +359,63 @@ export default function TradesPage() {
                           "bg-destructive text-white shadow-destructive/20 hover:opacity-90 disabled:opacity-50"
                         )}
                       >
-                         {isTrading ? (
-                           <RefreshCcw className="h-4 w-4 animate-spin" />
-                         ) : (
-                           <>
-                             <motion.div animate={{ rotate: 180 }}>
-                               <ArrowUpCircle className="h-5 w-5" />
-                             </motion.div>
-                             Put
-                           </>
-                         )}
+                        {isTrading ? (
+                          <RefreshCcw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            <motion.div animate={{ rotate: 180 }}>
+                              <ArrowUpCircle className="h-5 w-5" />
+                            </motion.div>
+                            Put
+                          </>
+                        )}
                       </button>
                     </div>
 
                     <div className="p-3 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-between">
-                       <div>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase">Wallet Balance</p>
-                          <p className="font-bold text-sm text-primary">${walletBalance.toLocaleString()}</p>
-                       </div>
-                       <Wallet className="h-5 w-5 text-primary opacity-50" />
+                      <div>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase">Wallet Balance</p>
+                        <p className="font-bold text-sm text-primary">${walletBalance.toLocaleString()}</p>
+                      </div>
+                      <Wallet className="h-5 w-5 text-primary opacity-50" />
                     </div>
                   </div>
                 </div>
 
                 {/* My active positions - mini list */}
                 {myTrades && myTrades.filter((s: any) => s.status === 'active').length > 0 && (
-                   <div className="bg-card border border-border rounded-3xl p-6">
-                      <h4 className="text-sm font-bold mb-4 flex items-center justify-between">
-                         My Active Trades
-                         <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px]">
-                            {myTrades.filter((s: any) => s.status === 'active').length}
-                         </span>
-                      </h4>
-                      <div className="space-y-3">
-                         {myTrades.filter((s: any) => s.status === 'active').slice(0, 3).map((tradeEntry: any) => (
-                            <div key={tradeEntry.id} className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/50">
-                               <div>
-                                  <p className="text-xs font-bold">{tradeEntry.managed_trades?.asset_symbol}</p>
-                                  <p className="text-[10px] text-muted-foreground">${tradeEntry.stake_amount}</p>
-                               </div>
-                               <div className="text-right">
-                                  <p className="text-xs font-bold text-success">+${(tradeEntry.stake_amount * (tradeEntry.managed_trades?.profit_percent / 100)).toFixed(2)}</p>
-                                  <Timer className="h-3 w-3 text-muted-foreground ml-auto mt-0.5" />
-                               </div>
-                            </div>
-                         ))}
-                         {myTrades.filter((s: any) => s.status === 'active').length > 3 && (
-                            <button onClick={() => setViewMode('history')} className="w-full py-2 text-[10px] font-bold text-muted-foreground uppercase hover:text-primary transition-colors">
-                               View all trades
-                            </button>
-                         )}
-                      </div>
-                   </div>
+                  <div className="bg-card border border-border rounded-3xl p-6">
+                    <h4 className="text-sm font-bold mb-4 flex items-center justify-between">
+                      My Active Trades
+                      <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px]">
+                        {myTrades.filter((s: any) => s.status === 'active').length}
+                      </span>
+                    </h4>
+                    <div className="space-y-3">
+                      {myTrades.filter((s: any) => s.status === 'active').slice(0, 3).map((tradeEntry: any) => (
+                        <div key={tradeEntry.id} className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/50">
+                          <div>
+                            <p className="text-xs font-bold">{tradeEntry.managed_trades?.asset_symbol}</p>
+                            <p className="text-[10px] text-muted-foreground">${tradeEntry.stake_amount}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-bold text-success">+${(tradeEntry.stake_amount * (tradeEntry.managed_trades?.profit_percent / 100)).toFixed(2)}</p>
+                            <Timer className="h-3 w-3 text-muted-foreground ml-auto mt-0.5" />
+                          </div>
+                        </div>
+                      ))}
+                      {myTrades.filter((s: any) => s.status === 'active').length > 3 && (
+                        <button onClick={() => setViewMode('history')} className="w-full py-2 text-[10px] font-bold text-muted-foreground uppercase hover:text-primary transition-colors">
+                          View all trades
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             </motion.div>
           ) : (
-            <motion.div 
+            <motion.div
               key="history"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -462,68 +425,68 @@ export default function TradesPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Active Trades */}
                 <div>
-                   <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-                      <Activity className="h-6 w-6 text-primary" /> Active Trades
-                   </h2>
-                   <div className="space-y-4">
-                      {myTrades && myTrades.filter((s: any) => s.status === 'active').length === 0 ? (
-                        <div className="p-12 rounded-[2.5rem] border border-dashed border-border flex flex-col items-center justify-center opacity-40">
-                           <LayoutDashboard className="h-10 w-10 mb-2" />
-                           <p className="text-sm font-bold italic">No active trades</p>
+                  <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                    <Activity className="h-6 w-6 text-primary" /> Active Trades
+                  </h2>
+                  <div className="space-y-4">
+                    {myTrades && myTrades.filter((s: any) => s.status === 'active').length === 0 ? (
+                      <div className="p-12 rounded-[2.5rem] border border-dashed border-border flex flex-col items-center justify-center opacity-40">
+                        <LayoutDashboard className="h-10 w-10 mb-2" />
+                        <p className="text-sm font-bold italic">No active trades</p>
+                      </div>
+                    ) : myTrades?.filter((s: any) => s.status === 'active').map((tradeEntry: any) => (
+                      <div key={tradeEntry.id} className="bg-card border border-border p-6 rounded-4xl flex items-center justify-between shadow-sm">
+                        <div className="flex items-center gap-4">
+                          <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                            <b className="text-primary">{tradeEntry.managed_trades?.asset_symbol.slice(0, 1)}</b>
+                          </div>
+                          <div>
+                            <p className="font-bold uppercase">{tradeEntry.managed_trades?.asset_symbol} ({tradeEntry.direction})</p>
+                            <p className="text-xs text-muted-foreground">
+                              Amount: ${tradeEntry.stake_amount} • Entry: {tradeEntry.managed_trades?.signal_type} @ {tradeEntry.managed_trades?.entry_price}
+                            </p>
+                          </div>
                         </div>
-                      ) : myTrades?.filter((s: any) => s.status === 'active').map((tradeEntry: any) => (
-                        <div key={tradeEntry.id} className="bg-card border border-border p-6 rounded-4xl flex items-center justify-between shadow-sm">
-                           <div className="flex items-center gap-4">
-                              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                                 <b className="text-primary">{tradeEntry.managed_trades?.asset_symbol.slice(0, 1)}</b>
-                              </div>
-                              <div>
-                                 <p className="font-bold uppercase">{tradeEntry.managed_trades?.asset_symbol} ({tradeEntry.direction})</p>
-                                 <p className="text-xs text-muted-foreground">
-                                   Amount: ${tradeEntry.stake_amount} • Entry: {tradeEntry.managed_trades?.signal_type} @ {tradeEntry.managed_trades?.entry_price}
-                                 </p>
-                              </div>
-                           </div>
-                           <div className="text-right">
-                              <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">Expected Payout</p>
-                              <p className="text-xl font-black text-success">
-                                ${ (tradeEntry.stake_amount * (1 + (tradeEntry.managed_trades?.profit_percent || 0) / 100)).toLocaleString()}
-                              </p>
-                           </div>
+                        <div className="text-right">
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">Expected Payout</p>
+                          <p className="text-xl font-black text-success">
+                            ${(tradeEntry.stake_amount * (1 + (tradeEntry.managed_trades?.profit_percent || 0) / 100)).toLocaleString()}
+                          </p>
                         </div>
-                      ))}
-                   </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Trade History */}
                 <div>
-                   <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-                      <History className="h-6 w-6 text-muted-foreground" /> Trade History
-                   </h2>
-                   <div className="space-y-3">
-                      {myTrades && myTrades.filter((s: any) => s.status !== 'active').length === 0 ? (
-                        <div className="p-12 rounded-[2.5rem] border border-dashed border-border flex flex-col items-center justify-center opacity-40">
-                           <History className="h-10 w-10 mb-2" />
-                           <p className="text-sm font-bold italic">No history available</p>
+                  <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                    <History className="h-6 w-6 text-muted-foreground" /> Trade History
+                  </h2>
+                  <div className="space-y-3">
+                    {myTrades && myTrades.filter((s: any) => s.status !== 'active').length === 0 ? (
+                      <div className="p-12 rounded-[2.5rem] border border-dashed border-border flex flex-col items-center justify-center opacity-40">
+                        <History className="h-10 w-10 mb-2" />
+                        <p className="text-sm font-bold italic">No history available</p>
+                      </div>
+                    ) : myTrades?.filter((s: any) => s.status !== 'active').map((tradeEntry: any) => (
+                      <div key={tradeEntry.id} className="bg-muted/30 border border-border/50 p-5 rounded-2xl flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {tradeEntry.status === 'paid_out' ? <CheckCircle className="h-5 w-5 text-success" /> : <X className="h-5 w-5 text-destructive" />}
+                          <div>
+                            <p className="text-sm font-bold uppercase">{tradeEntry.managed_trades?.asset_symbol} ({tradeEntry.direction}) - {tradeEntry.status === 'paid_out' ? 'Settled' : 'Lost'}</p>
+                            <p className="text-[10px] text-muted-foreground uppercase font-bold">{format(new Date(tradeEntry.created_at), 'MMM dd, yyyy')}</p>
+                          </div>
                         </div>
-                      ) : myTrades?.filter((s: any) => s.status !== 'active').map((tradeEntry: any) => (
-                        <div key={tradeEntry.id} className="bg-muted/30 border border-border/50 p-5 rounded-2xl flex items-center justify-between">
-                           <div className="flex items-center gap-3">
-                              {tradeEntry.status === 'paid_out' ? <CheckCircle className="h-5 w-5 text-success" /> : <X className="h-5 w-5 text-destructive" />}
-                              <div>
-                                 <p className="text-sm font-bold uppercase">{tradeEntry.managed_trades?.asset_symbol} ({tradeEntry.direction}) - {tradeEntry.status === 'paid_out' ? 'Settled' : 'Lost'}</p>
-                                 <p className="text-[10px] text-muted-foreground uppercase font-bold">{format(new Date(tradeEntry.created_at), 'MMM dd, yyyy')}</p>
-                              </div>
-                           </div>
-                           <div className="text-right">
-                              <p className={cn("text-sm font-black", tradeEntry.status === 'paid_out' ? "text-success" : "text-destructive")}>
-                                 {tradeEntry.status === 'paid_out' ? `+$${(tradeEntry.stake_amount * (1 + (tradeEntry.managed_trades?.profit_percent || 0) / 100)).toLocaleString()}` : `$0.00`}
-                              </p>
-                              <span className="text-[10px] text-muted-foreground font-bold">Amount: ${tradeEntry.stake_amount}</span>
-                           </div>
+                        <div className="text-right">
+                          <p className={cn("text-sm font-black", tradeEntry.status === 'paid_out' ? "text-success" : "text-destructive")}>
+                            {tradeEntry.status === 'paid_out' ? `+$${(tradeEntry.stake_amount * (1 + (tradeEntry.managed_trades?.profit_percent || 0) / 100)).toLocaleString()}` : `$0.00`}
+                          </p>
+                          <span className="text-[10px] text-muted-foreground font-bold">Amount: ${tradeEntry.stake_amount}</span>
                         </div>
-                      ))}
-                   </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </motion.div>

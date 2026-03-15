@@ -13,7 +13,7 @@ export async function POST(request: Request) {
 async function handleCron(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const key = searchParams.get('key');
+    const key = searchParams.get('key') || searchParams.get('secret');
     const authHeader = request.headers.get('authorization');
     
     // Check for secret key (either via header or query param)

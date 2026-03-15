@@ -20,7 +20,10 @@ export async function GET() {
           asset_type,
           profit_percent,
           status,
-          ends_at
+          ends_at,
+          signal_type,
+          entry_price,
+          duration
         )
       `)
       .eq("user_id", user.id)

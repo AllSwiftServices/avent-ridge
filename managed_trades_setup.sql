@@ -11,6 +11,10 @@ CREATE TABLE IF NOT EXISTS managed_trades (
   scope TEXT NOT NULL DEFAULT 'all',     -- 'all' | 'user'
   target_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   status TEXT NOT NULL DEFAULT 'active', -- 'active' | 'completed' | 'cancelled'
+  signal_type TEXT,                      -- 'call' | 'put'
+  entry_price NUMERIC,
+  duration TEXT,                         -- e.g. '5m', '1h'
+  outcome TEXT DEFAULT 'win',            -- 'win' | 'loss'
   created_by UUID REFERENCES auth.users(id) NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

@@ -14,26 +14,47 @@ export async function GET(request: Request) {
     const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
     const isAdmin = profile?.role === "admin";
 
-    let query = supabaseAdmin
+    // Fetch withdrawals
+    const { data: withdrawals, error: withdrawalsError } = await supabaseAdmin
       .from("withdrawals")
-      .select(`
-        *,
-        users (
-          email,
-          name
-        )
-      `)
+      .select("*")
       .order("created_at", { ascending: false });
 
+    if (withdrawalsError) throw withdrawalsError;
+
+    let filteredWithdrawals = withdrawals || [];
+    
     // Users only see their own withdrawals
     if (!isAdmin) {
-      query = query.eq("user_id", user.id);
+      filteredWithdrawals = filteredWithdrawals.filter(w => w.user_id === user.id);
     }
 
-    const { data, error } = await query;
-    if (error) throw error;
+    if (filteredWithdrawals.length === 0) {
+      return NextResponse.json([]);
+    }
 
-    return NextResponse.json(data);
+    // Fetch users for these withdrawals to perform manual join
+    const userIds = Array.from(new Set(filteredWithdrawals.map(w => w.user_id)));
+    const { data: usersData, error: usersError } = await supabaseAdmin
+      .from("users")
+      .select("id, email, name")
+      .in("id", userIds);
+
+    if (usersError) {
+      console.error("Failed to fetch users for withdrawals join:", usersError);
+      // Still return withdrawals even if user data fetch fails
+      return NextResponse.json(filteredWithdrawals);
+    }
+
+    const userMap = new Map(usersData?.map(u => [u.id, u]));
+
+    // Merge user data into withdrawals
+    const enrichedWithdrawals = filteredWithdrawals.map(w => ({
+      ...w,
+      users: userMap.get(w.user_id) || null
+    }));
+
+    return NextResponse.json(enrichedWithdrawals);
   } catch (error: any) {
     console.error("Withdrawals fetch error:", error);
     return NextResponse.json({ message: error.message || "Failed to fetch withdrawals" }, { status: 500 });

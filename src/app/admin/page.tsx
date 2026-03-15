@@ -89,6 +89,10 @@ interface ManagedTrade {
   scope: 'all' | 'user';
   target_user_id?: string;
   status: 'active' | 'completed' | 'cancelled';
+  signal_type?: 'call' | 'put';
+  entry_price?: number;
+  duration?: string;
+  outcome?: 'win' | 'loss';
   created_at: string;
 }
 
@@ -145,6 +149,8 @@ export default function AdminDashboard() {
     profit_percent: 10,
     min_stake: 10,
     scope: 'all',
+    signal_type: 'call',
+    outcome: 'win',
     ends_at: format(new Date(Date.now() + 86400000), "yyyy-MM-dd'T'HH:mm")
   });
 
@@ -345,6 +351,8 @@ export default function AdminDashboard() {
         profit_percent: 10,
         min_stake: 10,
         scope: 'all',
+        signal_type: 'call',
+        outcome: 'win',
         ends_at: format(new Date(Date.now() + 86400000), "yyyy-MM-dd'T'HH:mm")
       });
       fetchAllData();
@@ -946,6 +954,52 @@ export default function AdminDashboard() {
                         </div>
                       )}
 
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Signal Type</label>
+                        <select 
+                          value={newTrade.signal_type}
+                          onChange={(e) => setNewTrade({...newTrade, signal_type: e.target.value as any})}
+                          className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
+                        >
+                          <option value="call">CALL (Up)</option>
+                          <option value="put">PUT (Down)</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Entry Price ($)</label>
+                        <input 
+                          type="number"
+                          placeholder="e.g. 65000"
+                          value={newTrade.entry_price || ''}
+                          onChange={(e) => setNewTrade({...newTrade, entry_price: parseFloat(e.target.value)})}
+                          className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Duration</label>
+                        <input 
+                          type="text"
+                          placeholder="e.g. 5m, 1h, 1d"
+                          value={newTrade.duration || ''}
+                          onChange={(e) => setNewTrade({...newTrade, duration: e.target.value})}
+                          className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Target Outcome</label>
+                        <select 
+                          value={newTrade.outcome}
+                          onChange={(e) => setNewTrade({...newTrade, outcome: e.target.value as any})}
+                          className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
+                        >
+                          <option value="win">Win (Stake + Profit)</option>
+                          <option value="loss">Loss (Stake Lost)</option>
+                        </select>
+                      </div>
+
                       <div className="flex items-end">
                         <button 
                           onClick={handleCreateTrade}
@@ -978,7 +1032,15 @@ export default function AdminDashboard() {
                                 {t.asset_symbol} 
                                 <span className="px-2 py-0.5 rounded-full bg-success/10 text-success text-[10px] font-bold">+{t.profit_percent}%</span>
                               </h4>
-                              <p className="text-xs text-muted-foreground">{t.asset_name} • Min Stake: ${t.min_stake}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {t.asset_name} • Min: ${t.min_stake} • 
+                                <span className={cn("ml-1 font-bold italic uppercase", t.signal_type === 'call' ? 'text-primary' : 'text-destructive')}>
+                                  {t.signal_type} @ ${t.entry_price}
+                                </span>
+                              </p>
+                              <p className="text-[10px] text-muted-foreground uppercase font-bold mt-1">
+                                Duration: {t.duration} • Outcome: <span className={t.outcome === 'win' ? 'text-success' : 'text-destructive'}>{t.outcome}</span>
+                              </p>
                             </div>
                           </div>
 

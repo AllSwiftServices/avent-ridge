@@ -50,7 +50,8 @@ export async function POST(request: Request) {
     const { 
       asset_symbol, asset_name, asset_type, 
       profit_percent, min_stake, ends_at, 
-      scope, target_user_id 
+      scope, target_user_id,
+      signal_type, entry_price, duration, outcome
     } = body;
 
     if (!asset_symbol || profit_percent === undefined || !ends_at) {
@@ -68,6 +69,10 @@ export async function POST(request: Request) {
         ends_at,
         scope: scope || 'all',
         target_user_id,
+        signal_type,
+        entry_price: entry_price ? Number(entry_price) : null,
+        duration,
+        outcome: outcome || 'win',
         created_by: user.id
       })
       .select()

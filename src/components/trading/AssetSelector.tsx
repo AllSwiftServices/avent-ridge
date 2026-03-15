@@ -16,7 +16,16 @@ const ASSETS = [
   { symbol: 'XRP', name: 'Ripple', type: 'crypto', pair: 'XRP/USDT' },
 ];
 
-export default function AssetSelector({ selected, onChange }: { selected: any, onChange: (asset: any) => void }) {
+export default function AssetSelector({ 
+  selected, 
+  onChange, 
+  assets: customAssets 
+}: { 
+  selected: any, 
+  onChange: (asset: any) => void,
+  assets?: any[]
+}) {
+  const assetsToUse = customAssets || ASSETS;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const ref = useRef<HTMLDivElement>(null);
@@ -27,7 +36,7 @@ export default function AssetSelector({ selected, onChange }: { selected: any, o
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const filtered = ASSETS.filter(a =>
+  const filtered = assetsToUse.filter(a =>
     a.symbol.toLowerCase().includes(query.toLowerCase()) ||
     a.name.toLowerCase().includes(query.toLowerCase())
   );

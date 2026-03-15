@@ -83,7 +83,7 @@ interface ManagedTrade {
   asset_name: string;
   asset_type: string;
   profit_percent: number;
-  min_stake: number;
+  min_amount: number;
   starts_at: string;
   ends_at: string;
   scope: 'all' | 'user';
@@ -138,6 +138,7 @@ export default function AdminDashboard() {
   const [processing, setProcessing] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [balanceAdjust, setBalanceAdjust] = useState('');
+  const [adjustWalletType, setAdjustWalletType] = useState<'holding' | 'trading'>('holding');
   const [syncing, setSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [userTab, setUserTab] = useState<'overview'|'balances'|'holdings'|'edit'>('overview');
@@ -147,7 +148,7 @@ export default function AdminDashboard() {
   const [newTrade, setNewTrade] = useState<Partial<ManagedTrade>>({
     asset_symbol: '',
     profit_percent: 10,
-    min_stake: 10,
+    min_amount: 10,
     scope: 'all',
     signal_type: 'call',
     outcome: 'win',
@@ -285,9 +286,13 @@ export default function AdminDashboard() {
       setProcessing(true);
       try {
           const delta = direction === 'add' ? amount : -amount;
-          const { error } = await api.post('/portfolio/admin-adjust', { user_id: userId, delta });
+          const { error } = await api.post('/portfolio/admin-adjust', { 
+            user_id: userId, 
+            delta, 
+            currency: adjustWalletType 
+          });
           if (error) throw error;
-          toast.success(`Successfully ${direction === 'add' ? 'added' : 'removed'} $${amount} ${direction === 'add' ? 'to' : 'from'} holding balance`);
+          toast.success(`Successfully ${direction === 'add' ? 'added' : 'removed'} $${amount} ${direction === 'add' ? 'to' : 'from'} ${adjustWalletType} balance`);
           setBalanceAdjust('');
           setSelectedUser(null);
       } catch (err: any) {
@@ -349,7 +354,7 @@ export default function AdminDashboard() {
       setNewTrade({
         asset_symbol: '',
         profit_percent: 10,
-        min_stake: 10,
+        min_amount: 10,
         scope: 'all',
         signal_type: 'call',
         outcome: 'win',
@@ -368,7 +373,7 @@ export default function AdminDashboard() {
     try {
       const { data, error } = await api.post<any>(`/managed-trades/${id}/complete`, {});
       if (error) throw error;
-      toast.success(data.message || "Trade completed and stakers paid out");
+      toast.success(data.message || "Trade completed and traders paid out");
       fetchAllData();
     } catch (err: any) {
       toast.error(err.message);
@@ -906,12 +911,12 @@ export default function AdminDashboard() {
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Minimum Stake ($)</label>
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Minimum Amount ($)</label>
                         <input 
                           type="number"
                           placeholder="e.g. 10"
-                          value={newTrade.min_stake}
-                          onChange={(e) => setNewTrade({...newTrade, min_stake: parseFloat(e.target.value)})}
+                          value={newTrade.min_amount}
+                          onChange={(e) => setNewTrade({...newTrade, min_amount: parseFloat(e.target.value)})}
                           className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
                         />
                       </div>
@@ -995,8 +1000,8 @@ export default function AdminDashboard() {
                           onChange={(e) => setNewTrade({...newTrade, outcome: e.target.value as any})}
                           className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
                         >
-                          <option value="win">Win (Stake + Profit)</option>
-                          <option value="loss">Loss (Stake Lost)</option>
+                          <option value="win">Win (Trade + Profit)</option>
+                          <option value="loss">Loss (Trade Lost)</option>
                         </select>
                       </div>
 
@@ -1033,7 +1038,7 @@ export default function AdminDashboard() {
                                 <span className="px-2 py-0.5 rounded-full bg-success/10 text-success text-[10px] font-bold">+{t.profit_percent}%</span>
                               </h4>
                               <p className="text-xs text-muted-foreground">
-                                {t.asset_name} • Min: ${t.min_stake} • 
+                                {t.asset_name} • Min: ${t.min_amount} • 
                                 <span className={cn("ml-1 font-bold italic uppercase", t.signal_type === 'call' ? 'text-primary' : 'text-destructive')}>
                                   {t.signal_type} @ ${t.entry_price}
                                 </span>
@@ -1251,8 +1256,26 @@ export default function AdminDashboard() {
                               </div>
                           ))}
                           <div className="pt-4 border-t border-border space-y-3">
-                              <p className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-2"><Wallet className="h-3.5 w-3.5" /> Adjust Holding Balance</p>
-                              <input type="number" placeholder="Amount (USD)" value={balanceAdjust} onChange={(e) => setBalanceAdjust(e.target.value)}
+                              <div className="flex items-center justify-between">
+                                  <p className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-2">
+                                      <Wallet className="h-3.5 w-3.5" /> Adjust Balance
+                                  </p>
+                                  <div className="flex gap-1 p-0.5 bg-muted rounded-lg">
+                                      {(['holding', 'trading'] as const).map(type => (
+                                          <button
+                                              key={type}
+                                              onClick={() => setAdjustWalletType(type)}
+                                              className={cn(
+                                                  "px-3 py-1 text-[9px] font-bold uppercase rounded-md transition-all",
+                                                  adjustWalletType === type ? "bg-background shadow-sm text-primary" : "text-muted-foreground"
+                                              )}
+                                          >
+                                              {type}
+                                          </button>
+                                      ))}
+                                  </div>
+                              </div>
+                              <input type="number" placeholder={`Amount to ${adjustWalletType} balance (USD)`} value={balanceAdjust} onChange={(e) => setBalanceAdjust(e.target.value)}
                                   className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none" />
                               <div className="grid grid-cols-2 gap-3">
                                   <button onClick={() => handleAdjustBalance(selectedUser.id, 'add')} disabled={processing || !balanceAdjust}
@@ -1386,6 +1409,12 @@ export default function AdminDashboard() {
 
                       {selectedWithdrawal.status === 'pending' ? (
                           <div className="space-y-4 pt-2">
+                            <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl mb-4">
+                                <p className="text-xs font-bold text-amber-500 flex items-center gap-2 mb-1">
+                                    <AlertCircle className="h-4 w-4" /> Warning: Potential Trade Wash
+                                </p>
+                                <p className="text-[10px] text-muted-foreground">This user has high trading activity. Verify trades before approving.</p>
+                            </div>
                               <div className="space-y-2">
                                   <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Admin Feedback / Notes</label>
                                   <textarea

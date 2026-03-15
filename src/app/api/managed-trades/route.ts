@@ -49,10 +49,12 @@ export async function POST(request: Request) {
 
     const { 
       asset_symbol, asset_name, asset_type, 
-      profit_percent, min_stake, ends_at, 
+      profit_percent, min_amount, min_stake, ends_at, 
       scope, target_user_id,
       signal_type, entry_price, duration, outcome
     } = body;
+
+    const minimumRequiredAmount = min_amount !== undefined ? min_amount : (min_stake !== undefined ? min_stake : 10);
 
     if (!asset_symbol || profit_percent === undefined || !ends_at) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -65,7 +67,7 @@ export async function POST(request: Request) {
         asset_name,
         asset_type,
         profit_percent: Number(profit_percent),
-        min_stake: min_stake !== undefined ? Number(min_stake) : 10,
+        min_stake: Number(minimumRequiredAmount),
         ends_at,
         scope: scope || 'all',
         target_user_id,

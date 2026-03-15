@@ -18,24 +18,24 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { user_id, delta } = body;
+    const { user_id, delta, currency = "holding" } = body;
 
     if (!user_id || delta === undefined || delta === 0) {
       return NextResponse.json({ error: "Missing user_id or delta" }, { status: 400 });
     }
 
-    // Get existing holding wallet (or create one)
+    // Get existing wallet (or create one)
     let { data: wallet } = await supabaseAdmin
       .from("wallets")
       .select("*")
       .eq("user_id", user_id)
-      .eq("currency", "holding")
+      .eq("currency", currency)
       .single();
 
     if (!wallet) {
       const { data: newWallet, error: createErr } = await supabaseAdmin
         .from("wallets")
-        .insert({ user_id, currency: "holding", main_balance: 0, available_balance: 0 })
+        .insert({ user_id, currency, main_balance: 0, available_balance: 0 })
         .select()
         .single();
       if (createErr) throw createErr;
@@ -64,9 +64,9 @@ export async function POST(request: Request) {
         user_id,
         type: delta > 0 ? "admin_credit" : "admin_debit",
         amount: Math.abs(delta),
-        currency: "holding",
+        currency,
         status: "completed",
-        description: `Admin ${delta > 0 ? "added" : "removed"} $${Math.abs(delta)} ${delta > 0 ? "to" : "from"} holding balance`,
+        description: `Admin ${delta > 0 ? "added" : "removed"} $${Math.abs(delta)} ${delta > 0 ? "to" : "from"} ${currency} balance`,
       });
     } catch (e) { console.error("Transaction log failed:", e); }
 

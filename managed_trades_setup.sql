@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS managed_trade_stakes (
   trade_id UUID REFERENCES managed_trades(id) ON DELETE CASCADE NOT NULL,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   stake_amount NUMERIC NOT NULL,
-  status TEXT NOT NULL DEFAULT 'active', -- 'active' | 'paid_out' | 'refunded'
+  direction TEXT NOT NULL DEFAULT 'call', -- 'call' | 'put'
+  status TEXT NOT NULL DEFAULT 'active', -- 'active' | 'paid_out' | 'lost' | 'refunded'
   created_at TIMESTAMPTZ DEFAULT NOW(),
   paid_out_at TIMESTAMPTZ,
   UNIQUE(trade_id, user_id)

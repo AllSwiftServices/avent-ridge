@@ -11,23 +11,23 @@ export async function processTradePayout(tradeId: string) {
   if (tradeErr || !trade) throw new Error("Trade not found");
   if (trade.status !== "active") throw new Error("Trade is not active");
 
-  // 2. Fetch all active stakes for this trade
-  const { data: stakes, error: stakesErr } = await supabaseAdmin
+  // 2. Fetch all active positions for this signal
+  const { data: userPositions, error: userPositionsErr } = await supabaseAdmin
     .from("managed_trade_stakes")
     .select("*")
     .eq("trade_id", tradeId)
     .eq("status", "active");
 
-  if (stakesErr) throw stakesErr;
+  if (userPositionsErr) throw userPositionsErr;
 
   const results = {
-    totalStakers: stakes?.length || 0,
+    totalTraders: userPositions?.length || 0,
     paidOut: 0,
     failed: 0
   };
 
-  if (!stakes || stakes.length === 0) {
-    // No stakes, just mark trade as completed
+  if (!userPositions || userPositions.length === 0) {
+    // No traders, just mark trade as completed
     await supabaseAdmin
       .from("managed_trades")
       .update({ status: "completed" })
@@ -35,24 +35,33 @@ export async function processTradePayout(tradeId: string) {
     return results;
   }
 
-  // 3. Process each stake
-  for (const stake of stakes) {
+  // 3. Process each trade position
+  for (const tradePosition of userPositions) {
     try {
-      const isWin = trade.outcome !== 'loss';
-      const stakeAmount = Number(stake.stake_amount);
-      const profitAmount = isWin ? (stakeAmount * Number(trade.profit_percent)) / 100 : 0;
-      const totalPayout = isWin ? stakeAmount + profitAmount : 0;
+      // Determine actual market direction
+      // If signal was 'call' and outcome was 'win', market moved 'call'
+      // If signal was 'call' and outcome was 'loss', market moved 'put'
+      // If signal was 'put' and outcome was 'win', market moved 'put'
+      // If signal was 'put' and outcome was 'loss', market moved 'call'
+      const marketDirection = trade.signal_type === 'call' 
+        ? (trade.outcome === 'win' ? 'call' : 'put')
+        : (trade.outcome === 'win' ? 'put' : 'call');
+
+      const isWin = tradePosition.direction === marketDirection;
+      const tradeAmount = Number(tradePosition.stake_amount);
+      const profitAmount = isWin ? (tradeAmount * Number(trade.profit_percent)) / 100 : 0;
+      const totalPayout = isWin ? tradeAmount + profitAmount : 0;
 
       if (isWin) {
         // Credit user's wallet
         const { data: wallet, error: walletErr } = await supabaseAdmin
           .from("wallets")
           .select("*")
-          .eq("user_id", stake.user_id)
+          .eq("user_id", tradePosition.user_id)
           .eq("currency", "trading")
           .single();
 
-        if (walletErr || !wallet) throw new Error(`Wallet not found for user ${stake.user_id}`);
+        if (walletErr || !wallet) throw new Error(`Wallet not found for user ${tradePosition.user_id}`);
 
         const { error: creditErr } = await supabaseAdmin
           .from("wallets")
@@ -63,7 +72,7 @@ export async function processTradePayout(tradeId: string) {
 
         // Log transaction
         await supabaseAdmin.from("transactions").insert({
-          user_id: stake.user_id,
+          user_id: tradePosition.user_id,
           amount: totalPayout,
           type: "managed_trade_payout",
           status: "completed",
@@ -71,19 +80,19 @@ export async function processTradePayout(tradeId: string) {
         });
       }
 
-      // Mark stake as processed (paid_out if win, lost if loss)
+      // Mark position as processed (paid_out if win, lost if loss)
       await supabaseAdmin
         .from("managed_trade_stakes")
         .update({ 
           status: isWin ? "paid_out" : "lost",
           paid_out_at: new Date().toISOString()
         })
-        .eq("id", stake.id);
+        .eq("id", tradePosition.id);
 
       if (!isWin) {
-        // Log loss transaction for clarity (optional, but good for history)
+        // Log loss transaction for clarity
         await supabaseAdmin.from("transactions").insert({
-          user_id: stake.user_id,
+          user_id: tradePosition.user_id,
           amount: 0,
           type: "managed_trade_loss",
           status: "completed",
@@ -94,11 +103,11 @@ export async function processTradePayout(tradeId: string) {
       // 4. Notify User
       try {
         const { sendPushNotification } = await import("./push-notifications");
-        await sendPushNotification(stake.user_id, {
+        await sendPushNotification(tradePosition.user_id, {
           title: isWin ? "Trade Payout Received" : "Trade Result: Loss",
           body: isWin 
-            ? `Your $${stakeAmount.toLocaleString()} stake in ${trade.asset_symbol} has matured! $${totalPayout.toLocaleString()} has been credited to your trading wallet.`
-            : `Your $${stakeAmount.toLocaleString()} stake in ${trade.asset_symbol} managed trade has expired in a loss.`,
+            ? `Your $${tradeAmount.toLocaleString()} trade in ${trade.asset_symbol} has matured! $${totalPayout.toLocaleString()} has been credited to your trading wallet.`
+            : `Your $${tradeAmount.toLocaleString()} trade in ${trade.asset_symbol} managed trade has expired in a loss.`,
           url: "/wallet"
         });
       } catch (pushErr) {
@@ -107,7 +116,7 @@ export async function processTradePayout(tradeId: string) {
 
       results.paidOut++;
     } catch (e) {
-      console.error(`Failed to process stake ${stake.id}:`, e);
+      console.error(`Failed to process position ${tradePosition.id}:`, e);
       results.failed++;
     }
   }

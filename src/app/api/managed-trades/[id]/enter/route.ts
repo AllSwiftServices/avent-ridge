@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, supabaseAdmin } from "@/lib/supabase-server";
 
-// POST /api/managed-trades/[id]/stake — User stakes in a trade
+// POST /api/managed-trades/[id]/enter — User enters a trade
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -16,10 +16,14 @@ export async function POST(
 
     const tradeId = id;
     const body = await request.json();
-    const { amount } = body;
+    const { amount, direction = "call" } = body;
 
     if (!amount || amount <= 0) {
-      return NextResponse.json({ error: "Invalid stake amount" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid trade amount" }, { status: 400 });
+    }
+
+    if (!['call', 'put'].includes(direction)) {
+      return NextResponse.json({ error: "Invalid trade direction" }, { status: 400 });
     }
 
     // 1. Fetch trade details and check validity
@@ -42,7 +46,7 @@ export async function POST(
     }
 
     if (amount < trade.min_stake) {
-      return NextResponse.json({ error: `Minimum stake is $${trade.min_stake}` }, { status: 400 });
+      return NextResponse.json({ error: `Minimum amount is $${trade.min_stake}` }, { status: 400 });
     }
 
     // Check if user is eligible (if scoped to user)
@@ -62,8 +66,7 @@ export async function POST(
       return NextResponse.json({ error: "Insufficient trading balance" }, { status: 400 });
     }
 
-    // 3. Perform transaction: Deduct balance + Create stake
-    // Note: In a real production app, use a DB transaction/RPC for atomicity.
+    // 3. Perform transaction: Deduct balance + Create trade position
     const { error: deductErr } = await supabaseAdmin
       .from("wallets")
       .update({ main_balance: Number(wallet.main_balance) - amount })
@@ -71,49 +74,50 @@ export async function POST(
 
     if (deductErr) throw deductErr;
 
-    const { data: stake, error: stakeErr } = await supabaseAdmin
+    const { data: tradeEntry, error: tradeEntryErr } = await supabaseAdmin
       .from("managed_trade_stakes")
       .insert({
         trade_id: tradeId,
         user_id: user.id,
-        stake_amount: amount
+        stake_amount: amount,
+        direction
       })
       .select()
       .single();
 
-    if (stakeErr) {
-      // Rollback balance if stake record fails
+    if (tradeEntryErr) {
+      // Rollback balance if record fails
       await supabaseAdmin
         .from("wallets")
         .update({ main_balance: Number(wallet.main_balance) })
         .eq("id", wallet.id);
-      throw stakeErr;
+      throw tradeEntryErr;
     }
 
     // Log transaction
     await supabaseAdmin.from("transactions").insert({
       user_id: user.id,
       amount: -amount,
-      type: "managed_trade_stake",
+      type: "managed_trade_entry",
       status: "completed",
-      description: `Stake in ${trade.asset_symbol} managed trade`
+      description: `Trade in ${trade.asset_symbol} managed trade`
     });
 
     // 4. Notify User
     try {
       const { sendPushNotification } = await import("@/lib/push-notifications");
       await sendPushNotification(user.id, {
-        title: "Stake Successful",
-        body: `You've successfully staked $${amount.toLocaleString()} in ${trade.asset_symbol} managed trade.`,
+        title: "Trade Successful",
+        body: `You've successfully opened a $${amount.toLocaleString()} trade in ${trade.asset_symbol} managed trade.`,
         url: "/trades"
       });
     } catch (pushErr) {
-      console.error("Failed to send stake notification:", pushErr);
+      console.error("Failed to send notification:", pushErr);
     }
 
-    return NextResponse.json(stake);
+    return NextResponse.json(tradeEntry);
   } catch (error: any) {
-    console.error("Staking error:", error);
-    return NextResponse.json({ message: error.message || "Failed to stake" }, { status: 500 });
+    console.error("Trading error:", error);
+    return NextResponse.json({ message: error.message || "Failed to open trade" }, { status: 500 });
   }
 }

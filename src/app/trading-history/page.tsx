@@ -16,8 +16,9 @@ const TYPE_CONFIG: any = {
   sell: { label: 'Sell', icon: ArrowUpRight, color: 'text-destructive', bg: 'bg-destructive/10' },
   deposit: { label: 'Deposit', icon: ArrowDownLeft, color: 'text-primary', bg: 'bg-primary/10' },
   withdraw: { label: 'Withdraw', icon: ArrowUpRight, color: 'text-destructive', bg: 'bg-destructive/10' },
-  managed_trade_stake: { label: 'Trade Stake', icon: ArrowUpRight, color: 'text-destructive', bg: 'bg-destructive/10' },
-  managed_trade_payout: { label: 'Trade Payout', icon: ArrowDownLeft, color: 'text-primary', bg: 'bg-primary/10' },
+  managed_trade_stake: { label: 'Trade Entry', icon: ArrowUpRight, color: 'text-destructive', bg: 'bg-destructive/10' },
+  managed_trade_entry: { label: 'Trade Entry', icon: ArrowUpRight, color: 'text-destructive', bg: 'bg-destructive/10' },
+  managed_trade_payout: { label: 'Trade Result', icon: ArrowDownLeft, color: 'text-primary', bg: 'bg-primary/10' },
 };
 
 const TABS = ['all', 'buy', 'sell', 'deposit', 'withdraw', 'trades'];
@@ -45,7 +46,7 @@ export default function TradingHistory() {
   });
 
   const filtered = (transactions || []).filter((tx: any) => {
-    const isTrade = tx.type === 'managed_trade_stake' || tx.type === 'managed_trade_payout';
+    const isTrade = tx.type === 'managed_trade_stake' || tx.type === 'managed_trade_entry' || tx.type === 'managed_trade_payout';
     const matchTab = activeTab === 'all' || (activeTab === 'trades' && isTrade) || tx.type === activeTab;
     const matchSearch = !search ||
       tx.asset_symbol?.toLowerCase().includes(search.toLowerCase()) ||
@@ -57,8 +58,8 @@ export default function TradingHistory() {
   const totalBuys = (transactions || []).filter((t: any) => t.type === 'buy').reduce((s: number, t: any) => s + (t.amount || 0), 0);
   const totalSells = (transactions || []).filter((t: any) => t.type === 'sell').reduce((s: number, t: any) => s + (t.amount || 0), 0);
   const totalPayouts = (transactions || []).filter((t: any) => t.type === 'managed_trade_payout').reduce((s: number, t: any) => s + (t.amount || 0), 0);
-  const totalStakes = (transactions || []).filter((t: any) => t.type === 'managed_trade_stake').reduce((s: number, t: any) => s + Math.abs(t.amount || 0), 0);
-  const tradeProfit = totalPayouts - totalStakes;
+  const totalTrades = (transactions || []).filter((t: any) => t.type === 'managed_trade_stake' || t.type === 'managed_trade_entry').reduce((s: number, t: any) => s + Math.abs(t.amount || 0), 0);
+  const tradeProfit = totalPayouts - totalTrades;
 
   return (
     <div className="min-h-screen pb-24 md:pb-8 bg-background text-foreground">

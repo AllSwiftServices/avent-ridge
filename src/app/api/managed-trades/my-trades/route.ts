@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, supabaseAdmin } from "@/lib/supabase-server";
 
-// GET /api/managed-trades/my-stakes — User's own stakes history
+// GET /api/managed-trades/my-trades — User's own trades history
 export async function GET() {
   try {
     const supabase = await createClient();
@@ -10,7 +10,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: stakes, error } = await supabaseAdmin
+    const { data: userTrades, error } = await supabaseAdmin
       .from("managed_trade_stakes")
       .select(`
         *,
@@ -31,9 +31,9 @@ export async function GET() {
 
     if (error) throw error;
 
-    return NextResponse.json(stakes);
+    return NextResponse.json(userTrades);
   } catch (error: any) {
-    console.error("My stakes fetch error:", error);
-    return NextResponse.json({ message: error.message || "Failed to fetch stakes" }, { status: 500 });
+    console.error("My trades fetch error:", error);
+    return NextResponse.json({ message: error.message || "Failed to fetch trades" }, { status: 500 });
   }
 }

@@ -24,7 +24,7 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: `Trade completed. Paid out ${results.paidOut} stakers.`,
+      message: `Trade completed. Paid out ${results.paidOut} traders.`,
       ...results
     });
   } catch (error: any) {

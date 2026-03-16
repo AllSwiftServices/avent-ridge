@@ -999,7 +999,14 @@ export default function AdminDashboard() {
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Entry Price ($)</label>
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">
+                          Entry Price ($)
+                          {newTrade.asset_symbol && (
+                            <span className="ml-2 text-primary lowercase float-right">
+                              current: ${assets.find(a => a.symbol === newTrade.asset_symbol)?.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 }) || '0.00'}
+                            </span>
+                          )}
+                        </label>
                         <input 
                           type="number"
                           placeholder="e.g. 65000"

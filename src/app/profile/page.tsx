@@ -238,14 +238,14 @@ export default function ProfilePage() {
       <header className="sticky top-0 z-30 backdrop-blur-xl border-b bg-background/95 border-border">
         <div className="px-4 py-4 flex items-center justify-between">
           <h1 className="font-bold text-2xl">Profile</h1>
-          {!isEditing && (
+          {/* {!isEditing && (
             <button 
               onClick={() => setIsEditing(true)}
               className="px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-colors"
             >
               Edit
             </button>
-          )}
+          )} */}
         </div>
       </header>
 

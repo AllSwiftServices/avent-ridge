@@ -170,8 +170,8 @@ export default function AiTradingView({ onViewChange }: AiTradingViewProps) {
                   tradeMode === 'binary' ? "bg-primary text-primary-foreground" : "text-muted-foreground"
                 )}
               >
-                <Zap className="h-3 sm:h-3.5 w-3 sm:w-3.5" /> <span className="hidden min-[360px]:inline">Live Trading</span>
-                <span className="min-[360px]:hidden">Live</span>
+                <Zap className="h-3 sm:h-3.5 w-3 sm:w-3.5" /> <span className="hidden min-[360px]:inline">AI Trading</span>
+                <span className="min-[360px]:hidden">AI</span>
               </button>
               <button
                 onClick={() => onViewChange?.('live')}
@@ -180,8 +180,8 @@ export default function AiTradingView({ onViewChange }: AiTradingViewProps) {
                   "text-muted-foreground hover:bg-muted"
                 )}
               >
-                <BarChart2 className="h-3 sm:h-3.5 w-3 sm:w-3.5" /> <span className="hidden min-[360px]:inline">Broker Trading</span>
-                <span className="min-[360px]:hidden">Broker</span>
+                <BarChart2 className="h-3 sm:h-3.5 w-3 sm:w-3.5" /> <span className="hidden min-[360px]:inline">Live Trading</span>
+                <span className="min-[360px]:hidden">Live</span>
               </button>
             </div>
             

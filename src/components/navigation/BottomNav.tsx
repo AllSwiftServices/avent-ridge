@@ -26,7 +26,7 @@ export default function BottomNav() {
       'bg-background/80 backdrop-blur-xl border-t border-border',
       'md:hidden'
     )}>
-      <div className="flex items-center justify-start sm:justify-around overflow-x-auto no-scrollbar py-2 px-2 safe-area-pb gap-1">
+      <div className="flex items-center justify-around py-2 px-1 safe-area-pb">
         {navItems.map((item) => {
           const isActive = location.pathname === createPageUrl(item.page);
           return (
@@ -34,7 +34,7 @@ export default function BottomNav() {
               key={item.page}
               to={createPageUrl(item.page)}
               className={cn(
-                'relative flex flex-col items-center justify-center py-2 px-3 rounded-2xl transition-all min-w-[72px] shrink-0',
+                'relative flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all flex-1',
                 isActive ? 'text-primary' : 'text-muted-foreground'
               )}
             >
@@ -60,7 +60,7 @@ export default function BottomNav() {
             <Link
               to={createPageUrl('Admin')}
               className={cn(
-                'relative flex flex-col items-center justify-center py-2 px-3 rounded-2xl transition-all min-w-[72px] shrink-0',
+                'relative flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all flex-1',
                 location.pathname === '/admin' ? 'text-primary' : 'text-muted-foreground'
               )}
             >

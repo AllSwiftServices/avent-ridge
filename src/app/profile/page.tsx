@@ -189,7 +189,7 @@ export default function ProfilePage() {
     {
       title: 'Account',
       items: [
-        { icon: User, label: 'Personal Information', action: () => navigate(createPageUrl('verify-identity')) },
+        { icon: User, label: 'Personal Information', action: () => navigate('/profile/personal-info') },
         {
           icon: Shield,
           label: 'KYC Verification',

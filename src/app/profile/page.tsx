@@ -197,7 +197,7 @@ export default function ProfilePage() {
           badgeColor: kycRecord?.status === 'approved' ? 'text-primary bg-primary/10' : kycRecord?.status === 'rejected' ? 'text-destructive bg-destructive/10' : 'text-muted-foreground bg-muted',
           action: () => navigate(createPageUrl('verify-identity'))
         },
-        { icon: Lock, label: 'Security Settings', action: comingSoon },
+        { icon: Lock, label: 'Security Settings', action: () => navigate('/profile/security') },
       ]
     },
     {

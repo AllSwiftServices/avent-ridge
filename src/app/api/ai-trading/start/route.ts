@@ -65,7 +65,7 @@ export async function POST(request: Request) {
         profit,
         duration,
         resolves_at: resolvesAt,
-        entry_price: price,
+        entry_price: price || 0, // Ensure numeric value
         status: "pending"
       })
       .select()
@@ -73,33 +73,45 @@ export async function POST(request: Request) {
 
     if (tradeError) throw tradeError;
 
-    // Record Transaction (Deduction)
-    const { error: txError } = await supabaseAdmin
-      .from("transactions")
-      .insert({
-        user_id: user.id,
-        type: "trade_entry",
-        amount: -amount,
-        symbol: assetSymbol,
-        price: price,
-        status: "completed"
-      });
+    try {
+      // Record Transaction (Deduction)
+      const { error: txError } = await supabaseAdmin
+        .from("transactions")
+        .insert({
+          user_id: user.id,
+          type: "trade_entry",
+          amount: -amount,
+          symbol: assetSymbol,
+          price: price || 0, // Ensure numeric value
+          total_value: amount,
+          status: "completed"
+        });
 
-    if (txError) throw txError;
+      if (txError) throw txError;
 
-    // Update Wallet
-    const { error: walletUpdateError } = await supabaseAdmin
-      .from("wallets")
-      .update({ 
-        main_balance: wallet.main_balance - amount,
-        available_balance: wallet.available_balance - amount
-      })
-      .eq("user_id", user.id)
-      .eq("currency", "trading");
+      // Update Wallet
+      const { error: walletUpdateError } = await supabaseAdmin
+        .from("wallets")
+        .update({ 
+          main_balance: wallet.main_balance - amount,
+          available_balance: wallet.available_balance - amount
+        })
+        .eq("user_id", user.id)
+        .eq("currency", "trading");
 
-    if (walletUpdateError) throw walletUpdateError;
+      if (walletUpdateError) throw walletUpdateError;
 
-    return NextResponse.json({ tradeId: trade.id });
+      return NextResponse.json({ tradeId: trade.id });
+    } catch (cleanupError: any) {
+      console.error("Cleanup Error - Rolling back trade:", cleanupError);
+      // Manual Rollback: Delete the trade record if subsequent operations fail
+      await supabaseAdmin
+        .from("ai_trades")
+        .delete()
+        .eq("id", trade.id);
+      
+      throw cleanupError;
+    }
   } catch (error: any) {
     console.error("AI Trade start error:", error);
     

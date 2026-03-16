@@ -65,7 +65,10 @@ export async function processTradePayout(tradeId: string) {
 
         const { error: creditErr } = await supabaseAdmin
           .from("wallets")
-          .update({ main_balance: Number(wallet.main_balance) + totalPayout })
+          .update({ 
+            main_balance: Number(wallet.main_balance) + totalPayout,
+            available_balance: Number(wallet.available_balance) + totalPayout
+          })
           .eq("id", wallet.id);
 
         if (creditErr) throw creditErr;
@@ -74,6 +77,7 @@ export async function processTradePayout(tradeId: string) {
         await supabaseAdmin.from("transactions").insert({
           user_id: tradePosition.user_id,
           amount: totalPayout,
+          total_value: totalPayout,
           type: "managed_trade_payout",
           status: "completed",
           description: `Payout from ${trade.asset_symbol} managed trade (+${trade.profit_percent}% profit)`
@@ -94,6 +98,7 @@ export async function processTradePayout(tradeId: string) {
         await supabaseAdmin.from("transactions").insert({
           user_id: tradePosition.user_id,
           amount: 0,
+          total_value: tradeAmount,
           type: "managed_trade_loss",
           status: "completed",
           description: `Managed trade on ${trade.asset_symbol} ended in loss`

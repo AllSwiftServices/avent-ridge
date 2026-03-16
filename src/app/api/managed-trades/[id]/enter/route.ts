@@ -69,7 +69,10 @@ export async function POST(
     // 3. Perform transaction: Deduct balance + Create trade position
     const { error: deductErr } = await supabaseAdmin
       .from("wallets")
-      .update({ main_balance: Number(wallet.main_balance) - amount })
+      .update({ 
+        main_balance: Number(wallet.main_balance) - amount,
+        available_balance: Number(wallet.available_balance) - amount
+      })
       .eq("id", wallet.id);
 
     if (deductErr) throw deductErr;
@@ -89,7 +92,10 @@ export async function POST(
       // Rollback balance if record fails
       await supabaseAdmin
         .from("wallets")
-        .update({ main_balance: Number(wallet.main_balance) })
+        .update({ 
+          main_balance: Number(wallet.main_balance),
+          available_balance: Number(wallet.available_balance)
+        })
         .eq("id", wallet.id);
       throw tradeEntryErr;
     }
@@ -98,6 +104,7 @@ export async function POST(
     await supabaseAdmin.from("transactions").insert({
       user_id: user.id,
       amount: -amount,
+      total_value: amount,
       type: "managed_trade_entry",
       status: "completed",
       description: `Trade in ${trade.asset_symbol} managed trade`

@@ -85,6 +85,7 @@ export async function POST(request: Request) {
         user_id: user.id,
         type: "trade_sell",
         amount: proceeds,
+        total_value: proceeds,
         currency: "USD",
         status: "completed",
         description: `Sold ${quantity} ${asset_symbol} @ $${asset.price}`,

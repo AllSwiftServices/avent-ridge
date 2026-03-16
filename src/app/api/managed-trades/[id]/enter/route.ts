@@ -54,7 +54,16 @@ export async function POST(
       return NextResponse.json({ error: "You are not eligible for this trade" }, { status: 403 });
     }
 
-    // 2. Check user trading balance
+    // 2. Fetch current asset price
+    const { data: assetData, error: assetErr } = await supabaseAdmin
+      .from("assets")
+      .select("price")
+      .eq("symbol", trade.asset_symbol)
+      .single();
+
+    const currentPrice = assetData ? assetData.price : 0;
+
+    // 3. Check user trading balance
     const { data: wallet, error: walletErr } = await supabaseAdmin
       .from("wallets")
       .select("*")
@@ -66,7 +75,7 @@ export async function POST(
       return NextResponse.json({ error: "Insufficient trading balance" }, { status: 400 });
     }
 
-    // 3. Perform transaction: Deduct balance + Create trade position
+    // 4. Perform transaction: Deduct balance + Create trade position
     const { error: deductErr } = await supabaseAdmin
       .from("wallets")
       .update({ 
@@ -83,7 +92,8 @@ export async function POST(
         trade_id: tradeId,
         user_id: user.id,
         stake_amount: amount,
-        direction
+        direction,
+        entry_price: currentPrice
       })
       .select()
       .single();

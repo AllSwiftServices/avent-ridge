@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Zap, Clock, TrendingUp, AlertCircle, CheckCircle,
-  RefreshCcw, ArrowRight, ShieldCheck, X, Activity,
-  LineChart, LayoutDashboard, History, Wallet,
-  ArrowUpCircle, Info, Timer, Target, ChevronDown
+  TrendingUp, TrendingDown, Clock, RefreshCcw, CheckCircle, X,
+  History, ArrowUpCircle, ChevronDown, Activity, LayoutDashboard,
+  Wallet, Info
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -16,91 +15,142 @@ import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import AssetSelector from '@/components/trading/AssetSelector';
 import CandlestickChart from '@/components/trading/CandlestickChart';
-import LivePriceHeader from '@/components/trading/LivePriceHeader';
+
+// ─── Constants ──────────────────────────────────────────────────────────────
 
 const OPTION_TYPES = ['Commodities', 'Crypto', 'Forex', 'Indices', 'Stocks'];
 const ASSETS_BY_TYPE: Record<string, string[]> = {
-  'Commodities': ['Gold', 'Silver', 'Crude Oil Brent', 'Crude Oil WTI', 'Natural Gas', 'Corn', 'Wheat', 'Copper'],
-  'Crypto': ['Bitcoin', 'Ethereum', 'Solana', 'XRP', 'Cardano', 'Dogecoin', 'Polkadot'],
-  'Forex': ['EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'USD/CAD', 'EUR/GBP'],
-  'Indices': ['S&P 500', 'Nasdaq 100', 'Dow Jones', 'FTSE 100', 'DAX 40'],
-  'Stocks': ['Apple', 'Microsoft', 'Tesla', 'Amazon', 'Google', 'Meta'],
+  Commodities: ['Gold', 'Silver', 'Crude Oil Brent', 'Crude Oil WTI', 'Natural Gas', 'Corn', 'Wheat', 'Copper'],
+  Crypto: ['Bitcoin', 'Ethereum', 'Solana', 'XRP', 'Cardano', 'Dogecoin', 'Polkadot'],
+  Forex: ['EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'USD/CAD', 'EUR/GBP'],
+  Indices: ['S&P 500', 'Nasdaq 100', 'Dow Jones', 'FTSE 100', 'DAX 40'],
+  Stocks: ['Apple', 'Microsoft', 'Tesla', 'Amazon', 'Google', 'Meta'],
 };
 const DURATIONS = [
-  { label: '30 Seconds', value: '30s' },
-  { label: '1 Minute', value: '1m' },
-  { label: '5 Minutes', value: '5m' },
-  { label: '15 Minutes', value: '15m' },
-  { label: '30 Minutes', value: '30m' },
-  { label: '1 Hour', value: '1h' },
+  { label: '30 Seconds', value: '30s', ms: 30_000 },
+  { label: '1 Minute', value: '1m', ms: 60_000 },
+  { label: '2 Minutes', value: '2m', ms: 120_000 },
+  { label: '3 Minutes', value: '3m', ms: 180_000 },
+  { label: '5 Minutes', value: '5m', ms: 300_000 },
+  { label: '10 Minutes', value: '10m', ms: 600_000 },
+  { label: '15 Minutes', value: '15m', ms: 900_000 },
+  { label: '20 Minutes', value: '20m', ms: 1_200_000 },
+  { label: '30 Minutes', value: '30m', ms: 1_800_000 },
+  { label: '45 Minutes', value: '45m', ms: 2_700_000 },
 ];
 
-const CountdownTimer = ({ endsAt, onExpire, tradeId }: { endsAt: string, onExpire?: () => void, tradeId?: string }) => {
-  const [timeLeft, setTimeLeft] = useState<string>('');
-  const [isExpired, setIsExpired] = useState(false);
-  const queryClient = useQueryClient();
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+/** Platform clock showing UTC time */
+const PlatformClock = () => {
+  const [time, setTime] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <span className="font-mono text-xs text-muted-foreground">
+      {time.toISOString().slice(11, 19)} UTC
+    </span>
+  );
+};
+
+/** Countdown from a given endsAt timestamp */
+const StakeCountdown = ({
+  endsAt,
+  onExpire,
+}: {
+  endsAt: string;
+  onExpire: () => void;
+}) => {
+  const [left, setLeft] = useState('');
+  const calledRef = useRef(false);
 
   useEffect(() => {
-    const calculateTimeLeft = () => {
-      const now = new Date().getTime();
-      const end = new Date(endsAt).getTime();
-      const difference = end - now;
-
-      if (difference <= 0) {
-        setTimeLeft('Finalizing...');
-        if (!isExpired) {
-          setIsExpired(true);
-          onExpire?.();
-          
-          if (tradeId) {
-            api.post('/managed-trades/process-expired', { tradeId }).then(() => {
-              queryClient.invalidateQueries({ queryKey: ['managed-trades'] });
-              queryClient.invalidateQueries({ queryKey: ['trading-wallet'] });
-              queryClient.invalidateQueries({ queryKey: ['my-managed-trades'] });
-            }).catch(err => console.error("Auto-payout trigger failed:", err));
-          }
+    const tick = () => {
+      const diff = new Date(endsAt).getTime() - Date.now();
+      if (diff <= 0) {
+        setLeft('Resolving…');
+        if (!calledRef.current) {
+          calledRef.current = true;
+          onExpire();
         }
         return;
       }
-
-      setIsExpired(false);
-      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-      const minutes = Math.floor((difference / 1000 / 60) % 60);
-      const seconds = Math.floor((difference / 1000) % 60);
-
-      const parts = [];
-      if (hours > 0) parts.push(hours.toString().padStart(2, '0'));
-      parts.push(minutes.toString().padStart(2, '0'));
-      parts.push(seconds.toString().padStart(2, '0'));
-      
-      setTimeLeft(parts.join(':'));
+      const s = Math.floor((diff / 1000) % 60);
+      const m = Math.floor(diff / 60_000);
+      setLeft(m > 0 ? `${m}m ${s.toString().padStart(2, '0')}s` : `${s}s`);
     };
+    tick();
+    const id = setInterval(tick, 500);
+    return () => clearInterval(id);
+  }, [endsAt, onExpire]);
 
-    calculateTimeLeft();
-    const timer = setInterval(calculateTimeLeft, 1000);
-    return () => clearInterval(timer);
-  }, [endsAt, onExpire, isExpired, tradeId, queryClient]);
-
-  return <span className={cn(isExpired ? "text-muted-foreground animate-pulse" : "font-mono font-bold")}>{timeLeft}</span>;
+  return <span className="font-mono font-bold text-primary">{left}</span>;
 };
 
-const DigitalClock = () => {
-  const [time, setTime] = useState(new Date());
-  useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-  return (
-    <div className="flex items-center gap-2 bg-muted/30 px-3 py-2 rounded-xl border border-border/50">
-      <Clock className="h-4 w-4 text-primary" />
-      <span className="font-mono text-sm font-bold tracking-tight">
-        {time.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-      </span>
-    </div>
-  );
-};
+// ─── Result overlay ──────────────────────────────────────────────────────────
+
+const TradeResultOverlay = ({
+  result,
+  onClose,
+}: {
+  result: { isWin: boolean; totalPayout: number; tradeAmount: number; profitAmount: number } | null;
+  onClose: () => void;
+}) => (
+  <AnimatePresence>
+    {result && (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      >
+        <motion.div
+          onClick={e => e.stopPropagation()}
+          className={cn(
+            "bg-card border rounded-3xl p-8 max-w-xs w-full text-center shadow-2xl",
+            result.isWin ? "border-primary/40 shadow-primary/20" : "border-destructive/40 shadow-destructive/20"
+          )}
+        >
+          <div className={cn(
+            "h-16 w-16 rounded-full mx-auto mb-4 flex items-center justify-center",
+            result.isWin ? "bg-primary/20" : "bg-destructive/20"
+          )}>
+            {result.isWin
+              ? <TrendingUp className="h-8 w-8 text-primary" />
+              : <TrendingDown className="h-8 w-8 text-destructive" />}
+          </div>
+          <h2 className={cn("text-2xl font-black mb-1", result.isWin ? "text-primary" : "text-destructive")}>
+            {result.isWin ? 'You Win! 🎉' : 'Trade Lost'}
+          </h2>
+          {result.isWin ? (
+            <>
+              <p className="text-muted-foreground text-sm mb-3">Payout credited to your wallet</p>
+              <p className="text-4xl font-black text-primary">+${result.totalPayout.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground mt-1">Profit: ${result.profitAmount.toLocaleString()}</p>
+            </>
+          ) : (
+            <>
+              <p className="text-muted-foreground text-sm mb-3">Better luck next time</p>
+              <p className="text-2xl font-black text-destructive">-${result.tradeAmount.toLocaleString()}</p>
+            </>
+          )}
+          <button
+            onClick={onClose}
+            className="mt-6 w-full h-12 rounded-2xl bg-primary text-black font-bold text-sm hover:opacity-90 transition-all"
+          >
+            Continue Trading
+          </button>
+        </motion.div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+);
+
+// ─── Main Component ──────────────────────────────────────────────────────────
 
 interface LiveTradingViewProps {
   onViewChange?: (view: 'ai' | 'live') => void;
@@ -110,49 +160,44 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
   const { user, isLoadingAuth } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [selectedTrade, setSelectedTrade] = useState<any>(null);
+
+  // Selections
+  const [selOptionType, setSelOptionType] = useState('Crypto');
+  const [selAsset, setSelAsset] = useState('Bitcoin');
+  const [selDuration, setSelDuration] = useState('');
   const [tradeAmount, setTradeAmount] = useState('');
-  const [isTrading, setIsTrading] = useState(false);
-  const [viewMode, setViewMode] = useState<'dashboard' | 'history'>('dashboard');
   const [isFixedTime, setIsFixedTime] = useState(true);
-  const [selectedExpired, setSelectedExpired] = useState(false);
+  const [historyView, setHistoryView] = useState(false);
 
-  // Filter state for selection
-  const [selOptionType, setSelOptionType] = useState<string>('Crypto');
-  const [selAssetId, setSelAssetId] = useState<string>('Bitcoin');
-  const [selDuration, setSelDuration] = useState<string>('5m');
+  // Active trade stake being watched
+  const [activePendingStake, setActivePendingStake] = useState<{
+    stakeId: string; endsAt: string; direction: string; amount: number;
+  } | null>(null);
+  const [tradeResult, setTradeResult] = useState<{
+    isWin: boolean; totalPayout: number; tradeAmount: number; profitAmount: number;
+  } | null>(null);
+  const [isTrading, setIsTrading] = useState(false);
 
-  // Browsing asset (used for chart when no active trade matches)
-  const [browseAsset, setBrowseAsset] = useState<any>({ symbol: 'BTC', name: 'Bitcoin', type: 'crypto' });
-
-  // Live price simulation for browsing
-  const [livePrice, setLivePrice] = useState<number>(0);
-  const prevPriceRef = useRef<number>(0);
-  const [prevPrice, setPrevPrice] = useState<number>(0);
+  // Live chart price simulation
+  const [livePrice, setLivePrice] = useState(0);
+  const prevPriceRef = useRef(0);
+  const [prevPrice, setPrevPrice] = useState(0);
   const [changePercent, setChangePercent] = useState(0);
 
   useEffect(() => {
     if (!isLoadingAuth && !user) navigate(createPageUrl('Home'));
   }, [user, isLoadingAuth, navigate]);
 
-  // Fetch ALL assets from DB for browsing
-  const { data: allAssets } = useQuery({
-    queryKey: ['all-assets'],
-    queryFn: async () => {
-      const { data, error } = await api.get<any[]>('/assets');
-      if (error) throw error;
-      return data;
-    }
-  });
-
+  // Managed trades (active signals from admin)
   const { data: trades, isLoading: loadingTrades } = useQuery({
     queryKey: ['managed-trades'],
     queryFn: async () => {
       const { data, error } = await api.get<any[]>('/managed-trades');
       if (error) throw error;
-      return data;
+      return data || [];
     },
-    enabled: !!user
+    enabled: !!user,
+    refetchInterval: 10_000,
   });
 
   const activeTrades = useMemo(() => {
@@ -161,556 +206,514 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
     return trades.filter(t => t.status === 'active' && new Date(t.ends_at).getTime() > now);
   }, [trades]);
 
-  // Build the browsable asset list: all DB assets
-  const browseAssets = useMemo(() => {
-    if (!allAssets) return [];
-    return allAssets.map((a: any) => ({
-      symbol: a.symbol,
-      name: a.name,
-      type: a.asset_type || a.type || 'crypto',
-      price: a.price,
-      change_percent: a.change_percent,
-    }));
-  }, [allAssets]);
+  // Always show ALL option types from the static list
+  const availableOptionTypes = OPTION_TYPES;
 
-  // Initialize price when asset changes
+  // Always show ALL assets for the selected option type from the static list
+  const availableAssets = ASSETS_BY_TYPE[selOptionType] || [];
+
+  // Keep selAsset valid when option type changes
   useEffect(() => {
-    const dbAsset = allAssets?.find((a: any) => a.symbol === browseAsset.symbol);
-    const basePrice = dbAsset?.price ?? 100;
-    const baseChange = dbAsset?.change_percent ?? 0;
-    setLivePrice(basePrice);
-    setPrevPrice(basePrice);
-    prevPriceRef.current = basePrice;
-    setChangePercent(baseChange);
-  }, [browseAsset.symbol, allAssets]);
+    if (availableAssets.length > 0 && !availableAssets.includes(selAsset)) {
+      setSelAsset(availableAssets[0]);
+    }
+  }, [availableAssets, selAsset]);
 
-  // Simulate live price ticking
+  // Always show ALL durations from the static list
+  const availableDurations = DURATIONS.map(d => d.value);
+
+  // Keep selDuration valid
+  useEffect(() => {
+    if (availableDurations.length > 0 && !availableDurations.includes(selDuration)) {
+      setSelDuration(availableDurations[0]);
+    }
+  }, [availableDurations, selDuration]);
+
+  // Find the matching admin trade — fuzzy match asset name/symbol, ignore duration
+  const selectedTrade = useMemo(() => {
+    const sel = selAsset.toLowerCase();
+    return activeTrades.find(t => {
+      const typeMatch = t.asset_type?.toLowerCase() === selOptionType.toLowerCase();
+      const nameMatch =
+        t.asset_name?.toLowerCase() === sel ||
+        t.asset_symbol?.toLowerCase() === sel ||
+        t.asset_name?.toLowerCase().includes(sel) ||
+        sel.includes(t.asset_name?.toLowerCase() || '') ||
+        sel.includes(t.asset_symbol?.toLowerCase() || '') ||
+        t.asset_symbol?.toLowerCase().includes(sel);
+      return typeMatch && nameMatch;
+    }) || null;
+  }, [activeTrades, selOptionType, selAsset]);
+
+  // Wallet balance
+  const { data: wallets } = useQuery({
+    queryKey: ['wallets'],
+    queryFn: async () => {
+      const { data } = await api.get<any[]>('/wallets');
+      return data || [];
+    },
+    enabled: !!user,
+  });
+  const walletBalance = (wallets as any[])?.find(w => w.currency === 'trading')?.main_balance ?? 0;
+
+  // My trades history
+  const { data: myTrades } = useQuery({
+    queryKey: ['my-managed-trades'],
+    queryFn: async () => {
+      const { data } = await api.get<any[]>('/managed-trades/my-trades');
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  // Price simulation
+  useEffect(() => {
+    const base = selectedTrade?.entry_price || 45000;
+    setLivePrice(base);
+    prevPriceRef.current = base;
+    setPrevPrice(base);
+    setChangePercent(0);
+  }, [selAsset, selectedTrade?.entry_price]);
+
   useEffect(() => {
     if (!livePrice) return;
-    const volatility = browseAsset.type === 'crypto' ? 0.0015 : 0.0005;
-    const interval = setInterval(() => {
+    const v = 0.001;
+    const id = setInterval(() => {
       setLivePrice(prev => {
-        if (!prev) return prev;
-        const change = (Math.random() - 0.49) * prev * volatility;
+        const change = (Math.random() - 0.49) * prev * v;
         const next = Math.max(prev * 0.95, prev + change);
         setPrevPrice(prevPriceRef.current);
         prevPriceRef.current = prev;
         return next;
       });
-    }, 1000 + Math.random() * 500);
-    return () => clearInterval(interval);
-  }, [livePrice, browseAsset.type]);
+    }, 1200);
+    return () => clearInterval(id);
+  }, [livePrice]);
 
-  // Derive dynamic options from active signals
-  const availableOptionTypes = useMemo(() => {
-    const types = new Set(activeTrades.map(t => t.asset_type.charAt(0).toUpperCase() + t.asset_type.slice(1)));
-    return Array.from(types).sort();
-  }, [activeTrades]);
-
-  const availableAssetsByType = useMemo(() => {
-    const map: Record<string, string[]> = {};
-    activeTrades.forEach(t => {
-      const type = t.asset_type.charAt(0).toUpperCase() + t.asset_type.slice(1);
-      if (!map[type]) map[type] = [];
-      if (!map[type].includes(t.asset_name)) map[type].push(t.asset_name);
-    });
-    return map;
-  }, [activeTrades]);
-
-  const availableDurations = useMemo(() => {
-    const durations = activeTrades
-      .filter(t => 
-        (t.asset_type.toLowerCase() === selOptionType.toLowerCase()) && 
-        (t.asset_name === selAssetId)
-      )
-      .map(t => t.duration);
-    return Array.from(new Set(durations));
-  }, [activeTrades, selOptionType, selAssetId]);
-
-  // Sync selection with active trades
-  useEffect(() => {
-    if (!trades) return;
-    
-    const matchingTrade = trades.find(t => 
-      t.status === 'active' && 
-      t.asset_type?.toLowerCase() === selOptionType?.toLowerCase() &&
-      (t.asset_name?.toLowerCase() === selAssetId?.toLowerCase() || t.asset_symbol?.toLowerCase() === selAssetId?.toLowerCase()) &&
-      t.duration === selDuration
-    );
-
-    if (matchingTrade) {
-      setSelectedTrade(matchingTrade);
-      setSelectedExpired(false);
-    } else {
-      setSelectedTrade(null);
-    }
-  }, [trades, selOptionType, selAssetId, selDuration]);
-
-  // Auto-selection refinements for dynamic transitions
-  useEffect(() => {
-    if (activeTrades.length === 0) return;
-
-    if (availableOptionTypes.length > 0 && !availableOptionTypes.includes(selOptionType)) {
-      const firstType = availableOptionTypes[0];
-      setSelOptionType(firstType);
-      const firstAsset = availableAssetsByType[firstType]?.[0];
-      if (firstAsset) setSelAssetId(firstAsset);
-      return;
-    }
-
-    const validAssetsForType = availableAssetsByType[selOptionType] || [];
-    if (validAssetsForType.length > 0 && !validAssetsForType.includes(selAssetId)) {
-      setSelAssetId(validAssetsForType[0]);
-      return;
-    }
-
-    if (availableDurations.length > 0 && !availableDurations.includes(selDuration)) {
-      setSelDuration(availableDurations[0]);
-    }
-  }, [activeTrades, availableOptionTypes, availableAssetsByType, availableDurations, selOptionType, selAssetId, selDuration]);
-
-  const { data: wallet } = useQuery({
-    queryKey: ['trading-wallet'],
-    queryFn: async () => {
-      const { data, error } = await api.get<any>('/api/wallets?currency=trading');
-      if (error || !data) {
-        const res = await api.get<any[]>('/wallets');
-        return res.data?.find((w: any) => w.currency === 'trading');
-      }
-      return data;
-    },
-    enabled: !!user
-  });
-
-  const { data: myTrades, isLoading: loadingMyTrades } = useQuery({
-    queryKey: ['my-managed-trades'],
-    queryFn: async () => {
-      const { data, error } = await api.get<any[]>('/managed-trades/my-trades');
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user
-  });
-
-  const handleTrade = async (direction: 'call' | 'put' = 'call') => {
-    if (!selectedTrade || !tradeAmount) return;
+  // Profit preview
+  const durationMeta = DURATIONS.find(d => d.value === selDuration);
+  const profitPreview = useMemo(() => {
     const amount = parseFloat(tradeAmount);
-    if (isNaN(amount) || amount < selectedTrade.min_stake) {
-      toast.error(`Minimum amount is $${selectedTrade.min_stake}`);
+    if (isNaN(amount) || amount <= 0) return 0;
+    const pct = selectedTrade?.profit_percent ?? 80;
+    return (amount * pct) / 100;
+  }, [tradeAmount, selectedTrade]);
+
+  // Resolve individual stake when countdown hits zero
+  const handleStakeExpiry = useCallback(async () => {
+    if (!activePendingStake) return;
+    try {
+      const res = await fetch('/api/managed-trades/resolve-stake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stakeId: activePendingStake.stakeId }),
+        credentials: 'include',
+      });
+      const result = await res.json();
+      if (result.already_resolved) {
+        // already done
+      } else {
+        setTradeResult({
+          isWin: result.isWin,
+          totalPayout: result.totalPayout,
+          tradeAmount: result.tradeAmount,
+          profitAmount: result.profitAmount,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['my-managed-trades'] });
+      queryClient.invalidateQueries({ queryKey: ['wallets'] });
+    } catch (e) {
+      console.error('Resolve stake error:', e);
+    } finally {
+      setActivePendingStake(null);
+    }
+  }, [activePendingStake, queryClient]);
+
+  // Place trade
+  const handleTrade = async (direction: 'call' | 'put') => {
+    if (!selectedTrade) {
+      toast.error('No active signal for this selection');
+      return;
+    }
+    const amount = parseFloat(tradeAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('Enter a valid amount');
+      return;
+    }
+    if (amount < (selectedTrade.min_stake || 0)) {
+      toast.error(`Minimum stake: $${selectedTrade.min_stake}`);
+      return;
+    }
+    if (!selDuration) {
+      toast.error('Select an expiration time');
+      return;
+    }
+    if (amount > walletBalance) {
+      toast.error('Insufficient trading balance');
+      return;
+    }
+    if (activePendingStake) {
+      toast.error('You already have an active trade running');
       return;
     }
 
     setIsTrading(true);
     try {
-      const { error } = await api.post(`/managed-trades/${selectedTrade.id}/enter`, {
+      const { data, error } = await api.post<any>(`/managed-trades/${selectedTrade.id}/enter`, {
         amount,
-        direction
+        direction,
+        user_duration: selDuration,
       });
       if (error) throw error;
-      toast.success("Trade position opened successfully!");
+
+      // Compute local countdown
+      const dMs = DURATIONS.find(d => d.value === selDuration)?.ms ?? 60_000;
+      const endsAt = new Date(Date.now() + dMs).toISOString();
+
+      setActivePendingStake({
+        stakeId: data.id,
+        endsAt,
+        direction,
+        amount,
+      });
+
+      toast.success(`${direction === 'call' ? '↑ Call' : '↓ Put'} position opened!`);
       setTradeAmount('');
-      queryClient.invalidateQueries({ queryKey: ['managed-trades'] });
-      queryClient.invalidateQueries({ queryKey: ['trading-wallet'] });
-      queryClient.invalidateQueries({ queryKey: ['my-managed-trades'] });
+      queryClient.invalidateQueries({ queryKey: ['wallets'] });
     } catch (err: any) {
-      toast.error(err.message || "Failed to open trade");
+      toast.error(err.message || 'Failed to open trade');
     } finally {
       setIsTrading(false);
     }
   };
 
+  const canTrade = !!selectedTrade && !!tradeAmount && !!selDuration && !activePendingStake;
+
   if (isLoadingAuth || loadingTrades) {
     return (
-      <div className="flex-1 bg-background flex items-center justify-center py-20">
+      <div className="flex-1 flex items-center justify-center py-24">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     );
   }
 
-  // For the asset selector: merge DB assets with trade-specific assets
-  const tradeAssets = activeTrades.map(t => ({
-    symbol: t.asset_symbol,
-    name: t.asset_name,
-    type: t.asset_type,
-    tradeId: t.id,
-    ...t
-  }));
-
-  const handleAssetChange = (asset: any) => {
-    // Update browsing asset for chart
-    setBrowseAsset({ symbol: asset.symbol, name: asset.name, type: asset.type || asset.asset_type || 'crypto' });
-    // Also attempt to match to an active trade
-    if (asset.asset_type) {
-      setSelOptionType(asset.asset_type.charAt(0).toUpperCase() + asset.asset_type.slice(1));
-      setSelAssetId(asset.asset_name || asset.name);
-      if (asset.duration) setSelDuration(asset.duration);
-    }
-  };
-
-  const walletBalance = Number(wallet?.main_balance || 0);
-
-  // Determine chart display price: from selected trade or from live price simulation
-  const chartBasePrice = selectedTrade?.entry_price || livePrice || 100;
-  const chartIsPositive = selectedTrade ? selectedTrade.signal_type === 'call' : changePercent >= 0;
-  const hasActiveTrade = !!selectedTrade;
-
   return (
-    <div className="bg-background text-foreground pb-24 lg:pb-8 flex flex-col">
-      <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border px-4 lg:px-8 py-4">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="h-10 w-10 rounded-xl bg-linear-to-br from-primary to-amber-500 flex items-center justify-center shadow-lg shadow-primary/20">
-              <Zap className="h-6 w-6 text-black" />
+    <>
+      <TradeResultOverlay result={tradeResult} onClose={() => setTradeResult(null)} />
+
+      <div className="bg-background text-foreground pb-24 lg:pb-8">
+        {/* ── Chart ─────────────────────────────────────────── */}
+        <div className="px-3 pt-3">
+          <div className="rounded-3xl bg-card border border-border p-4 mb-3">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="font-bold text-sm">{selAsset}</p>
+                <p className="text-[10px] text-muted-foreground">{selOptionType}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <p className={cn(
+                    "text-lg font-black",
+                    livePrice > prevPrice ? "text-success" : "text-destructive"
+                  )}>
+                    {livePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <PlatformClock />
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight">Live Trading</h1>
-              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest leading-none mt-1">
-                Expert-Led Signals
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setViewMode('dashboard')}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all",
-                viewMode === 'dashboard' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <LayoutDashboard className="h-4 w-4" /> Chart
-            </button>
-            <button
-              onClick={() => setViewMode('history')}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all",
-                viewMode === 'history' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <History className="h-4 w-4" /> Activity
-            </button>
+            <CandlestickChart basePrice={livePrice} isPositive={livePrice >= prevPrice} />
           </div>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto p-4 lg:p-8">
+        {/* ── View toggle ────────────────────────────────────── */}
+        <div className="px-3 pb-3 flex gap-2">
+          <button
+            onClick={() => setHistoryView(false)}
+            className={cn(
+              "flex-1 py-2 rounded-2xl text-xs font-bold transition-all",
+              !historyView ? "bg-primary text-black" : "bg-muted text-muted-foreground"
+            )}
+          >
+            Trade
+          </button>
+          <button
+            onClick={() => setHistoryView(true)}
+            className={cn(
+              "flex-1 py-2 rounded-2xl text-xs font-bold transition-all",
+              historyView ? "bg-primary text-black" : "bg-muted text-muted-foreground"
+            )}
+          >
+            History
+          </button>
+        </div>
+
         <AnimatePresence mode="wait">
-          {viewMode === 'dashboard' ? (
+          {!historyView ? (
             <motion.div
-              key="dashboard"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6"
+              key="trade"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="px-3 space-y-3 max-w-lg mx-auto"
             >
-              <div className="space-y-6">
-                <div className="bg-card border border-border rounded-[2.5rem] p-6 lg:p-8">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                    <div className="space-y-1">
-                      <AssetSelector
-                        selected={browseAsset}
-                        assets={browseAssets.length > 0 ? browseAssets : tradeAssets}
-                        onChange={handleAssetChange}
-                      />
-                      <p className="text-sm text-muted-foreground px-1">
-                        {browseAsset.name}
-                        {hasActiveTrade && <span className="ml-1 text-primary">• Active Signal</span>}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-6">
-                      {hasActiveTrade ? (
-                        <>
-                          <div className="text-right">
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Profit Target</p>
-                            <span className="text-2xl font-black text-success">+{selectedTrade?.profit_percent}%</span>
-                          </div>
-                          <div className="h-10 w-px bg-border hidden md:block" />
-                          <div className="text-right">
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Ends In</p>
-                            <span className="text-lg flex items-center justify-end">
-                              <CountdownTimer 
-                                key={selectedTrade.id} 
-                                endsAt={selectedTrade.ends_at} 
-                                onExpire={() => setSelectedExpired(true)} 
-                                tradeId={selectedTrade.id}
-                              />
-                            </span>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="text-right">
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Price</p>
-                          <span className="text-2xl font-black">
-                            ${livePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+              {/* ── Active stake countdown ─────────────────────── */}
+              {activePendingStake && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={cn(
+                    "rounded-3xl border p-4 flex items-center justify-between",
+                    activePendingStake.direction === 'call'
+                      ? "bg-success/10 border-success/30"
+                      : "bg-destructive/10 border-destructive/30"
+                  )}
+                >
+                  <div>
+                    <p className="text-xs font-bold uppercase">
+                      {activePendingStake.direction === 'call' ? '↑ Call' : '↓ Put'} — ${activePendingStake.amount}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Resolving in…</p>
                   </div>
-                  <div className="rounded-3xl bg-muted/30 border border-border p-4">
-                    <CandlestickChart
-                      basePrice={chartBasePrice}
-                      isPositive={chartIsPositive}
+                  <StakeCountdown
+                    endsAt={activePendingStake.endsAt}
+                    onExpire={handleStakeExpiry}
+                  />
+                </motion.div>
+              )}
+
+              {/* ── Execution Panel ───────────────────────────────── */}
+              <div className="rounded-3xl bg-card border border-border overflow-hidden">
+                {/* Option Type */}
+                <div className="p-4 border-b border-border space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    Option Type <Info className="h-3 w-3" />
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={selOptionType}
+                      onChange={e => setSelOptionType(e.target.value)}
+                      className="w-full h-11 bg-muted/40 border border-border rounded-2xl px-4 pr-10 font-semibold text-sm appearance-none outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    >
+                      {availableOptionTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Asset Type */}
+                <div className="p-4 border-b border-border space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Asset Type</label>
+                  <div className="relative">
+                    <select
+                      value={selAsset}
+                      onChange={e => setSelAsset(e.target.value)}
+                      className="w-full h-11 bg-muted/40 border border-border rounded-2xl px-4 pr-10 font-semibold text-sm appearance-none outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    >
+                      {availableAssets.map(a => <option key={a} value={a}>{a}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Platform Time + Fixed Time toggle */}
+                <div className="p-4 border-b border-border flex items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Platform Time</p>
+                    <PlatformClock />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-muted-foreground">Fixed Time</span>
+                    <button
+                      onClick={() => setIsFixedTime(v => !v)}
+                      className={cn(
+                        "relative h-6 w-11 rounded-full transition-colors focus:outline-none",
+                        isFixedTime ? "bg-primary" : "bg-muted"
+                      )}
+                    >
+                      <motion.span
+                        layout
+                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                        className={cn(
+                          "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm",
+                          isFixedTime ? "left-5.5" : "left-0.5"
+                        )}
+                        style={{ left: isFixedTime ? '22px' : '2px' }}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Amount */}
+                <div className="p-4 border-b border-border space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Amount</label>
+                    <span className="text-[10px] text-muted-foreground">
+                      Balance: ${Number(walletBalance).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">$</span>
+                    <input
+                      type="number"
+                      value={tradeAmount}
+                      onChange={e => setTradeAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full h-11 pl-9 pr-4 bg-muted/40 border border-border rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     />
                   </div>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="bg-card border border-border rounded-[2.5rem] p-8 shadow-xl shadow-primary/5 sticky top-28">
-                  <div className="mb-6 flex items-center justify-between">
-                    <h3 className="text-xl font-bold">Execution Panel</h3>
-                    <DigitalClock />
-                  </div>
-
-                  <div className="space-y-5">
-                    {!hasActiveTrade ? (
-                      <div className="p-6 rounded-2xl bg-muted/30 border border-dashed border-border text-center">
-                        <Clock className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-                        <p className="text-sm font-bold">No Active Signal</p>
-                        <p className="text-xs text-muted-foreground mt-1 max-w-[260px] mx-auto">
-                          There are no active managed trades for <span className="font-bold text-foreground">{browseAsset.name}</span> right now. Browse the chart above or check back soon.
-                        </p>
-                      </div>
-                    ) : (
-                      <>
-                    <div className="p-4 rounded-2xl bg-muted/20 border border-border space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase">Asset</span>
-                        <span className="text-sm font-bold">{selectedTrade.asset_symbol} — {selectedTrade.asset_name}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase">Signal</span>
-                        <span className={cn(
-                          "text-sm font-bold uppercase px-2 py-0.5 rounded-lg",
-                          selectedTrade.signal_type === 'call' ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
-                        )}>
-                          {selectedTrade.signal_type === 'call' ? '▲ Call' : '▼ Put'}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase">Expires</span>
-                        <span className="text-sm font-mono font-bold text-primary">
-                          <CountdownTimer key={`info-${selectedTrade.id}`} endsAt={selectedTrade.ends_at} onExpire={() => setSelectedExpired(true)} />
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase">Profit</span>
-                        <span className="text-sm font-bold text-success">+{selectedTrade.profit_percent}%</span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between px-1">
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase">Amount</label>
-                        <span className="text-[10px] font-bold text-primary uppercase">Min: ${selectedTrade?.min_stake || 0}</span>
-                      </div>
-                      <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold opacity-40">$</span>
-                        <input
-                          type="number"
-                          value={tradeAmount}
-                          onChange={(e) => setTradeAmount(e.target.value)}
-                          placeholder="1000"
-                          className="w-full h-12 pl-10 pr-4 bg-muted/30 border border-border rounded-xl text-lg font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Expiration Time</label>
-                      <div className="relative">
-                        <select
-                          value={selDuration}
-                          onChange={(e) => setSelDuration(e.target.value)}
-                          className="w-full h-12 bg-muted/30 border border-border rounded-xl px-4 font-semibold text-sm appearance-none outline-none focus:ring-2 focus:ring-primary/20"
-                        >
-                          <option value="">Select Duration</option>
-                          {availableDurations.map(d => {
-                            const meta = DURATIONS.find(dm => dm.value === d);
-                            return <option key={d} value={d}>{meta?.label || d}</option>;
-                          })}
-                        </select>
-                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-1 px-1">
-                        <TrendingUp className="h-3 w-3 text-success" />
-                        <span className="text-[10px] font-bold text-success uppercase">Profit ({selectedTrade?.profit_percent}%)</span>
-                      </div>
-                      <div className="w-full h-12 bg-success/5 border border-success/20 rounded-xl flex items-center justify-between px-4">
-                        <span className="text-lg font-black text-success">
-                          ${tradeAmount && !isNaN(parseFloat(tradeAmount))
-                            ? (parseFloat(tradeAmount) * (selectedTrade?.profit_percent / 100)).toLocaleString()
-                            : '0.00'}
-                        </span>
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase">USD</span>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 pt-2">
-                      <button
-                        onClick={() => handleTrade('call')}
-                        disabled={isTrading || !tradeAmount || !selectedTrade || selectedExpired}
-                        className={cn(
-                          "h-12 rounded-xl flex items-center justify-center gap-2 font-bold transition-all shadow-lg",
-                          "bg-success text-white shadow-success/20 hover:opacity-90 disabled:opacity-50"
-                        )}
-                      >
-                        {isTrading ? (
-                          <RefreshCcw className="h-4 w-4 animate-spin" />
-                        ) : selectedExpired ? (
-                          "Expired"
-                        ) : (
-                          <>
-                            <ArrowUpCircle className="h-5 w-5" /> Call
-                          </>
-                        )}
-                      </button>
-                      <button
-                        onClick={() => handleTrade('put')}
-                        disabled={isTrading || !tradeAmount || !selectedTrade || selectedExpired}
-                        className={cn(
-                          "h-12 rounded-xl flex items-center justify-center gap-2 font-bold transition-all shadow-lg",
-                          "bg-destructive text-white shadow-destructive/20 hover:opacity-90 disabled:opacity-50"
-                        )}
-                      >
-                        {isTrading ? (
-                          <RefreshCcw className="h-4 w-4 animate-spin" />
-                        ) : selectedExpired ? (
-                          "Expired"
-                        ) : (
-                          <>
-                            <motion.div animate={{ rotate: 180 }}>
-                              <ArrowUpCircle className="h-5 w-5" />
-                            </motion.div>
-                            Put
-                          </>
-                        )}
-                      </button>
-                    </div>
-
-                    <div className="p-3 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-between">
-                      <div>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase">Wallet Balance</p>
-                        <p className="font-bold text-sm text-primary">${walletBalance.toLocaleString()}</p>
-                      </div>
-                      <Wallet className="h-5 w-5 text-primary opacity-50" />
-                    </div>
-                      </>
-                    )}
-                  </div>
+                  {selectedTrade && (
+                    <p className="text-[10px] text-muted-foreground">Min: ${selectedTrade.min_stake}</p>
+                  )}
                 </div>
 
-                {myTrades && myTrades.filter((s: any) => s.status === 'active').length > 0 && (
-                  <div className="bg-card border border-border rounded-3xl p-6">
-                    <h4 className="text-sm font-bold mb-4 flex items-center justify-between">
-                      My Active Trades
-                      <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px]">
-                        {myTrades.filter((s: any) => s.status === 'active').length}
-                      </span>
-                    </h4>
-                    <div className="space-y-3">
-                      {myTrades.filter((s: any) => s.status === 'active').slice(0, 3).map((tradeEntry: any) => (
-                        <div key={tradeEntry.id} className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/50">
-                          <div>
-                            <p className="text-xs font-bold">{tradeEntry.managed_trades?.asset_symbol}</p>
-                            <p className="text-[10px] text-muted-foreground">${tradeEntry.stake_amount}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xs font-bold text-success">+${(tradeEntry.stake_amount * (tradeEntry.managed_trades?.profit_percent / 100)).toFixed(2)}</p>
-                            <Timer className="h-3 w-3 text-muted-foreground ml-auto mt-0.5" />
-                          </div>
-                        </div>
-                      ))}
-                      {myTrades.filter((s: any) => s.status === 'active').length > 3 && (
-                        <button onClick={() => setViewMode('history')} className="w-full py-2 text-[10px] font-bold text-muted-foreground uppercase hover:text-primary transition-colors">
-                          View all trades
-                        </button>
+                {/* Expiration Time */}
+                <div className="p-4 border-b border-border space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Expiration Time</label>
+                  <div className="relative">
+                    <select
+                      value={selDuration}
+                      onChange={e => setSelDuration(e.target.value)}
+                      className={cn(
+                        "w-full h-11 bg-muted/40 border rounded-2xl px-4 pr-10 font-semibold text-sm appearance-none outline-none focus:ring-2 focus:ring-primary/20 transition-all",
+                        !selDuration ? "border-primary" : "border-border"
                       )}
-                    </div>
+                    >
+                      <option value="">Select a value</option>
+                      {availableDurations.map(d => {
+                        const meta = DURATIONS.find(dm => dm.value === d);
+                        return <option key={d} value={d}>{meta?.label || d}</option>;
+                      })}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Profit preview */}
+                <div className="p-4 border-b border-border">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <TrendingUp className="h-3 w-3 text-success" />
+                    <label className="text-xs font-bold text-success uppercase tracking-wider">
+                      Profit ({selectedTrade?.profit_percent ?? 80}%)
+                    </label>
+                  </div>
+                  <div className="h-11 bg-success/5 border border-success/20 rounded-2xl flex items-center px-4">
+                    <span className="font-black text-success">
+                      {profitPreview > 0 ? `$${profitPreview.toFixed(2)}` : '—'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* No signal warning */}
+                {!selectedTrade && (
+                  <div className="px-4 py-3 bg-amber-500/5 border-b border-amber-500/20 flex items-start gap-2">
+                    <Info className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                      No active admin signal for this selection. Please choose a different asset or wait.
+                    </p>
                   </div>
                 )}
+
+                {/* Call / Put Buttons */}
+                <div className="p-4 grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => handleTrade('call')}
+                    disabled={!canTrade || isTrading}
+                    className={cn(
+                      "h-14 rounded-2xl flex items-center justify-center gap-2 font-black text-base transition-all shadow-lg",
+                      canTrade && !isTrading
+                        ? "bg-success text-white shadow-success/20 hover:opacity-90 active:scale-[0.97]"
+                        : "bg-success/30 text-white/50 cursor-not-allowed"
+                    )}
+                  >
+                    {isTrading
+                      ? <RefreshCcw className="h-5 w-5 animate-spin" />
+                      : <><ArrowUpCircle className="h-5 w-5" /> Call</>
+                    }
+                  </button>
+                  <button
+                    onClick={() => handleTrade('put')}
+                    disabled={!canTrade || isTrading}
+                    className={cn(
+                      "h-14 rounded-2xl flex items-center justify-center gap-2 font-black text-base transition-all shadow-lg",
+                      canTrade && !isTrading
+                        ? "bg-destructive text-white shadow-destructive/20 hover:opacity-90 active:scale-[0.97]"
+                        : "bg-destructive/30 text-white/50 cursor-not-allowed"
+                    )}
+                  >
+                    {isTrading
+                      ? <RefreshCcw className="h-5 w-5 animate-spin" />
+                      : <><ArrowUpCircle className="h-5 w-5 rotate-180" /> Put</>
+                    }
+                  </button>
+                </div>
               </div>
             </motion.div>
           ) : (
             <motion.div
               key="history"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="space-y-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="px-3 space-y-3 max-w-lg mx-auto"
             >
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div>
-                  <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-                    <Activity className="h-6 w-6 text-primary" /> Active Trades
-                  </h2>
-                  <div className="space-y-4">
-                    {myTrades && myTrades.filter((s: any) => s.status === 'active').length === 0 ? (
-                      <div className="p-12 rounded-[2.5rem] border border-dashed border-border flex flex-col items-center justify-center opacity-40">
-                        <LayoutDashboard className="h-10 w-10 mb-2" />
-                        <p className="text-sm font-bold italic">No active trades</p>
-                      </div>
-                    ) : myTrades?.filter((s: any) => s.status === 'active').map((tradeEntry: any) => (
-                      <div key={tradeEntry.id} className="bg-card border border-border p-6 rounded-4xl flex items-center justify-between shadow-sm">
-                        <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                            <b className="text-primary">{tradeEntry.managed_trades?.asset_symbol?.slice(0, 1)}</b>
-                          </div>
-                          <div>
-                            <p className="font-bold uppercase">{tradeEntry.managed_trades?.asset_symbol} ({tradeEntry.direction})</p>
-                            <p className="text-xs text-muted-foreground">
-                              Amount: ${tradeEntry.stake_amount} • Entry: {tradeEntry.managed_trades?.signal_type} @ {tradeEntry.managed_trades?.entry_price}
-                            </p>
-                          </div>
+              {/* Active positions */}
+              {myTrades?.filter((t: any) => t.status === 'active').length > 0 && (
+                <div className="rounded-3xl bg-card border border-border p-5">
+                  <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-primary" /> Active Trades
+                  </h3>
+                  <div className="space-y-2">
+                    {myTrades.filter((t: any) => t.status === 'active').map((t: any) => (
+                      <div key={t.id} className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/50">
+                        <div>
+                          <p className="text-xs font-bold">{t.managed_trades?.asset_symbol} – {t.direction}</p>
+                          <p className="text-[10px] text-muted-foreground">${t.stake_amount}</p>
                         </div>
-                        <div className="text-right">
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">Expected Payout</p>
-                          <p className="text-xl font-black text-success">
-                            ${(tradeEntry.stake_amount * (1 + (tradeEntry.managed_trades?.profit_percent || 0) / 100)).toLocaleString()}
-                          </p>
-                        </div>
+                        <p className="text-xs font-bold text-success">+${(Number(t.stake_amount) * (t.managed_trades?.profit_percent || 0) / 100).toFixed(2)}</p>
                       </div>
                     ))}
                   </div>
                 </div>
+              )}
 
-                <div>
-                  <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-                    <History className="h-6 w-6 text-muted-foreground" /> Trade History
-                  </h2>
-                  <div className="space-y-3">
-                    {myTrades && myTrades.filter((s: any) => s.status !== 'active').length === 0 ? (
-                      <div className="p-12 rounded-[2.5rem] border border-dashed border-border flex flex-col items-center justify-center opacity-40">
-                        <History className="h-10 w-10 mb-2" />
-                        <p className="text-sm font-bold italic">No history available</p>
-                      </div>
-                    ) : myTrades?.filter((s: any) => s.status !== 'active').map((tradeEntry: any) => (
-                      <div key={tradeEntry.id} className="bg-muted/30 border border-border/50 p-5 rounded-2xl flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {tradeEntry.status === 'paid_out' ? <CheckCircle className="h-5 w-5 text-success" /> : <X className="h-5 w-5 text-destructive" />}
+              {/* History */}
+              <div className="rounded-3xl bg-card border border-border p-5">
+                <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
+                  <History className="h-4 w-4 text-muted-foreground" /> Trade History
+                </h3>
+                {!myTrades || myTrades.filter((t: any) => t.status !== 'active').length === 0 ? (
+                  <div className="py-12 text-center opacity-40">
+                    <History className="h-8 w-8 mx-auto mb-2" />
+                    <p className="text-sm font-bold">No history yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {myTrades.filter((t: any) => t.status !== 'active').map((t: any) => (
+                      <div key={t.id} className="flex items-center justify-between p-3 rounded-2xl bg-muted/20 border border-border/40">
+                        <div className="flex items-center gap-2">
+                          {t.status === 'paid_out'
+                            ? <CheckCircle className="h-4 w-4 text-success shrink-0" />
+                            : <X className="h-4 w-4 text-destructive shrink-0" />}
                           <div>
-                            <p className="text-sm font-bold uppercase">{tradeEntry.managed_trades?.asset_symbol} ({tradeEntry.direction}) - {tradeEntry.status === 'paid_out' ? 'Settled' : 'Lost'}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase font-bold">{format(new Date(tradeEntry.created_at), 'MMM dd, yyyy')}</p>
+                            <p className="text-xs font-bold">{t.managed_trades?.asset_symbol} ({t.direction})</p>
+                            <p className="text-[10px] text-muted-foreground">{format(new Date(t.created_at), 'MMM dd, HH:mm')}</p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className={cn("text-sm font-black", tradeEntry.status === 'paid_out' ? "text-success" : "text-destructive")}>
-                            {tradeEntry.status === 'paid_out' ? `+$${(tradeEntry.stake_amount * (1 + (tradeEntry.managed_trades?.profit_percent || 0) / 100)).toLocaleString()}` : `$0.00`}
-                          </p>
-                          <span className="text-[10px] text-muted-foreground font-bold">Amount: ${tradeEntry.stake_amount}</span>
-                        </div>
+                        <p className={cn("text-xs font-black", t.status === 'paid_out' ? "text-success" : "text-destructive")}>
+                          {t.status === 'paid_out'
+                            ? `+$${(Number(t.stake_amount) * (1 + (t.managed_trades?.profit_percent || 0) / 100)).toFixed(2)}`
+                            : `-$${Number(t.stake_amount).toFixed(2)}`}
+                        </p>
                       </div>
                     ))}
                   </div>
-                </div>
+                )}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
-      </main>
-    </div>
+      </div>
+    </>
   );
 }

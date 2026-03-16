@@ -16,7 +16,19 @@ export async function POST(
 
     const tradeId = id;
     const body = await request.json();
-    const { amount, direction = "call" } = body;
+    const { amount, direction = "call", user_duration } = body;
+
+    // Parse user-selected duration into milliseconds
+    const durationMs: Record<string, number> = {
+      '30s': 30_000, '1m': 60_000, '2m': 120_000, '3m': 180_000,
+      '5m': 300_000, '10m': 600_000, '15m': 900_000, '20m': 1_200_000,
+      '30m': 1_800_000, '45m': 2_700_000, '1h': 3_600_000,
+      '2h': 7_200_000, '4h': 14_400_000, '6h': 21_600_000,
+      '12h': 43_200_000, '24h': 86_400_000,
+    };
+    const userEndsAt = user_duration && durationMs[user_duration]
+      ? new Date(Date.now() + durationMs[user_duration]).toISOString()
+      : null;
 
     if (!amount || amount <= 0) {
       return NextResponse.json({ error: "Invalid trade amount" }, { status: 400 });
@@ -91,7 +103,8 @@ export async function POST(
         user_id: user.id,
         stake_amount: amount,
         direction,
-        entry_price: currentPrice
+        entry_price: currentPrice,
+        ...(userEndsAt ? { user_ends_at: userEndsAt } : {}),
       })
       .select()
       .single();

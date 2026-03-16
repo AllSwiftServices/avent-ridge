@@ -89,15 +89,12 @@ export async function POST(request: Request) {
 
       if (txError) throw txError;
 
-      // Update Wallet
-      const { error: walletUpdateError } = await supabaseAdmin
-        .from("wallets")
-        .update({ 
-          main_balance: wallet.main_balance - amount,
-          available_balance: wallet.available_balance - amount
-        })
-        .eq("user_id", user.id)
-        .eq("currency", "trading");
+      // Update Wallet atomically
+      const { error: walletUpdateError } = await supabaseAdmin.rpc("adjust_wallet_balance", {
+        p_user_id: user.id,
+        p_currency: "trading",
+        p_amount: -amount,
+      });
 
       if (walletUpdateError) throw walletUpdateError;
 

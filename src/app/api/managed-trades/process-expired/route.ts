@@ -1,10 +1,22 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-server";
+import { createClient, supabaseAdmin } from "@/lib/supabase-server";
 import { processTradePayout } from "@/lib/managed-trades";
 
 // POST /api/managed-trades/process-expired — Trigger payout for a specific trade if expired
 export async function POST(request: Request) {
   try {
+    // Auth: require either a logged-in user or the CRON_SECRET
+    const authHeader = request.headers.get("authorization");
+    const cronValid = process.env.CRON_SECRET && authHeader === `Bearer ${process.env.CRON_SECRET}`;
+
+    if (!cronValid) {
+      const supabase = await createClient();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+    }
+
     const { tradeId } = await request.json();
     
     if (!tradeId) {

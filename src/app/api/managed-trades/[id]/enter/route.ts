@@ -75,14 +75,12 @@ export async function POST(
       return NextResponse.json({ error: "Insufficient trading balance" }, { status: 400 });
     }
 
-    // 4. Perform transaction: Deduct balance + Create trade position
-    const { error: deductErr } = await supabaseAdmin
-      .from("wallets")
-      .update({ 
-        main_balance: Number(wallet.main_balance) - amount,
-        available_balance: Number(wallet.available_balance) - amount
-      })
-      .eq("id", wallet.id);
+    // 4. Perform transaction: Deduct balance atomically + Create trade position
+    const { error: deductErr } = await supabaseAdmin.rpc("adjust_wallet_balance", {
+      p_user_id: user.id,
+      p_currency: "trading",
+      p_amount: -amount,
+    });
 
     if (deductErr) throw deductErr;
 
@@ -99,26 +97,30 @@ export async function POST(
       .single();
 
     if (tradeEntryErr) {
-      // Rollback balance if record fails
-      await supabaseAdmin
-        .from("wallets")
-        .update({ 
-          main_balance: Number(wallet.main_balance),
-          available_balance: Number(wallet.available_balance)
-        })
-        .eq("id", wallet.id);
+      // Rollback balance atomically if record fails
+      await supabaseAdmin.rpc("adjust_wallet_balance", {
+        p_user_id: user.id,
+        p_currency: "trading",
+        p_amount: amount,
+      });
       throw tradeEntryErr;
     }
 
     // Log transaction
-    await supabaseAdmin.from("transactions").insert({
+    const { error: txLogErr } = await supabaseAdmin.from("transactions").insert({
       user_id: user.id,
       amount: -amount,
       total_value: amount,
       type: "managed_trade_entry",
+      symbol: trade.asset_symbol,
+      price: currentPrice || 0,
       status: "completed",
       description: `Trade in ${trade.asset_symbol} managed trade`
     });
+
+    if (txLogErr) {
+      console.error("Failed to log trade entry transaction:", txLogErr);
+    }
 
     // 4. Notify User
     try {

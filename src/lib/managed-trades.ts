@@ -39,10 +39,6 @@ export async function processTradePayout(tradeId: string) {
   for (const tradePosition of userPositions) {
     try {
       // Determine actual market direction
-      // If signal was 'call' and outcome was 'win', market moved 'call'
-      // If signal was 'call' and outcome was 'loss', market moved 'put'
-      // If signal was 'put' and outcome was 'win', market moved 'put'
-      // If signal was 'put' and outcome was 'loss', market moved 'call'
       const marketDirection = trade.signal_type === 'call' 
         ? (trade.outcome === 'win' ? 'call' : 'put')
         : (trade.outcome === 'win' ? 'put' : 'call');
@@ -53,35 +49,33 @@ export async function processTradePayout(tradeId: string) {
       const totalPayout = isWin ? tradeAmount + profitAmount : 0;
 
       if (isWin) {
-        // Credit user's wallet
-        const { data: wallet, error: walletErr } = await supabaseAdmin
-          .from("wallets")
-          .select("*")
-          .eq("user_id", tradePosition.user_id)
-          .eq("currency", "trading")
-          .single();
+        // Credit user's wallet atomically
+        const { error: walletErr } = await supabaseAdmin.rpc("adjust_wallet_balance", {
+          p_user_id: tradePosition.user_id,
+          p_currency: "trading",
+          p_amount: totalPayout,
+        });
 
-        if (walletErr || !wallet) throw new Error(`Wallet not found for user ${tradePosition.user_id}`);
-
-        const { error: creditErr } = await supabaseAdmin
-          .from("wallets")
-          .update({ 
-            main_balance: Number(wallet.main_balance) + totalPayout,
-            available_balance: Number(wallet.available_balance) + totalPayout
-          })
-          .eq("id", wallet.id);
-
-        if (creditErr) throw creditErr;
+        if (walletErr) {
+          console.error(`Failed to credit wallet for user ${tradePosition.user_id}:`, walletErr);
+          throw walletErr;
+        }
 
         // Log transaction
-        await supabaseAdmin.from("transactions").insert({
+        const { error: txError } = await supabaseAdmin.from("transactions").insert({
           user_id: tradePosition.user_id,
           amount: totalPayout,
           total_value: totalPayout,
           type: "managed_trade_payout",
+          symbol: trade.asset_symbol,
+          price: tradePosition.entry_price || trade.entry_price || 0,
           status: "completed",
           description: `Payout from ${trade.asset_symbol} managed trade (+${trade.profit_percent}% profit)`
         });
+
+        if (txError) {
+          console.error(`Failed to log payout transaction for user ${tradePosition.user_id}:`, txError);
+        }
       }
 
       // Mark position as processed (paid_out if win, lost if loss)
@@ -94,15 +88,21 @@ export async function processTradePayout(tradeId: string) {
         .eq("id", tradePosition.id);
 
       if (!isWin) {
-        // Log loss transaction for clarity
-        await supabaseAdmin.from("transactions").insert({
+        // Log loss transaction
+        const { error: txError } = await supabaseAdmin.from("transactions").insert({
           user_id: tradePosition.user_id,
           amount: 0,
           total_value: tradeAmount,
           type: "managed_trade_loss",
+          symbol: trade.asset_symbol,
+          price: tradePosition.entry_price || trade.entry_price || 0,
           status: "completed",
           description: `Managed trade on ${trade.asset_symbol} ended in loss`
         });
+
+        if (txError) {
+          console.error(`Failed to log loss transaction for user ${tradePosition.user_id}:`, txError);
+        }
       }
 
       // 4. Notify User

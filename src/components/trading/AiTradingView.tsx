@@ -41,7 +41,7 @@ const ASSET_DEFAULTS: Record<string, { price: number, type: string }> = {
 
 const DEFAULT_ASSET = { symbol: 'BTC', name: 'Bitcoin', type: 'crypto', pair: 'BTC/USDT' };
 
-export default function AiTradingPage() {
+export default function AiTradingView() {
   const searchParams = useSearchParams();
   const initialAssetSymbol = searchParams.get('asset') || 'BTC';
   const [selectedAsset, setSelectedAsset] = useState<any>(
@@ -150,7 +150,7 @@ export default function AiTradingPage() {
     : `${(Math.random() * 80 + 10).toFixed(0)}M`;
 
   return (
-    <div className="min-h-screen pb-24 md:pb-8 bg-background">
+    <div className="pb-24 md:pb-8 bg-background flex flex-col">
       {/* ── TOP BAR ── */}
       <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-xl border-b border-border">
         <div className="flex flex-wrap items-center justify-between px-2 sm:px-4 py-2 sm:py-3 gap-2 sm:gap-3">

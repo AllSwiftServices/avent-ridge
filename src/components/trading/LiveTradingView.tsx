@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Zap, Clock, TrendingUp, AlertCircle, CheckCircle,
@@ -18,6 +18,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import AssetSelector from '@/components/trading/AssetSelector';
 import CandlestickChart from '@/components/trading/CandlestickChart';
+import LivePriceHeader from '@/components/trading/LivePriceHeader';
 
 const OPTION_TYPES = ['Commodities', 'Crypto', 'Forex', 'Indices', 'Stocks'];
 const ASSETS_BY_TYPE: Record<string, string[]> = {
@@ -101,7 +102,7 @@ const DigitalClock = () => {
   );
 };
 
-export default function LiveTradingPage() {
+export default function LiveTradingView() {
   const { user, isLoadingAuth } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -117,9 +118,28 @@ export default function LiveTradingPage() {
   const [selAssetId, setSelAssetId] = useState<string>('Bitcoin');
   const [selDuration, setSelDuration] = useState<string>('5m');
 
+  // Browsing asset (used for chart when no active trade matches)
+  const [browseAsset, setBrowseAsset] = useState<any>({ symbol: 'BTC', name: 'Bitcoin', type: 'crypto' });
+
+  // Live price simulation for browsing
+  const [livePrice, setLivePrice] = useState<number>(0);
+  const prevPriceRef = useRef<number>(0);
+  const [prevPrice, setPrevPrice] = useState<number>(0);
+  const [changePercent, setChangePercent] = useState(0);
+
   useEffect(() => {
     if (!isLoadingAuth && !user) navigate(createPageUrl('Home'));
   }, [user, isLoadingAuth, navigate]);
+
+  // Fetch ALL assets from DB for browsing
+  const { data: allAssets } = useQuery({
+    queryKey: ['all-assets'],
+    queryFn: async () => {
+      const { data, error } = await api.get<any[]>('/assets');
+      if (error) throw error;
+      return data;
+    }
+  });
 
   const { data: trades, isLoading: loadingTrades } = useQuery({
     queryKey: ['managed-trades'],
@@ -136,6 +156,46 @@ export default function LiveTradingPage() {
     const now = Date.now();
     return trades.filter(t => t.status === 'active' && new Date(t.ends_at).getTime() > now);
   }, [trades]);
+
+  // Build the browsable asset list: all DB assets
+  const browseAssets = useMemo(() => {
+    if (!allAssets) return [];
+    return allAssets.map((a: any) => ({
+      symbol: a.symbol,
+      name: a.name,
+      type: a.asset_type || a.type || 'crypto',
+      price: a.price,
+      change_percent: a.change_percent,
+    }));
+  }, [allAssets]);
+
+  // Initialize price when asset changes
+  useEffect(() => {
+    const dbAsset = allAssets?.find((a: any) => a.symbol === browseAsset.symbol);
+    const basePrice = dbAsset?.price ?? 100;
+    const baseChange = dbAsset?.change_percent ?? 0;
+    setLivePrice(basePrice);
+    setPrevPrice(basePrice);
+    prevPriceRef.current = basePrice;
+    setChangePercent(baseChange);
+  }, [browseAsset.symbol, allAssets]);
+
+  // Simulate live price ticking
+  useEffect(() => {
+    if (!livePrice) return;
+    const volatility = browseAsset.type === 'crypto' ? 0.0015 : 0.0005;
+    const interval = setInterval(() => {
+      setLivePrice(prev => {
+        if (!prev) return prev;
+        const change = (Math.random() - 0.49) * prev * volatility;
+        const next = Math.max(prev * 0.95, prev + change);
+        setPrevPrice(prevPriceRef.current);
+        prevPriceRef.current = prev;
+        return next;
+      });
+    }, 1000 + Math.random() * 500);
+    return () => clearInterval(interval);
+  }, [livePrice, browseAsset.type]);
 
   // Derive dynamic options from active signals
   const availableOptionTypes = useMemo(() => {
@@ -186,7 +246,6 @@ export default function LiveTradingPage() {
   useEffect(() => {
     if (activeTrades.length === 0) return;
 
-    // 1. If current selection has no signal, pick first available OptionType
     if (availableOptionTypes.length > 0 && !availableOptionTypes.includes(selOptionType)) {
       const firstType = availableOptionTypes[0];
       setSelOptionType(firstType);
@@ -195,14 +254,12 @@ export default function LiveTradingPage() {
       return;
     }
 
-    // 2. If current asset is invalid for selected type, pick first available asset
     const validAssetsForType = availableAssetsByType[selOptionType] || [];
     if (validAssetsForType.length > 0 && !validAssetsForType.includes(selAssetId)) {
       setSelAssetId(validAssetsForType[0]);
       return;
     }
 
-    // 3. If current duration is invalid for asset, pick first available duration
     if (availableDurations.length > 0 && !availableDurations.includes(selDuration)) {
       setSelDuration(availableDurations[0]);
     }
@@ -260,12 +317,13 @@ export default function LiveTradingPage() {
 
   if (isLoadingAuth || loadingTrades) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex-1 bg-background flex items-center justify-center py-20">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     );
   }
 
+  // For the asset selector: merge DB assets with trade-specific assets
   const tradeAssets = activeTrades.map(t => ({
     symbol: t.asset_symbol,
     name: t.asset_name,
@@ -275,15 +333,25 @@ export default function LiveTradingPage() {
   }));
 
   const handleAssetChange = (asset: any) => {
-    setSelOptionType(asset.asset_type.charAt(0).toUpperCase() + asset.asset_type.slice(1));
-    setSelAssetId(asset.asset_name);
-    setSelDuration(asset.duration);
+    // Update browsing asset for chart
+    setBrowseAsset({ symbol: asset.symbol, name: asset.name, type: asset.type || asset.asset_type || 'crypto' });
+    // Also attempt to match to an active trade
+    if (asset.asset_type) {
+      setSelOptionType(asset.asset_type.charAt(0).toUpperCase() + asset.asset_type.slice(1));
+      setSelAssetId(asset.asset_name || asset.name);
+      if (asset.duration) setSelDuration(asset.duration);
+    }
   };
 
   const walletBalance = Number(wallet?.main_balance || 0);
 
+  // Determine chart display price: from selected trade or from live price simulation
+  const chartBasePrice = selectedTrade?.entry_price || livePrice || 100;
+  const chartIsPositive = selectedTrade ? selectedTrade.signal_type === 'call' : changePercent >= 0;
+  const hasActiveTrade = !!selectedTrade;
+
   return (
-    <div className="min-h-screen bg-background text-foreground pb-24 lg:pb-8">
+    <div className="bg-background text-foreground pb-24 lg:pb-8 flex flex-col">
       <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border px-4 lg:px-8 py-4">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -331,54 +399,56 @@ export default function LiveTradingPage() {
               className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6"
             >
               <div className="space-y-6">
-                {activeTrades.length === 0 ? (
-                  <div className="bg-card border border-border border-dashed rounded-[2.5rem] p-12 text-center h-[500px] flex flex-col items-center justify-center">
-                    <Clock className="h-16 w-16 text-muted-foreground/20 mb-4" />
-                    <h2 className="text-xl font-bold">No Active Trades</h2>
-                    <p className="text-muted-foreground max-w-xs mx-auto mt-2">
-                      Our expert traders are currently analyzing the markets. New trades will appear here shortly.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="bg-card border border-border rounded-[2.5rem] p-6 lg:p-8">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                      <div className="space-y-1">
-                        <AssetSelector
-                          selected={selectedTrade ? { symbol: selectedTrade.asset_symbol, type: selectedTrade.asset_type } : null}
-                          assets={tradeAssets}
-                          onChange={handleAssetChange}
-                        />
-                        <p className="text-sm text-muted-foreground px-1">{selectedTrade?.asset_name} • Managed Trade</p>
-                      </div>
-                      <div className="flex items-center gap-6">
-                        <div className="text-right">
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Profit Target</p>
-                          <span className="text-2xl font-black text-success">+{selectedTrade?.profit_percent}%</span>
-                        </div>
-                        <div className="h-10 w-px bg-border hidden md:block" />
-                        <div className="text-right">
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Ends In</p>
-                          <span className="text-lg flex items-center justify-end">
-                            {selectedTrade?.ends_at ? (
+                <div className="bg-card border border-border rounded-[2.5rem] p-6 lg:p-8">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                    <div className="space-y-1">
+                      <AssetSelector
+                        selected={browseAsset}
+                        assets={browseAssets.length > 0 ? browseAssets : tradeAssets}
+                        onChange={handleAssetChange}
+                      />
+                      <p className="text-sm text-muted-foreground px-1">
+                        {browseAsset.name}
+                        {hasActiveTrade && <span className="ml-1 text-primary">• Active Signal</span>}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-6">
+                      {hasActiveTrade ? (
+                        <>
+                          <div className="text-right">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Profit Target</p>
+                            <span className="text-2xl font-black text-success">+{selectedTrade?.profit_percent}%</span>
+                          </div>
+                          <div className="h-10 w-px bg-border hidden md:block" />
+                          <div className="text-right">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Ends In</p>
+                            <span className="text-lg flex items-center justify-end">
                               <CountdownTimer 
                                 key={selectedTrade.id} 
                                 endsAt={selectedTrade.ends_at} 
                                 onExpire={() => setSelectedExpired(true)} 
                                 tradeId={selectedTrade.id}
                               />
-                            ) : 'N/A'}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-right">
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Price</p>
+                          <span className="text-2xl font-black">
+                            ${livePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                         </div>
-                      </div>
-                    </div>
-                    <div className="rounded-3xl bg-muted/30 border border-border p-4">
-                      <CandlestickChart
-                        basePrice={selectedTrade?.entry_price || 100}
-                        isPositive={selectedTrade?.signal_type === 'call'}
-                      />
+                      )}
                     </div>
                   </div>
-                )}
+                  <div className="rounded-3xl bg-muted/30 border border-border p-4">
+                    <CandlestickChart
+                      basePrice={chartBasePrice}
+                      isPositive={chartIsPositive}
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-6">
@@ -389,6 +459,16 @@ export default function LiveTradingPage() {
                   </div>
 
                   <div className="space-y-5">
+                    {!hasActiveTrade ? (
+                      <div className="p-6 rounded-2xl bg-muted/30 border border-dashed border-border text-center">
+                        <Clock className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                        <p className="text-sm font-bold">No Active Signal</p>
+                        <p className="text-xs text-muted-foreground mt-1 max-w-[260px] mx-auto">
+                          There are no active managed trades for <span className="font-bold text-foreground">{browseAsset.name}</span> right now. Browse the chart above or check back soon.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Option Type</label>
                       <div className="relative">
@@ -541,6 +621,8 @@ export default function LiveTradingPage() {
                       </div>
                       <Wallet className="h-5 w-5 text-primary opacity-50" />
                     </div>
+                      </>
+                    )}
                   </div>
                 </div>
 

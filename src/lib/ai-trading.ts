@@ -29,41 +29,45 @@ export async function resolveAiTrade(tradeId: string) {
   // 4. Record Transaction and Update Wallet if Win
   if (isWin) {
     // Record Win Transaction
-    await supabaseAdmin.from("transactions").insert({
+    const { error: txError } = await supabaseAdmin.from("transactions").insert({
       user_id: trade.user_id,
       type: "trade_win",
       amount: totalPayout,
-      symbol: "AI-PROFT",
+      symbol: "AI-PROFIT",
       price: trade.entry_price || 0,
       total_value: totalPayout,
       status: "completed"
     });
 
-    // Update Wallet
-    const { data: wallet } = await supabaseAdmin
-      .from("wallets")
-      .select("main_balance, available_balance")
-      .eq("user_id", trade.user_id)
-      .eq("currency", "trading")
-      .single();
-    
-    if (wallet) {
-      await supabaseAdmin.from("wallets").update({
-        main_balance: wallet.main_balance + totalPayout,
-        available_balance: wallet.available_balance + totalPayout
-      }).eq("user_id", trade.user_id).eq("currency", "trading");
+    if (txError) {
+      console.error("Failed to insert win transaction:", txError);
+    }
+
+    // Update Wallet atomically
+    const { error: walletErr } = await supabaseAdmin.rpc("adjust_wallet_balance", {
+      p_user_id: trade.user_id,
+      p_currency: "trading",
+      p_amount: totalPayout,
+    });
+
+    if (walletErr) {
+      console.error("Failed to update wallet on win:", walletErr);
     }
   } else {
     // Record Loss Transaction
-    await supabaseAdmin.from("transactions").insert({
+    const { error: txError } = await supabaseAdmin.from("transactions").insert({
       user_id: trade.user_id,
       type: "trade_loss",
       amount: 0,
-      symbol: "AI-LOST",
+      symbol: "AI-LOSS",
       price: trade.entry_price || 0,
       total_value: trade.stake || 0,
       status: "completed"
     });
+
+    if (txError) {
+      console.error("Failed to insert loss transaction:", txError);
+    }
   }
 
   return { outcome: trade.outcome, profit: trade.profit };

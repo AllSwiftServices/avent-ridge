@@ -30,6 +30,9 @@ export default function AppContent({ children }: { children: React.ReactNode }) 
         if (isLoadingAuth || isPublicPath) return;
 
         if (user) {
+            // Admins bypass KYC gate
+            if (user.role === 'admin') return;
+
             // Allow access to wallet and profile without KYC
             if (isAllowedWithoutKyc) return;
 

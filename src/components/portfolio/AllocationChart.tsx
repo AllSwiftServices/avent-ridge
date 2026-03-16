@@ -28,16 +28,16 @@ export default function AllocationChart({ data }: { data: { name: string, value:
   }));
 
   return (
-    <div className="flex items-center gap-4">
-      <div className="w-40 h-40">
+    <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-4">
+      <div className="w-48 h-48 sm:w-40 sm:h-40 shrink-0">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={chartData}
               cx="50%"
               cy="50%"
-              innerRadius={45}
-              outerRadius={70}
+              innerRadius={50}
+              outerRadius={80}
               paddingAngle={2}
               dataKey="value"
             >
@@ -55,13 +55,13 @@ export default function AllocationChart({ data }: { data: { name: string, value:
                 border: '1px solid hsl(var(--border))',
                 borderRadius: '12px',
               }}
-              formatter={(value: any) => [`$${parseFloat(value).toFixed(2)}`, 'Value']}
+              formatter={(value: any) => [`$${parseFloat(value).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, 'Value']}
             />
           </PieChart>
         </ResponsiveContainer>
       </div>
       
-      <div className="flex-1 space-y-2">
+      <div className="w-full flex-1 space-y-2">
         {chartData.slice(0, 5).map((item, index) => (
           <div key={item.name} className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
@@ -71,11 +71,11 @@ export default function AllocationChart({ data }: { data: { name: string, value:
               />
               <span className="font-medium">{item.name}</span>
             </div>
-            <span className="text-muted-foreground">{item.percentage}%</span>
+            <span className="text-muted-foreground font-mono">{item.percentage}%</span>
           </div>
         ))}
         {chartData.length > 5 && (
-          <p className="text-xs text-muted-foreground">+{chartData.length - 5} more</p>
+          <p className="text-xs text-muted-foreground text-center sm:text-left">+{chartData.length - 5} more</p>
         )}
       </div>
     </div>

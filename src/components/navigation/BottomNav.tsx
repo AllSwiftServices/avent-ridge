@@ -8,7 +8,7 @@ import { createPageUrl } from '@/utils';
 const navItems = [
   { icon: LayoutDashboard, label: 'Home', page: 'dashboard' },
   { icon: TrendingUp, label: 'Markets', page: 'markets' },
-  { icon: Zap, label: 'Trades', page: 'trades' },
+  { icon: Zap, label: 'Live Trading', page: 'live-trading' },
   { icon: PieChart, label: 'Portfolio', page: 'portfolio' },
   { icon: Wallet, label: 'Wallet', page: 'wallet' },
 ];

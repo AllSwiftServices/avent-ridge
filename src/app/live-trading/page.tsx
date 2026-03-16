@@ -1,297 +1,657 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  TrendingUp, TrendingDown, Zap, Shield, BarChart3, 
-  History, Settings, Bell, Search, Menu, Sun, Moon,
-  ArrowUpRight, ArrowDownRight, Share2, Info, ChevronDown,
-  Volume2, VolumeX, Timer, Target, PieChart, Activity, BarChart2
+import {
+  Zap, Clock, TrendingUp, AlertCircle, CheckCircle,
+  RefreshCcw, ArrowRight, ShieldCheck, X, Activity,
+  LineChart, LayoutDashboard, History, Wallet,
+  ArrowUpCircle, Info, Timer, Target, ChevronDown
 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import TradingHistoryPanel from '@/components/trading/TradingHistoryPanel';
-import { useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'next/navigation';
-import { cn } from '@/lib/utils';
+import { useAuth } from '@/lib/AuthContext';
 import { useNavigate } from '@/lib/react-router-shim';
 import { createPageUrl } from '@/utils';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { toast } from 'sonner';
 import AssetSelector from '@/components/trading/AssetSelector';
-import LivePriceHeader from '@/components/trading/LivePriceHeader';
 import CandlestickChart from '@/components/trading/CandlestickChart';
-import OrderPanel from '@/components/trading/OrderPanel';
-import ProOrderPanel from '@/components/trading/ProOrderPanel';
-import OrderBook from '@/components/trading/OrderBook';
-import RecentTrades from '@/components/trading/RecentTrades';
-import PositionPanel from '@/components/trading/PositionPanel';
-import LiveIndicator from '@/components/trading/LiveIndicator';
-import { useAuth } from '@/lib/AuthContext';
 
-const ASSET_DEFAULTS: Record<string, { price: number, type: string }> = {
-  AAPL: { price: 178.42, type: 'stock' },
-  TSLA: { price: 248.75, type: 'stock' },
-  GOOGL: { price: 141.85, type: 'stock' },
-  MSFT: { price: 378.92, type: 'stock' },
-  NVDA: { price: 495.22, type: 'stock' },
-  AMZN: { price: 178.25, type: 'stock' },
-  BTC: { price: 67432.5, type: 'crypto' },
-  ETH: { price: 3542.18, type: 'crypto' },
-  SOL: { price: 148.65, type: 'crypto' },
-  XRP: { price: 0.52, type: 'crypto' },
+const OPTION_TYPES = ['Commodities', 'Crypto', 'Forex', 'Indices', 'Stocks'];
+const ASSETS_BY_TYPE: Record<string, string[]> = {
+  'Commodities': ['Gold', 'Silver', 'Crude Oil Brent', 'Crude Oil WTI', 'Natural Gas', 'Corn', 'Wheat', 'Copper'],
+  'Crypto': ['Bitcoin', 'Ethereum', 'Solana', 'XRP', 'Cardano', 'Dogecoin', 'Polkadot'],
+  'Forex': ['EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'USD/CAD', 'EUR/GBP'],
+  'Indices': ['S&P 500', 'Nasdaq 100', 'Dow Jones', 'FTSE 100', 'DAX 40'],
+  'Stocks': ['Apple', 'Microsoft', 'Tesla', 'Amazon', 'Google', 'Meta'],
 };
+const DURATIONS = [
+  { label: '30 Seconds', value: '30s' },
+  { label: '1 Minute', value: '1m' },
+  { label: '5 Minutes', value: '5m' },
+  { label: '15 Minutes', value: '15m' },
+  { label: '30 Minutes', value: '30m' },
+  { label: '1 Hour', value: '1h' },
+];
 
-const DEFAULT_ASSET = { symbol: 'BTC', name: 'Bitcoin', type: 'crypto', pair: 'BTC/USDT' };
-
-export default function LiveTrading() {
-  const searchParams = useSearchParams();
-  const initialAssetSymbol = searchParams.get('asset') || 'BTC';
-  const [selectedAsset, setSelectedAsset] = useState<any>(
-    ASSET_DEFAULTS[initialAssetSymbol] 
-      ? { symbol: initialAssetSymbol, ...ASSET_DEFAULTS[initialAssetSymbol] }
-      : DEFAULT_ASSET
-  );
-  const { user, isLoadingAuth } = useAuth();
-  const navigate = useNavigate();
+const CountdownTimer = ({ endsAt, onExpire, tradeId }: { endsAt: string, onExpire?: () => void, tradeId?: string }) => {
+  const [timeLeft, setTimeLeft] = useState<string>('');
+  const [isExpired, setIsExpired] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!isLoadingAuth && !user) {
-      navigate(createPageUrl('Home'));
-    }
+    const calculateTimeLeft = () => {
+      const now = new Date().getTime();
+      const end = new Date(endsAt).getTime();
+      const difference = end - now;
+
+      if (difference <= 0) {
+        setTimeLeft('Finalizing...');
+        if (!isExpired) {
+          setIsExpired(true);
+          onExpire?.();
+          
+          if (tradeId) {
+            api.post('/managed-trades/process-expired', { tradeId }).then(() => {
+              queryClient.invalidateQueries({ queryKey: ['managed-trades'] });
+              queryClient.invalidateQueries({ queryKey: ['trading-wallet'] });
+              queryClient.invalidateQueries({ queryKey: ['my-managed-trades'] });
+            }).catch(err => console.error("Auto-payout trigger failed:", err));
+          }
+        }
+        return;
+      }
+
+      setIsExpired(false);
+      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((difference / 1000 / 60) % 60);
+      const seconds = Math.floor((difference / 1000) % 60);
+
+      const parts = [];
+      if (hours > 0) parts.push(hours.toString().padStart(2, '0'));
+      parts.push(minutes.toString().padStart(2, '0'));
+      parts.push(seconds.toString().padStart(2, '0'));
+      
+      setTimeLeft(parts.join(':'));
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+    return () => clearInterval(timer);
+  }, [endsAt, onExpire, isExpired, tradeId, queryClient]);
+
+  return <span className={cn(isExpired ? "text-muted-foreground animate-pulse" : "font-mono font-bold")}>{timeLeft}</span>;
+};
+
+const DigitalClock = () => {
+  const [time, setTime] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  return (
+    <div className="flex items-center gap-2 bg-muted/30 px-3 py-2 rounded-xl border border-border/50">
+      <Clock className="h-4 w-4 text-primary" />
+      <span className="font-mono text-sm font-bold tracking-tight">
+        {time.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+      </span>
+    </div>
+  );
+};
+
+export default function LiveTradingPage() {
+  const { user, isLoadingAuth } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [selectedTrade, setSelectedTrade] = useState<any>(null);
+  const [tradeAmount, setTradeAmount] = useState('');
+  const [isTrading, setIsTrading] = useState(false);
+  const [viewMode, setViewMode] = useState<'dashboard' | 'history'>('dashboard');
+  const [isFixedTime, setIsFixedTime] = useState(true);
+  const [selectedExpired, setSelectedExpired] = useState(false);
+
+  // Filter state for selection
+  const [selOptionType, setSelOptionType] = useState<string>('Crypto');
+  const [selAssetId, setSelAssetId] = useState<string>('Bitcoin');
+  const [selDuration, setSelDuration] = useState<string>('5m');
+
+  useEffect(() => {
+    if (!isLoadingAuth && !user) navigate(createPageUrl('Home'));
   }, [user, isLoadingAuth, navigate]);
 
-  const [livePrice, setLivePrice] = useState<number | null>(null);
-  const prevPriceRef = useRef<number | null>(null);
-  const [prevPrice, setPrevPrice] = useState<number | null>(null);
-  const [changePercent, setChangePercent] = useState(0);
-  const [high24h, setHigh24h] = useState(0);
-  const [low24h, setLow24h] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [openPosition, setOpenPosition] = useState<any>(null);
-  const [soundOn, setSoundOn] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const [tradeMode, setTradeMode] = useState<'binary' | 'advanced'>('binary');
-
-  const { data: assets } = useQuery({
-    queryKey: ['trading-assets'],
+  const { data: trades, isLoading: loadingTrades } = useQuery({
+    queryKey: ['managed-trades'],
     queryFn: async () => {
-      const { data, error } = await api.get<any[]>('/assets');
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  const { data: wallets } = useQuery({
-    queryKey: ['trading-wallets'],
-    queryFn: async () => {
-      const { data, error } = await api.get<any[]>('/wallets');
+      const { data, error } = await api.get<any[]>('/managed-trades');
       if (error) throw error;
       return data;
     },
     enabled: !!user
   });
 
-  const walletBalance = wallets?.[0]?.main_balance ?? 0;
+  const activeTrades = useMemo(() => {
+    if (!trades) return [];
+    const now = Date.now();
+    return trades.filter(t => t.status === 'active' && new Date(t.ends_at).getTime() > now);
+  }, [trades]);
 
-  // Initialize price from DB or fallback
-  useEffect(() => {
-    setLoading(true);
-    const dbAsset = assets?.find((a: any) => a.symbol === selectedAsset.symbol);
-    const basePrice = dbAsset?.price ?? ASSET_DEFAULTS[selectedAsset.symbol]?.price ?? 100;
-    const baseChange = dbAsset?.change_percent ?? 0;
-    setLivePrice(basePrice);
-    setPrevPrice(basePrice);
-    prevPriceRef.current = basePrice;
-    setChangePercent(baseChange);
-    setHigh24h(basePrice * 1.025);
-    setLow24h(basePrice * 0.975);
-    setTimeout(() => setLoading(false), 400);
-  }, [selectedAsset.symbol, assets]);
+  // Derive dynamic options from active signals
+  const availableOptionTypes = useMemo(() => {
+    const types = new Set(activeTrades.map(t => t.asset_type.charAt(0).toUpperCase() + t.asset_type.slice(1)));
+    return Array.from(types).sort();
+  }, [activeTrades]);
 
-  // Simulate live price ticking
+  const availableAssetsByType = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    activeTrades.forEach(t => {
+      const type = t.asset_type.charAt(0).toUpperCase() + t.asset_type.slice(1);
+      if (!map[type]) map[type] = [];
+      if (!map[type].includes(t.asset_name)) map[type].push(t.asset_name);
+    });
+    return map;
+  }, [activeTrades]);
+
+  const availableDurations = useMemo(() => {
+    const durations = activeTrades
+      .filter(t => 
+        (t.asset_type.toLowerCase() === selOptionType.toLowerCase()) && 
+        (t.asset_name === selAssetId)
+      )
+      .map(t => t.duration);
+    return Array.from(new Set(durations));
+  }, [activeTrades, selOptionType, selAssetId]);
+
+  // Sync selection with active trades
   useEffect(() => {
-    if (!livePrice) return;
-    const volatility = selectedAsset.type === 'crypto' ? 0.0015 : 0.0005;
-    const interval = setInterval(() => {
-      setLivePrice(prev => {
-        if (!prev) return prev;
-        const change = (Math.random() - 0.49) * prev * volatility;
-        const next = Math.max(prev * 0.95, prev + change);
-        setPrevPrice(prevPriceRef.current);
-        prevPriceRef.current = prev;
-        setHigh24h(h => Math.max(h, next));
-        setLow24h(l => Math.min(l, next));
-        return next;
+    if (!trades) return;
+    
+    const matchingTrade = trades.find(t => 
+      t.status === 'active' && 
+      t.asset_type?.toLowerCase() === selOptionType?.toLowerCase() &&
+      (t.asset_name?.toLowerCase() === selAssetId?.toLowerCase() || t.asset_symbol?.toLowerCase() === selAssetId?.toLowerCase()) &&
+      t.duration === selDuration
+    );
+
+    if (matchingTrade) {
+      setSelectedTrade(matchingTrade);
+      setSelectedExpired(false);
+    } else {
+      setSelectedTrade(null);
+    }
+  }, [trades, selOptionType, selAssetId, selDuration]);
+
+  // Auto-selection refinements for dynamic transitions
+  useEffect(() => {
+    if (activeTrades.length === 0) return;
+
+    // 1. If current selection has no signal, pick first available OptionType
+    if (availableOptionTypes.length > 0 && !availableOptionTypes.includes(selOptionType)) {
+      const firstType = availableOptionTypes[0];
+      setSelOptionType(firstType);
+      const firstAsset = availableAssetsByType[firstType]?.[0];
+      if (firstAsset) setSelAssetId(firstAsset);
+      return;
+    }
+
+    // 2. If current asset is invalid for selected type, pick first available asset
+    const validAssetsForType = availableAssetsByType[selOptionType] || [];
+    if (validAssetsForType.length > 0 && !validAssetsForType.includes(selAssetId)) {
+      setSelAssetId(validAssetsForType[0]);
+      return;
+    }
+
+    // 3. If current duration is invalid for asset, pick first available duration
+    if (availableDurations.length > 0 && !availableDurations.includes(selDuration)) {
+      setSelDuration(availableDurations[0]);
+    }
+  }, [activeTrades, availableOptionTypes, availableAssetsByType, availableDurations, selOptionType, selAssetId, selDuration]);
+
+  const { data: wallet } = useQuery({
+    queryKey: ['trading-wallet'],
+    queryFn: async () => {
+      const { data, error } = await api.get<any>('/api/wallets?currency=trading');
+      if (error || !data) {
+        const res = await api.get<any[]>('/wallets');
+        return res.data?.find((w: any) => w.currency === 'trading');
+      }
+      return data;
+    },
+    enabled: !!user
+  });
+
+  const { data: myTrades, isLoading: loadingMyTrades } = useQuery({
+    queryKey: ['my-managed-trades'],
+    queryFn: async () => {
+      const { data, error } = await api.get<any[]>('/managed-trades/my-trades');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user
+  });
+
+  const handleTrade = async (direction: 'call' | 'put' = 'call') => {
+    if (!selectedTrade || !tradeAmount) return;
+    const amount = parseFloat(tradeAmount);
+    if (isNaN(amount) || amount < selectedTrade.min_stake) {
+      toast.error(`Minimum amount is $${selectedTrade.min_stake}`);
+      return;
+    }
+
+    setIsTrading(true);
+    try {
+      const { error } = await api.post(`/managed-trades/${selectedTrade.id}/enter`, {
+        amount,
+        direction
       });
-    }, 1000 + Math.random() * 500);
-    return () => clearInterval(interval);
-  }, [livePrice, selectedAsset.type]);
+      if (error) throw error;
+      toast.success("Trade position opened successfully!");
+      setTradeAmount('');
+      queryClient.invalidateQueries({ queryKey: ['managed-trades'] });
+      queryClient.invalidateQueries({ queryKey: ['trading-wallet'] });
+      queryClient.invalidateQueries({ queryKey: ['my-managed-trades'] });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to open trade");
+    } finally {
+      setIsTrading(false);
+    }
+  };
+
+  if (isLoadingAuth || loadingTrades) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  const tradeAssets = activeTrades.map(t => ({
+    symbol: t.asset_symbol,
+    name: t.asset_name,
+    type: t.asset_type,
+    tradeId: t.id,
+    ...t
+  }));
 
   const handleAssetChange = (asset: any) => {
-    setSelectedAsset(asset);
-    setOpenPosition(null);
+    setSelOptionType(asset.asset_type.charAt(0).toUpperCase() + asset.asset_type.slice(1));
+    setSelAssetId(asset.asset_name);
+    setSelDuration(asset.duration);
   };
 
-  const handleClosePosition = () => {
-    setOpenPosition(null);
-  };
-
-  const handlePlaceOrder = ({ side, quantity, entryPrice, leverage }: any) => {
-    setOpenPosition({
-      symbol: selectedAsset.symbol,
-      side,
-      quantity,
-      entryPrice,
-      leverage,
-    });
-  };
-
-  const displayPrice = livePrice ?? 0;
-  const volLabel = selectedAsset.type === 'crypto'
-    ? `${(Math.random() * 5000 + 1000).toFixed(0)}M`
-    : `${(Math.random() * 80 + 10).toFixed(0)}M`;
+  const walletBalance = Number(wallet?.main_balance || 0);
 
   return (
-    <div className="min-h-screen pb-24 md:pb-8 bg-background">
-      {/* ── TOP BAR ── */}
-      <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-xl border-b border-border">
-        <div className="flex flex-wrap items-center justify-between px-2 sm:px-4 py-2 sm:py-3 gap-2 sm:gap-3">
-          <AssetSelector selected={selectedAsset} onChange={handleAssetChange} />
-          
-          <div className="flex items-center gap-1 sm:gap-2">
-            {/* Mode toggle */}
-            <div className="flex items-center rounded-xl overflow-hidden bg-muted">
-              <button
-                onClick={() => setTradeMode('binary')}
-                className={cn(
-                  "flex items-center gap-1 px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-semibold transition-all",
-                  tradeMode === 'binary' ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-                )}
-              >
-                <Zap className="h-3 sm:h-3.5 w-3 sm:w-3.5" /> <span className="hidden min-[360px]:inline">Binary</span>
-                <span className="min-[360px]:hidden">Bin</span>
-              </button>
-              <button
-                onClick={() => setTradeMode('advanced')}
-                className={cn(
-                  "flex items-center gap-1 px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-semibold transition-all",
-                  tradeMode === 'advanced' ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-                )}
-              >
-                <BarChart2 className="h-3 sm:h-3.5 w-3 sm:w-3.5" /> <span className="hidden min-[360px]:inline">Pro</span>
-              </button>
+    <div className="min-h-screen bg-background text-foreground pb-24 lg:pb-8">
+      <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border px-4 lg:px-8 py-4">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+              <Zap className="h-6 w-6 text-primary-foreground" />
             </div>
-            
-            <button
-              onClick={() => setHistoryOpen(true)}
-              className="flex items-center justify-center p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-muted text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
-            >
-              <History className="h-4 w-4" />
-              <span className="hidden sm:inline">History</span>
-            </button>
-            <LiveIndicator soundOn={soundOn} onToggleSound={() => setSoundOn(s => !s)} />
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">Live Trading</h1>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest leading-none mt-1">
+                Expert-Led Signals
+              </p>
+            </div>
           </div>
-        </div>
-
-        {/* Price strip */}
-        <div className="px-4 pb-3">
-          <AnimatePresence mode="wait">
-            {loading ? (
-              <motion.div key="skel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <div className="h-10 w-48 rounded-xl mb-1 bg-muted animate-pulse" />
-                <div className="h-4 w-64 rounded-xl bg-muted animate-pulse" />
-              </motion.div>
-            ) : (
-              <motion.div key={selectedAsset.symbol} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                <LivePriceHeader
-                  price={displayPrice}
-                  prevPrice={prevPrice}
-                  change={displayPrice - (livePrice ?? 0)}
-                  changePercent={changePercent}
-                  high24h={high24h}
-                  low24h={low24h}
-                  volume={volLabel}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setViewMode('dashboard')}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all",
+                viewMode === 'dashboard' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <LayoutDashboard className="h-4 w-4" /> Chart
+            </button>
+            <button
+              onClick={() => setViewMode('history')}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all",
+                viewMode === 'history' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <History className="h-4 w-4" /> Activity
+            </button>
+          </div>
         </div>
       </header>
 
-      <AnimatePresence mode="wait">
-        {tradeMode === 'binary' ? (
-          <motion.div key="binary" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full max-w-2xl mx-auto">
-            {/* Chart */}
-            <div className="px-3 pt-3">
-              <AnimatePresence mode="wait">
-                {loading ? (
-                  <motion.div key="chart-skel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <div className="rounded-2xl bg-card border border-border p-4">
-                      <div className="h-48 rounded-xl bg-muted animate-pulse" />
-                    </div>
-                  </motion.div>
+      <main className="max-w-7xl mx-auto p-4 lg:p-8">
+        <AnimatePresence mode="wait">
+          {viewMode === 'dashboard' ? (
+            <motion.div
+              key="dashboard"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6"
+            >
+              <div className="space-y-6">
+                {activeTrades.length === 0 ? (
+                  <div className="bg-card border border-border border-dashed rounded-[2.5rem] p-12 text-center h-[500px] flex flex-col items-center justify-center">
+                    <Clock className="h-16 w-16 text-muted-foreground/20 mb-4" />
+                    <h2 className="text-xl font-bold">No Active Trades</h2>
+                    <p className="text-muted-foreground max-w-xs mx-auto mt-2">
+                      Our expert traders are currently analyzing the markets. New trades will appear here shortly.
+                    </p>
+                  </div>
                 ) : (
-                  <motion.div
-                    key={selectedAsset.symbol + 'chart'}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="rounded-2xl bg-card border border-border p-3"
-                  >
-                    <CandlestickChart basePrice={displayPrice} isPositive={changePercent >= 0} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-            <OrderPanel asset={selectedAsset} price={displayPrice} balance={walletBalance} />
-          </motion.div>
-        ) : (
-          <motion.div key="advanced" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="px-3 py-4 space-y-4 max-w-7xl mx-auto">
-            <div className="md:grid md:grid-cols-[1fr_340px] md:gap-4">
-              {/* LEFT: Chart + Order Book + Recent Trades */}
-              <div className="space-y-4">
-                <AnimatePresence mode="wait">
-                  {loading ? (
-                    <motion.div key="chart-skel2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                      <div className="rounded-3xl bg-card border border-border p-4">
-                        <div className="h-72 rounded-2xl bg-muted animate-pulse" />
+                  <div className="bg-card border border-border rounded-[2.5rem] p-6 lg:p-8">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                      <div className="space-y-1">
+                        <AssetSelector
+                          selected={selectedTrade ? { symbol: selectedTrade.asset_symbol, type: selectedTrade.asset_type } : null}
+                          assets={tradeAssets}
+                          onChange={handleAssetChange}
+                        />
+                        <p className="text-sm text-muted-foreground px-1">{selectedTrade?.asset_name} • Managed Trade</p>
                       </div>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key={selectedAsset.symbol + 'chart2'}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="rounded-3xl bg-card border border-border p-4"
-                    >
-                      <CandlestickChart basePrice={displayPrice} isPositive={changePercent >= 0} />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {openPosition && (
-                  <PositionPanel position={openPosition} currentPrice={displayPrice} onClose={handleClosePosition} />
-                )}
-
-                <div className="md:hidden">
-                  <ProOrderPanel asset={selectedAsset} price={displayPrice} balance={walletBalance} onOrderPlaced={handlePlaceOrder} />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <OrderBook price={displayPrice} />
-                  <RecentTrades basePrice={displayPrice} />
-                </div>
-              </div>
-
-              {/* RIGHT: Order panel (desktop) */}
-              <div className="hidden md:flex flex-col gap-4">
-                <ProOrderPanel asset={selectedAsset} price={displayPrice} balance={walletBalance} onOrderPlaced={handlePlaceOrder} />
-                {openPosition && (
-                  <PositionPanel position={openPosition} currentPrice={displayPrice} onClose={handleClosePosition} />
+                      <div className="flex items-center gap-6">
+                        <div className="text-right">
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Profit Target</p>
+                          <span className="text-2xl font-black text-success">+{selectedTrade?.profit_percent}%</span>
+                        </div>
+                        <div className="h-10 w-px bg-border hidden md:block" />
+                        <div className="text-right">
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Ends In</p>
+                          <span className="text-lg flex items-center justify-end">
+                            {selectedTrade?.ends_at ? (
+                              <CountdownTimer 
+                                key={selectedTrade.id} 
+                                endsAt={selectedTrade.ends_at} 
+                                onExpire={() => setSelectedExpired(true)} 
+                                tradeId={selectedTrade.id}
+                              />
+                            ) : 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="rounded-3xl bg-muted/30 border border-border p-4">
+                      <CandlestickChart
+                        basePrice={selectedTrade?.entry_price || 100}
+                        isPositive={selectedTrade?.signal_type === 'call'}
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      <TradingHistoryPanel isOpen={historyOpen} onClose={() => setHistoryOpen(false)} />
+
+              <div className="space-y-6">
+                <div className="bg-card border border-border rounded-[2.5rem] p-8 shadow-xl shadow-primary/5 sticky top-28">
+                  <div className="mb-6 flex items-center justify-between">
+                    <h3 className="text-xl font-bold">Execution Panel</h3>
+                    <DigitalClock />
+                  </div>
+
+                  <div className="space-y-5">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Option Type</label>
+                      <div className="relative">
+                        <select
+                          value={selOptionType}
+                          onChange={(e) => setSelOptionType(e.target.value)}
+                          className="w-full h-12 bg-muted/30 border border-border rounded-xl px-4 font-semibold text-sm appearance-none outline-none focus:ring-2 focus:ring-primary/20"
+                        >
+                          <option value="">Select Option Type</option>
+                          {availableOptionTypes.map(type => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Asset Type</label>
+                      <div className="relative">
+                        <select
+                          value={selAssetId}
+                          onChange={(e) => setSelAssetId(e.target.value)}
+                          className="w-full h-12 bg-muted/30 border border-border rounded-xl px-4 font-semibold text-sm appearance-none outline-none focus:ring-2 focus:ring-primary/20"
+                        >
+                          <option value="">Select Asset</option>
+                          {(availableAssetsByType[selOptionType] || []).map(asset => (
+                            <option key={asset} value={asset}>{asset}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between px-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase">Fixed Time</span>
+                        <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                      </div>
+                      <button
+                        onClick={() => setIsFixedTime(!isFixedTime)}
+                        className={cn(
+                          "w-10 h-5 rounded-full p-1 transition-colors relative",
+                          isFixedTime ? "bg-primary" : "bg-muted"
+                        )}
+                      >
+                        <motion.div
+                          animate={{ x: isFixedTime ? 20 : 0 }}
+                          className="w-3 h-3 bg-white rounded-full shadow-sm"
+                        />
+                      </button>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between px-1">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase">Amount</label>
+                        <span className="text-[10px] font-bold text-primary uppercase">Min: ${selectedTrade?.min_stake || 0}</span>
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold opacity-40">$</span>
+                        <input
+                          type="number"
+                          value={tradeAmount}
+                          onChange={(e) => setTradeAmount(e.target.value)}
+                          placeholder="1000"
+                          className="w-full h-12 pl-10 pr-4 bg-muted/30 border border-border rounded-xl text-lg font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Expiration Time</label>
+                      <div className="relative">
+                        <select
+                          value={selDuration}
+                          onChange={(e) => setSelDuration(e.target.value)}
+                          className="w-full h-12 bg-muted/30 border border-border rounded-xl px-4 font-semibold text-sm appearance-none outline-none focus:ring-2 focus:ring-primary/20"
+                        >
+                          <option value="">Select Duration</option>
+                          {availableDurations.map(d => {
+                            const meta = DURATIONS.find(dm => dm.value === d);
+                            return <option key={d} value={d}>{meta?.label || d}</option>;
+                          })}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1 px-1">
+                        <TrendingUp className="h-3 w-3 text-success" />
+                        <span className="text-[10px] font-bold text-success uppercase">Profit ({selectedTrade?.profit_percent}%)</span>
+                      </div>
+                      <div className="w-full h-12 bg-success/5 border border-success/20 rounded-xl flex items-center justify-between px-4">
+                        <span className="text-lg font-black text-success">
+                          ${tradeAmount && !isNaN(parseFloat(tradeAmount))
+                            ? (parseFloat(tradeAmount) * (selectedTrade?.profit_percent / 100)).toLocaleString()
+                            : '0.00'}
+                        </span>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase">USD</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <button
+                        onClick={() => handleTrade('call')}
+                        disabled={isTrading || !tradeAmount || !selectedTrade || selectedExpired}
+                        className={cn(
+                          "h-12 rounded-xl flex items-center justify-center gap-2 font-bold transition-all shadow-lg",
+                          "bg-success text-white shadow-success/20 hover:opacity-90 disabled:opacity-50"
+                        )}
+                      >
+                        {isTrading ? (
+                          <RefreshCcw className="h-4 w-4 animate-spin" />
+                        ) : selectedExpired ? (
+                          "Expired"
+                        ) : (
+                          <>
+                            <ArrowUpCircle className="h-5 w-5" /> Call
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => handleTrade('put')}
+                        disabled={isTrading || !tradeAmount || !selectedTrade || selectedExpired}
+                        className={cn(
+                          "h-12 rounded-xl flex items-center justify-center gap-2 font-bold transition-all shadow-lg",
+                          "bg-destructive text-white shadow-destructive/20 hover:opacity-90 disabled:opacity-50"
+                        )}
+                      >
+                        {isTrading ? (
+                          <RefreshCcw className="h-4 w-4 animate-spin" />
+                        ) : selectedExpired ? (
+                          "Expired"
+                        ) : (
+                          <>
+                            <motion.div animate={{ rotate: 180 }}>
+                              <ArrowUpCircle className="h-5 w-5" />
+                            </motion.div>
+                            Put
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="p-3 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase">Wallet Balance</p>
+                        <p className="font-bold text-sm text-primary">${walletBalance.toLocaleString()}</p>
+                      </div>
+                      <Wallet className="h-5 w-5 text-primary opacity-50" />
+                    </div>
+                  </div>
+                </div>
+
+                {myTrades && myTrades.filter((s: any) => s.status === 'active').length > 0 && (
+                  <div className="bg-card border border-border rounded-3xl p-6">
+                    <h4 className="text-sm font-bold mb-4 flex items-center justify-between">
+                      My Active Trades
+                      <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px]">
+                        {myTrades.filter((s: any) => s.status === 'active').length}
+                      </span>
+                    </h4>
+                    <div className="space-y-3">
+                      {myTrades.filter((s: any) => s.status === 'active').slice(0, 3).map((tradeEntry: any) => (
+                        <div key={tradeEntry.id} className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/50">
+                          <div>
+                            <p className="text-xs font-bold">{tradeEntry.managed_trades?.asset_symbol}</p>
+                            <p className="text-[10px] text-muted-foreground">${tradeEntry.stake_amount}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-bold text-success">+${(tradeEntry.stake_amount * (tradeEntry.managed_trades?.profit_percent / 100)).toFixed(2)}</p>
+                            <Timer className="h-3 w-3 text-muted-foreground ml-auto mt-0.5" />
+                          </div>
+                        </div>
+                      ))}
+                      {myTrades.filter((s: any) => s.status === 'active').length > 3 && (
+                        <button onClick={() => setViewMode('history')} className="w-full py-2 text-[10px] font-bold text-muted-foreground uppercase hover:text-primary transition-colors">
+                          View all trades
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="history"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-8"
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
+                  <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                    <Activity className="h-6 w-6 text-primary" /> Active Trades
+                  </h2>
+                  <div className="space-y-4">
+                    {myTrades && myTrades.filter((s: any) => s.status === 'active').length === 0 ? (
+                      <div className="p-12 rounded-[2.5rem] border border-dashed border-border flex flex-col items-center justify-center opacity-40">
+                        <LayoutDashboard className="h-10 w-10 mb-2" />
+                        <p className="text-sm font-bold italic">No active trades</p>
+                      </div>
+                    ) : myTrades?.filter((s: any) => s.status === 'active').map((tradeEntry: any) => (
+                      <div key={tradeEntry.id} className="bg-card border border-border p-6 rounded-4xl flex items-center justify-between shadow-sm">
+                        <div className="flex items-center gap-4">
+                          <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                            <b className="text-primary">{tradeEntry.managed_trades?.asset_symbol?.slice(0, 1)}</b>
+                          </div>
+                          <div>
+                            <p className="font-bold uppercase">{tradeEntry.managed_trades?.asset_symbol} ({tradeEntry.direction})</p>
+                            <p className="text-xs text-muted-foreground">
+                              Amount: ${tradeEntry.stake_amount} • Entry: {tradeEntry.managed_trades?.signal_type} @ {tradeEntry.managed_trades?.entry_price}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">Expected Payout</p>
+                          <p className="text-xl font-black text-success">
+                            ${(tradeEntry.stake_amount * (1 + (tradeEntry.managed_trades?.profit_percent || 0) / 100)).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                    <History className="h-6 w-6 text-muted-foreground" /> Trade History
+                  </h2>
+                  <div className="space-y-3">
+                    {myTrades && myTrades.filter((s: any) => s.status !== 'active').length === 0 ? (
+                      <div className="p-12 rounded-[2.5rem] border border-dashed border-border flex flex-col items-center justify-center opacity-40">
+                        <History className="h-10 w-10 mb-2" />
+                        <p className="text-sm font-bold italic">No history available</p>
+                      </div>
+                    ) : myTrades?.filter((s: any) => s.status !== 'active').map((tradeEntry: any) => (
+                      <div key={tradeEntry.id} className="bg-muted/30 border border-border/50 p-5 rounded-2xl flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {tradeEntry.status === 'paid_out' ? <CheckCircle className="h-5 w-5 text-success" /> : <X className="h-5 w-5 text-destructive" />}
+                          <div>
+                            <p className="text-sm font-bold uppercase">{tradeEntry.managed_trades?.asset_symbol} ({tradeEntry.direction}) - {tradeEntry.status === 'paid_out' ? 'Settled' : 'Lost'}</p>
+                            <p className="text-[10px] text-muted-foreground uppercase font-bold">{format(new Date(tradeEntry.created_at), 'MMM dd, yyyy')}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={cn("text-sm font-black", tradeEntry.status === 'paid_out' ? "text-success" : "text-destructive")}>
+                            {tradeEntry.status === 'paid_out' ? `+$${(tradeEntry.stake_amount * (1 + (tradeEntry.managed_trades?.profit_percent || 0) / 100)).toLocaleString()}` : `$0.00`}
+                          </p>
+                          <span className="text-[10px] text-muted-foreground font-bold">Amount: ${tradeEntry.stake_amount}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
     </div>
   );
 }

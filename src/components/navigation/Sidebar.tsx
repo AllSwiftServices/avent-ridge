@@ -8,10 +8,10 @@ import { createPageUrl } from '@/utils';
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', page: 'dashboard' },
   { icon: TrendingUp, label: 'Markets', page: 'markets' },
-  { icon: Radio, label: 'Live Trading', page: 'live-trading' },
+  { icon: Radio, label: 'AI Trading', page: 'ai-trading' },
   { icon: PieChart, label: 'Portfolio', page: 'portfolio' },
   { icon: Wallet, label: 'Wallet', page: 'wallet' },
-  { icon: Zap, label: 'Winning Trades', page: 'trades' },
+  { icon: Zap, label: 'Live Trading', page: 'live-trading' },
   { icon: User, label: 'Profile', page: 'profile' },
 ];
 

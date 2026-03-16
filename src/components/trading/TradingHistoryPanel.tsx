@@ -9,19 +9,20 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 const TABS = [
+  { key: 'ai_trades', label: 'AI Trades' },
   { key: 'positions', label: 'Positions' },
   { key: 'orders', label: 'Orders' },
   { key: 'deals', label: 'Deals' },
 ];
 
 export default function TradingHistoryPanel({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
-  const [activeTab, setActiveTab] = useState('positions');
+  const [activeTab, setActiveTab] = useState('ai_trades');
   const [search, setSearch] = useState('');
   const { theme } = useTheme();
   const { user } = useAuth();
   const dark = theme === 'dark';
 
-  const { data: transactions, isLoading } = useQuery({
+  const { data: transactions, isLoading: isLoadingTx } = useQuery({
     queryKey: ['transactions-all'],
     queryFn: async () => {
       const { data, error } = await api.get<any[]>('/transactions?order=created_at.desc&limit=200');
@@ -30,6 +31,18 @@ export default function TradingHistoryPanel({ isOpen, onClose }: { isOpen: boole
     },
     enabled: isOpen && !!user,
   });
+
+  const { data: aiTrades, isLoading: isLoadingAi } = useQuery({
+    queryKey: ['ai-trades-history'],
+    queryFn: async () => {
+      const { data, error } = await api.get<any[]>('/ai-trading/history');
+      if (error) throw error;
+      return data;
+    },
+    enabled: isOpen && !!user,
+  });
+
+  const isLoading = isLoadingTx || isLoadingAi;
 
   const txList = transactions || [];
 
@@ -41,12 +54,20 @@ export default function TradingHistoryPanel({ isOpen, onClose }: { isOpen: boole
 
   // Filter list by tab and search
   const typeMap: Record<string, string[]> = { positions: ['buy', 'sell'], orders: ['buy', 'sell'], deals: ['deposit', 'withdraw'] };
-  const types = typeMap[activeTab] || ['buy', 'sell'];
-  const filtered = txList.filter((tx: any) => {
-    const matchType = types.includes(tx.type);
-    const matchSearch = !search || tx.asset_symbol?.toLowerCase().includes(search.toLowerCase());
-    return matchType && matchSearch;
-  });
+  
+  let filtered = [];
+  if (activeTab === 'ai_trades') {
+    filtered = (aiTrades || []).filter((tx: any) => 
+      !search || tx.asset_symbol?.toLowerCase().includes(search.toLowerCase())
+    );
+  } else {
+    const types = typeMap[activeTab] || ['buy', 'sell'];
+    filtered = txList.filter((tx: any) => {
+      const matchType = types.includes(tx.type);
+      const matchSearch = !search || tx.asset_symbol?.toLowerCase().includes(search.toLowerCase());
+      return matchType && matchSearch;
+    });
+  }
 
   return (
     <AnimatePresence>
@@ -137,6 +158,43 @@ export default function TradingHistoryPanel({ isOpen, onClose }: { isOpen: boole
                 </div>
               ) : (
                 filtered.map((tx: any, i: number) => {
+                  if (activeTab === 'ai_trades') {
+                    const isUp = tx.direction === 'UP';
+                    const isWin = tx.outcome === 'WIN';
+                    const isResolved = tx.status === 'resolved';
+
+                    return (
+                      <motion.div
+                        key={tx.id}
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                        transition={{ delay: i * 0.01 }}
+                        className={cn("border-b transition-colors", i % 2 === 0 ? "bg-card" : "bg-background")}
+                      >
+                        <div className="flex items-start justify-between px-4 pt-3 pb-1">
+                          <div className="flex items-center gap-2">
+                            <span className={cn("text-xs font-bold px-2 py-0.5 rounded", isUp ? "bg-primary/20 text-primary" : "bg-destructive/20 text-destructive")}>
+                              {isUp ? 'CALL' : 'PUT'}
+                            </span>
+                            <span className="font-bold text-sm text-foreground">
+                              ${tx.stake?.toLocaleString()}
+                            </span>
+                          </div>
+                          <span className={cn("font-bold text-sm", isResolved ? (isWin ? "text-primary" : "text-destructive") : "text-amber-500")}>
+                            {isResolved ? (isWin ? `+$${tx.profit?.toFixed(2)}` : `-$${tx.stake?.toFixed(2)}`) : 'PENDING'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between px-4 pb-3">
+                          <span className="text-xs text-muted-foreground">
+                            {tx.created_at ? format(new Date(tx.created_at), 'yyyy.MM.dd HH:mm:ss') : '—'}
+                          </span>
+                          <span className={cn("text-[10px] font-bold uppercase", isResolved ? (isWin ? "text-primary" : "text-destructive") : "text-amber-500")}>
+                            {isResolved ? (isWin ? 'Profit' : 'Loss') : 'Processing'}
+                          </span>
+                        </div>
+                      </motion.div>
+                    );
+                  }
+
                   const isPositive = tx.type === 'buy' || tx.type === 'deposit';
 
                   return (

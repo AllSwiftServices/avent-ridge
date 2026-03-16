@@ -43,7 +43,7 @@ export async function GET() {
     const userData = {
       ...user,
       ...(profile || {}),
-      kyc_status: kycData?.status || 'not_started'
+      kyc_status: kycData?.status || profile?.kyc_status || 'not_started'
     };
 
     return NextResponse.json(

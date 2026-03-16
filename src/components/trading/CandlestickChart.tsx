@@ -65,7 +65,10 @@ const CustomTooltip = ({ active, payload }: { active?: boolean, payload?: any[] 
   );
 };
 
+import { useIsMobile } from '@/hooks/use-mobile';
+
 export default function CandlestickChart({ basePrice, isPositive }: { basePrice: number, isPositive: boolean }) {
+  const isMobile = useIsMobile();
   const [timeFilter, setTimeFilter] = useState('15M');
   const [chartType, setChartType] = useState('candle');
   const [data, setData] = useState<any[]>([]);
@@ -151,25 +154,39 @@ export default function CandlestickChart({ basePrice, isPositive }: { basePrice:
         className="h-64 md:h-80"
       >
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+          <ComposedChart 
+            data={data} 
+            margin={{ 
+              top: 4, 
+              right: isMobile ? 2 : 4, 
+              bottom: 0, 
+              left: isMobile ? -20 : 0 
+            }}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} vertical={false} />
             <XAxis
               dataKey="time"
-              tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+              tick={{ fontSize: isMobile ? 8 : 10, fill: 'hsl(var(--muted-foreground))' }}
               tickLine={false}
               axisLine={false}
-              interval={Math.floor(data.length / 6)}
+              interval={isMobile ? Math.floor(data.length / 4) : Math.floor(data.length / 6)}
+              minTickGap={10}
             />
             <YAxis
               domain={[priceMin, priceMax]}
-              tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+              tick={{ fontSize: isMobile ? 8 : 10, fill: 'hsl(var(--muted-foreground))' }}
               tickLine={false}
               axisLine={false}
               tickFormatter={v => `$${v.toFixed(0)}`}
-              width={60}
+              width={isMobile ? 40 : 60}
               orientation="right"
+              hide={false}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '4 4' }} />
+            <Tooltip 
+              content={<CustomTooltip />} 
+              cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '4 4' }}
+              isAnimationActive={false}
+            />
 
             {chartType === 'line' ? (
               <Line

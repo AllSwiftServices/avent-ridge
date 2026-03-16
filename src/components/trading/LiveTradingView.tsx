@@ -658,7 +658,7 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
               className="px-3 space-y-3 max-w-lg mx-auto"
             >
               {/* Active positions */}
-              {myTrades?.filter((t: any) => t.status === 'active').length > 0 && (
+              {myTrades?.filter((t: any) => t.status === 'active')?.length > 0 && (
                 <div className="rounded-3xl bg-card border border-border p-5">
                   <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
                     <Activity className="h-4 w-4 text-primary" /> Active Trades

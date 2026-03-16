@@ -23,6 +23,22 @@ export async function GET(request: Request) {
     const { data, error } = await query;
     if (error) throw error;
 
+    // Strip sensitive fields from response for non-admin users
+    if (!isAdmin && data) {
+      const sanitized = data.map((t: any) => ({
+        id: t.id,
+        asset_symbol: t.asset_symbol,
+        asset_name: t.asset_name,
+        asset_type: t.asset_type,
+        profit_percent: t.profit_percent,
+        min_stake: t.min_stake,
+        ends_at: t.ends_at,
+        status: t.status,
+        duration: t.duration,
+      }));
+      return NextResponse.json(sanitized);
+    }
+
     return NextResponse.json(data);
   } catch (error: any) {
     console.error("Managed trades fetch error:", error);

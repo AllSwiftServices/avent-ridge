@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-server";
+import { supabaseAdmin, createClient } from "@/lib/supabase-server";
 import { sendWelcomeEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
         email: normalizedEmail,
         email_confirm: true,
         user_metadata: { name },
-        password: password || Math.random().toString(36).slice(-12), 
+        password: password || Math.random().toString(36).slice(-12),
       });
 
       if (authError) {
@@ -70,7 +70,6 @@ export async function POST(request: NextRequest) {
       }
       if (authData.user) {
         console.log(`[AUTH] Auth user created: ${authData.user.id}. Creating profile...`);
-        // Create user profile in public.users
         const { error: profileError } = await supabaseAdmin.from("users").insert({
           id: authData.user.id,
           email: normalizedEmail,
@@ -90,31 +89,45 @@ export async function POST(request: NextRequest) {
       }
     } else {
       console.log(`[AUTH] Login successful for: ${normalizedEmail}`);
-      // Login: Update email_verified status if not already
+      // Update email_verified status if not already
       await supabaseAdmin
         .from("users")
         .update({ email_verified: true })
         .eq("email", normalizedEmail);
     }
 
-    // NEW: Perform server-side sign-in to set session cookies
-    // This is required because we are removing Supabase from the client
+    // Set session cookies via createClient() so Next.js SSR cookies() integration propagates them
     if (password) {
       try {
-        const supabase = await (await import("@/lib/supabase-server")).createClient();
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        // createClient() at the top level of the route handler so its cookie writes land in the response
+        const supabase = await createClient();
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: normalizedEmail,
           password: password,
         });
 
         if (signInError) {
           console.error(`[AUTH] Error setting session for ${normalizedEmail}:`, signInError);
+          // Session couldn't be set but OTP was valid — return success anyway
+          // The user will need to be prompted to re-try or we rely on the token approach
         } else {
           console.log(`[AUTH] Session cookies set for ${normalizedEmail}`);
+          // Return the access token so the client can store it as a fallback
+          return NextResponse.json({
+            success: true,
+            message: "Verification successful",
+            session: {
+              access_token: signInData.session?.access_token,
+              refresh_token: signInData.session?.refresh_token,
+              expires_at: signInData.session?.expires_at,
+            },
+          });
         }
       } catch (err) {
         console.error(`[AUTH] Unexpected error during server-side sign-in:`, err);
       }
+    } else {
+      console.warn(`[AUTH] No password provided for ${normalizedEmail} — cannot set session cookies.`);
     }
 
     return NextResponse.json({

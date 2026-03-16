@@ -70,7 +70,7 @@ export default function Home() {
           otp,
           name: !isLogin ? name : undefined,
           type: isLogin ? 'login' : 'signup',
-          password: password, // Send password always to enable server-side sign-in
+          password: password,
         }),
       });
 
@@ -79,13 +79,30 @@ export default function Home() {
         throw new Error(data.error || 'Invalid verification code');
       }
 
-      // Log in with Supabase Auth using the email and password 
-      // (This assumes the user was either already created or just created in verify-otp)
-      // The session cookies are now set on the server in verify-otp
-
       showToast.success('Success! Entering dashboard...');
-      await refreshUser();
-      // Force a hard navigation to bypass any client-side App Router caching
+
+      // Poll refreshUser up to 8 times with a 500ms gap to ensure the session
+      // cookie has landed before we navigate — prevents the race condition where
+      // the dashboard mounts and immediately redirects back to login.
+      let authed = false;
+      for (let i = 0; i < 8; i++) {
+        await refreshUser();
+        // Check the auth context value via a direct session call
+        const sessionRes = await fetch('/api/auth/session', { cache: 'no-store' });
+        const sessionData = await sessionRes.json();
+        if (sessionData?.user) {
+          authed = true;
+          break;
+        }
+        // Wait 500ms before retrying
+        await new Promise(r => setTimeout(r, 500));
+      }
+
+      if (!authed) {
+        throw new Error('Session could not be established. Please try again.');
+      }
+
+      // Hard navigate to flush any client-side cache
       window.location.href = '/dashboard';
     } catch (error: any) {
       showToast.error(error.message || 'Verification failed. Please check the code.');

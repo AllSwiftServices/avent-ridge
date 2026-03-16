@@ -6,7 +6,7 @@ import {
   Zap, Clock, TrendingUp, AlertCircle, CheckCircle,
   RefreshCcw, ArrowRight, ShieldCheck, X, Activity,
   LineChart, LayoutDashboard, History, Wallet,
-  ArrowUpCircle, Info, Timer, Target
+  ArrowUpCircle, Info, Timer, Target, ChevronDown
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -14,11 +14,10 @@ import { useAuth } from '@/lib/AuthContext';
 import { useNavigate } from '@/lib/react-router-shim';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { toast } from 'sonner';
 import AssetSelector from '@/components/trading/AssetSelector';
 import CandlestickChart from '@/components/trading/CandlestickChart';
-import { ChevronDown } from 'lucide-react';
 
 const OPTION_TYPES = ['Commodities', 'Crypto', 'Forex', 'Indices', 'Stocks'];
 const ASSETS_BY_TYPE: Record<string, string[]> = {
@@ -54,7 +53,6 @@ const CountdownTimer = ({ endsAt, onExpire, tradeId }: { endsAt: string, onExpir
           setIsExpired(true);
           onExpire?.();
           
-          // Trigger instant payout if tradeId is provided
           if (tradeId) {
             api.post('/managed-trades/process-expired', { tradeId }).then(() => {
               queryClient.invalidateQueries({ queryKey: ['managed-trades'] });
@@ -86,7 +84,6 @@ const CountdownTimer = ({ endsAt, onExpire, tradeId }: { endsAt: string, onExpir
 
   return <span className={cn(isExpired ? "text-muted-foreground animate-pulse" : "font-mono font-bold")}>{timeLeft}</span>;
 };
-
 
 const DigitalClock = () => {
   const [time, setTime] = useState(new Date());
@@ -120,7 +117,6 @@ export default function TradesPage() {
   const [selAssetId, setSelAssetId] = useState<string>('Bitcoin');
   const [selDuration, setSelDuration] = useState<string>('5m');
 
-
   useEffect(() => {
     if (!isLoadingAuth && !user) navigate(createPageUrl('Home'));
   }, [user, isLoadingAuth, navigate]);
@@ -135,7 +131,37 @@ export default function TradesPage() {
     enabled: !!user
   });
 
-  const activeTrades = useMemo(() => trades?.filter(t => t.status === 'active') || [], [trades]);
+  const activeTrades = useMemo(() => {
+    if (!trades) return [];
+    const now = Date.now();
+    return trades.filter(t => t.status === 'active' && new Date(t.ends_at).getTime() > now);
+  }, [trades]);
+
+  // Derive dynamic options from active signals
+  const availableOptionTypes = useMemo(() => {
+    const types = new Set(activeTrades.map(t => t.asset_type.charAt(0).toUpperCase() + t.asset_type.slice(1)));
+    return Array.from(types).sort();
+  }, [activeTrades]);
+
+  const availableAssetsByType = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    activeTrades.forEach(t => {
+      const type = t.asset_type.charAt(0).toUpperCase() + t.asset_type.slice(1);
+      if (!map[type]) map[type] = [];
+      if (!map[type].includes(t.asset_name)) map[type].push(t.asset_name);
+    });
+    return map;
+  }, [activeTrades]);
+
+  const availableDurations = useMemo(() => {
+    const durations = activeTrades
+      .filter(t => 
+        (t.asset_type.toLowerCase() === selOptionType.toLowerCase()) && 
+        (t.asset_name === selAssetId)
+      )
+      .map(t => t.duration);
+    return Array.from(new Set(durations));
+  }, [activeTrades, selOptionType, selAssetId]);
 
   // Sync selection with active trades
   useEffect(() => {
@@ -156,16 +182,31 @@ export default function TradesPage() {
     }
   }, [trades, selOptionType, selAssetId, selDuration]);
 
-  // Set initial filters from existing selections if any
+  // Auto-selection refinements for dynamic transitions
   useEffect(() => {
-    if (activeTrades.length > 0 && !selectedTrade) {
-      const first = activeTrades[0];
-      setSelOptionType(first.asset_type.charAt(0).toUpperCase() + first.asset_type.slice(1));
-      setSelAssetId(first.asset_name);
-      setSelDuration(first.duration);
-      setSelectedTrade(first);
+    if (activeTrades.length === 0) return;
+
+    // 1. If current selection has no signal, pick first available OptionType
+    if (availableOptionTypes.length > 0 && !availableOptionTypes.includes(selOptionType)) {
+      const firstType = availableOptionTypes[0];
+      setSelOptionType(firstType);
+      const firstAsset = availableAssetsByType[firstType]?.[0];
+      if (firstAsset) setSelAssetId(firstAsset);
+      return;
     }
-  }, [activeTrades, selectedTrade]);
+
+    // 2. If current asset is invalid for selected type, pick first available asset
+    const validAssetsForType = availableAssetsByType[selOptionType] || [];
+    if (validAssetsForType.length > 0 && !validAssetsForType.includes(selAssetId)) {
+      setSelAssetId(validAssetsForType[0]);
+      return;
+    }
+
+    // 3. If current duration is invalid for asset, pick first available duration
+    if (availableDurations.length > 0 && !availableDurations.includes(selDuration)) {
+      setSelDuration(availableDurations[0]);
+    }
+  }, [activeTrades, availableOptionTypes, availableAssetsByType, availableDurations, selOptionType, selAssetId, selDuration]);
 
   const { data: wallet } = useQuery({
     queryKey: ['trading-wallet'],
@@ -225,7 +266,6 @@ export default function TradesPage() {
     );
   }
 
-  // Map active trades to the format AssetSelector expects
   const tradeAssets = activeTrades.map(t => ({
     symbol: t.asset_symbol,
     name: t.asset_name,
@@ -244,7 +284,6 @@ export default function TradesPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-24 lg:pb-8">
-      {/* --- DASHBOARD HEADER --- */}
       <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border px-4 lg:px-8 py-4">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -258,7 +297,6 @@ export default function TradesPage() {
               </p>
             </div>
           </div>
-
           <div className="flex items-center gap-2">
             <button
               onClick={() => setViewMode('dashboard')}
@@ -292,7 +330,6 @@ export default function TradesPage() {
               exit={{ opacity: 0, y: -10 }}
               className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6"
             >
-              {/* LEFT COLUMN: Chart & Info */}
               <div className="space-y-6">
                 {activeTrades.length === 0 ? (
                   <div className="bg-card border border-border border-dashed rounded-[2.5rem] p-12 text-center h-[500px] flex flex-col items-center justify-center">
@@ -303,53 +340,47 @@ export default function TradesPage() {
                     </p>
                   </div>
                 ) : (
-                  <>
-                    {/* Header + Selector */}
-                    <div className="bg-card border border-border rounded-[2.5rem] p-6 lg:p-8">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                        <div className="space-y-1">
-                          <AssetSelector
-                            selected={selectedTrade ? { symbol: selectedTrade.asset_symbol, type: selectedTrade.asset_type } : null}
-                            assets={tradeAssets}
-                            onChange={handleAssetChange}
-                          />
-                          <p className="text-sm text-muted-foreground px-1">{selectedTrade?.asset_name} • Managed Trade</p>
-                        </div>
-                        <div className="flex items-center gap-6">
-                          <div className="text-right">
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Profit Target</p>
-                            <span className="text-2xl font-black text-success">+{selectedTrade?.profit_percent}%</span>
-                          </div>
-                          <div className="h-10 w-px bg-border hidden md:block" />
-                          <div className="text-right">
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Ends In</p>
-                            <span className="text-lg flex items-center justify-end">
-                              {selectedTrade?.ends_at ? (
-                                <CountdownTimer 
-                                  key={selectedTrade.id} 
-                                  endsAt={selectedTrade.ends_at} 
-                                  onExpire={() => setSelectedExpired(true)} 
-                                />
-                              ) : 'N/A'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Chart */}
-                      <div className="rounded-3xl bg-muted/30 border border-border p-4">
-                        <CandlestickChart
-                          basePrice={selectedTrade?.entry_price || 100}
-                          isPositive={selectedTrade?.signal_type === 'call'}
+                  <div className="bg-card border border-border rounded-[2.5rem] p-6 lg:p-8">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                      <div className="space-y-1">
+                        <AssetSelector
+                          selected={selectedTrade ? { symbol: selectedTrade.asset_symbol, type: selectedTrade.asset_type } : null}
+                          assets={tradeAssets}
+                          onChange={handleAssetChange}
                         />
+                        <p className="text-sm text-muted-foreground px-1">{selectedTrade?.asset_name} • Managed Trade</p>
+                      </div>
+                      <div className="flex items-center gap-6">
+                        <div className="text-right">
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Profit Target</p>
+                          <span className="text-2xl font-black text-success">+{selectedTrade?.profit_percent}%</span>
+                        </div>
+                        <div className="h-10 w-px bg-border hidden md:block" />
+                        <div className="text-right">
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Ends In</p>
+                          <span className="text-lg flex items-center justify-end">
+                            {selectedTrade?.ends_at ? (
+                              <CountdownTimer 
+                                key={selectedTrade.id} 
+                                endsAt={selectedTrade.ends_at} 
+                                onExpire={() => setSelectedExpired(true)} 
+                                tradeId={selectedTrade.id}
+                              />
+                            ) : 'N/A'}
+                          </span>
+                        </div>
                       </div>
                     </div>
-
-                  </>
+                    <div className="rounded-3xl bg-muted/30 border border-border p-4">
+                      <CandlestickChart
+                        basePrice={selectedTrade?.entry_price || 100}
+                        isPositive={selectedTrade?.signal_type === 'call'}
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
 
-              {/* RIGHT COLUMN: Execution Panel (Refined to match image) */}
               <div className="space-y-6">
                 <div className="bg-card border border-border rounded-[2.5rem] p-8 shadow-xl shadow-primary/5 sticky top-28">
                   <div className="mb-6 flex items-center justify-between">
@@ -358,21 +389,16 @@ export default function TradesPage() {
                   </div>
 
                   <div className="space-y-5">
-                    {/* Option Type Dropdown */}
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Option Type</label>
                       <div className="relative">
                         <select
                           value={selOptionType}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setSelOptionType(val);
-                            setSelAssetId(ASSETS_BY_TYPE[val]?.[0] || '');
-                          }}
+                          onChange={(e) => setSelOptionType(e.target.value)}
                           className="w-full h-12 bg-muted/30 border border-border rounded-xl px-4 font-semibold text-sm appearance-none outline-none focus:ring-2 focus:ring-primary/20"
                         >
-                          <option value="">Select a value</option>
-                          {OPTION_TYPES.map(type => (
+                          <option value="">Select Option Type</option>
+                          {availableOptionTypes.map(type => (
                             <option key={type} value={type}>{type}</option>
                           ))}
                         </select>
@@ -380,7 +406,6 @@ export default function TradesPage() {
                       </div>
                     </div>
 
-                    {/* Asset Type Dropdown */}
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Asset Type</label>
                       <div className="relative">
@@ -389,8 +414,8 @@ export default function TradesPage() {
                           onChange={(e) => setSelAssetId(e.target.value)}
                           className="w-full h-12 bg-muted/30 border border-border rounded-xl px-4 font-semibold text-sm appearance-none outline-none focus:ring-2 focus:ring-primary/20"
                         >
-                          <option value="">Select a value</option>
-                          {ASSETS_BY_TYPE[selOptionType]?.map(asset => (
+                          <option value="">Select Asset</option>
+                          {(availableAssetsByType[selOptionType] || []).map(asset => (
                             <option key={asset} value={asset}>{asset}</option>
                           ))}
                         </select>
@@ -398,8 +423,6 @@ export default function TradesPage() {
                       </div>
                     </div>
 
-
-                    {/* Platform Time & Fixed Time */}
                     <div className="flex items-center justify-between px-1">
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] font-bold text-muted-foreground uppercase">Fixed Time</span>
@@ -419,7 +442,6 @@ export default function TradesPage() {
                       </button>
                     </div>
 
-                    {/* Amount */}
                     <div className="space-y-1.5">
                       <div className="flex justify-between px-1">
                         <label className="text-[10px] font-bold text-muted-foreground uppercase">Amount</label>
@@ -437,7 +459,6 @@ export default function TradesPage() {
                       </div>
                     </div>
 
-                    {/* Expiration Time Dropdown */}
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Expiration Time</label>
                       <div className="relative">
@@ -446,17 +467,16 @@ export default function TradesPage() {
                           onChange={(e) => setSelDuration(e.target.value)}
                           className="w-full h-12 bg-muted/30 border border-border rounded-xl px-4 font-semibold text-sm appearance-none outline-none focus:ring-2 focus:ring-primary/20"
                         >
-                          <option value="">Select a value</option>
-                          {DURATIONS.map(d => (
-                            <option key={d.value} value={d.value}>{d.label}</option>
-                          ))}
+                          <option value="">Select Duration</option>
+                          {availableDurations.map(d => {
+                            const meta = DURATIONS.find(dm => dm.value === d);
+                            return <option key={d} value={d}>{meta?.label || d}</option>;
+                          })}
                         </select>
                         <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                       </div>
                     </div>
- admissions
 
-                    {/* Profit Display */}
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-1 px-1">
                         <TrendingUp className="h-3 w-3 text-success" />
@@ -472,7 +492,6 @@ export default function TradesPage() {
                       </div>
                     </div>
 
-                    {/* Call / Put Buttons */}
                     <div className="grid grid-cols-2 gap-3 pt-2">
                       <button
                         onClick={() => handleTrade('call')}
@@ -525,7 +544,6 @@ export default function TradesPage() {
                   </div>
                 </div>
 
-                {/* My active positions - mini list */}
                 {myTrades && myTrades.filter((s: any) => s.status === 'active').length > 0 && (
                   <div className="bg-card border border-border rounded-3xl p-6">
                     <h4 className="text-sm font-bold mb-4 flex items-center justify-between">
@@ -566,7 +584,6 @@ export default function TradesPage() {
               className="space-y-8"
             >
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Active Trades */}
                 <div>
                   <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
                     <Activity className="h-6 w-6 text-primary" /> Active Trades
@@ -581,7 +598,7 @@ export default function TradesPage() {
                       <div key={tradeEntry.id} className="bg-card border border-border p-6 rounded-4xl flex items-center justify-between shadow-sm">
                         <div className="flex items-center gap-4">
                           <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                            <b className="text-primary">{tradeEntry.managed_trades?.asset_symbol.slice(0, 1)}</b>
+                            <b className="text-primary">{tradeEntry.managed_trades?.asset_symbol?.slice(0, 1)}</b>
                           </div>
                           <div>
                             <p className="font-bold uppercase">{tradeEntry.managed_trades?.asset_symbol} ({tradeEntry.direction})</p>
@@ -601,7 +618,6 @@ export default function TradesPage() {
                   </div>
                 </div>
 
-                {/* Trade History */}
                 <div>
                   <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
                     <History className="h-6 w-6 text-muted-foreground" /> Trade History

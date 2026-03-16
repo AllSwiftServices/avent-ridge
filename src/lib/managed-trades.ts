@@ -69,8 +69,7 @@ export async function processTradePayout(tradeId: string) {
           type: "managed_trade_payout",
           symbol: trade.asset_symbol,
           price: tradePosition.entry_price || trade.entry_price || 0,
-          status: "completed",
-          description: `Payout from ${trade.asset_symbol} managed trade (+${trade.profit_percent}% profit)`
+          status: "completed"
         });
 
         if (txError) {
@@ -96,8 +95,7 @@ export async function processTradePayout(tradeId: string) {
           type: "managed_trade_loss",
           symbol: trade.asset_symbol,
           price: tradePosition.entry_price || trade.entry_price || 0,
-          status: "completed",
-          description: `Managed trade on ${trade.asset_symbol} ended in loss`
+          status: "completed"
         });
 
         if (txError) {

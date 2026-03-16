@@ -114,8 +114,7 @@ export async function POST(
       type: "managed_trade_entry",
       symbol: trade.asset_symbol,
       price: currentPrice || 0,
-      status: "completed",
-      description: `Trade in ${trade.asset_symbol} managed trade`
+      status: "completed"
     });
 
     if (txLogErr) {

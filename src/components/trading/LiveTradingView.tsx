@@ -658,13 +658,13 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
               className="px-3 space-y-3 max-w-lg mx-auto"
             >
               {/* Active positions */}
-              {myTrades?.filter((t: any) => t.status === 'active')?.length > 0 && (
+              {(myTrades ?? []).filter((t: any) => t.status === 'active').length > 0 && (
                 <div className="rounded-3xl bg-card border border-border p-5">
                   <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
                     <Activity className="h-4 w-4 text-primary" /> Active Trades
                   </h3>
                   <div className="space-y-2">
-                    {myTrades.filter((t: any) => t.status === 'active').map((t: any) => (
+                    {(myTrades ?? []).filter((t: any) => t.status === 'active').map((t: any) => (
                       <div key={t.id} className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/50">
                         <div>
                           <p className="text-xs font-bold">{t.managed_trades?.asset_symbol} – {t.direction}</p>

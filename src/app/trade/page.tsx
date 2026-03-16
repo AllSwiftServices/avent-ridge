@@ -24,7 +24,7 @@ export default function TradePage() {
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
             >
-              <Bot className="h-4 w-4" /> AI Trading
+              <Bot className="h-4 w-4" /> Live Trading
             </button>
             <button
               onClick={() => setActiveView('live')}
@@ -35,7 +35,7 @@ export default function TradePage() {
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
             >
-              <Zap className="h-4 w-4" /> Live Trading
+              <Zap className="h-4 w-4" /> Broker Trading
             </button>
           </div>
         </div>

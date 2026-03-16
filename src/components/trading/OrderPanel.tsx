@@ -366,7 +366,7 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 0 }: a
                   <div className="h-5 w-5 border-2 border-white/30 border-t-white animate-spin rounded-full" />
                 ) : (
                   <>
-                    <span className="text-lg">⬆</span> Call
+                     Call
                   </>
                 )}
               </button>
@@ -379,7 +379,7 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 0 }: a
                   <div className="h-5 w-5 border-2 border-white/30 border-t-white animate-spin rounded-full" />
                 ) : (
                   <>
-                    <span className="text-lg">⬇</span> Put
+                     Put
                   </>
                 )}
               </button>

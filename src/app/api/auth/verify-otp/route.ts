@@ -56,7 +56,6 @@ export async function POST(request: NextRequest) {
     // Profile management
     if (type === "signup") {
       console.log(`[AUTH] Creating new user for signup: ${normalizedEmail}`);
-      // Create new user in Supabase Auth
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: normalizedEmail,
         email_confirm: true,
@@ -80,60 +79,80 @@ export async function POST(request: NextRequest) {
 
         if (profileError) {
           console.error(`[AUTH] Error creating profile for ${authData.user.id}:`, profileError);
-        } else {
-          console.log(`[AUTH] Profile created successfully for ${authData.user.id}`);
         }
 
-        // Send welcome email
         await sendWelcomeEmail(normalizedEmail, name || "there");
       }
     } else {
       console.log(`[AUTH] Login successful for: ${normalizedEmail}`);
-      // Update email_verified status if not already
       await supabaseAdmin
         .from("users")
         .update({ email_verified: true })
         .eq("email", normalizedEmail);
     }
 
-    // Set session cookies via createClient() so Next.js SSR cookies() integration propagates them
-    if (password) {
-      try {
-        // createClient() at the top level of the route handler so its cookie writes land in the response
-        const supabase = await createClient();
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: normalizedEmail,
-          password: password,
-        });
+    // ───────────────────────────────────────────────────────────────────────
+    // Set session cookies WITHOUT needing the user's password.
+    // Strategy: generate a Supabase magic-link token via admin API, exchange
+    // it for a real session, then store the session via the SSR client so the
+    // Next.js cookies() store gets the auth cookies written to the response.
+    // ───────────────────────────────────────────────────────────────────────
+    try {
+      // 1. Generate a one-time magic link token for this email
+      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+        type: "magiclink",
+        email: normalizedEmail,
+      });
 
-        if (signInError) {
-          console.error(`[AUTH] Error setting session for ${normalizedEmail}:`, signInError);
-          // Session couldn't be set but OTP was valid — return success anyway
-          // The user will need to be prompted to re-try or we rely on the token approach
-        } else {
-          console.log(`[AUTH] Session cookies set for ${normalizedEmail}`);
-          // Return the access token so the client can store it as a fallback
-          return NextResponse.json({
-            success: true,
-            message: "Verification successful",
-            session: {
-              access_token: signInData.session?.access_token,
-              refresh_token: signInData.session?.refresh_token,
-              expires_at: signInData.session?.expires_at,
-            },
-          });
-        }
-      } catch (err) {
-        console.error(`[AUTH] Unexpected error during server-side sign-in:`, err);
+      if (linkError || !linkData?.properties?.hashed_token) {
+        throw new Error(linkError?.message || "Failed to generate auth token");
       }
-    } else {
-      console.warn(`[AUTH] No password provided for ${normalizedEmail} — cannot set session cookies.`);
-    }
 
-    return NextResponse.json({
-      success: true,
-      message: "Verification successful",
-    });
+      const hashedToken = linkData.properties.hashed_token;
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+      // 2. Exchange the magic-link token for a real Supabase session
+      const verifyRes = await fetch(`${supabaseUrl}/auth/v1/verify`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": supabaseAnonKey,
+        },
+        body: JSON.stringify({ type: "magiclink", token: hashedToken }),
+      });
+
+      if (!verifyRes.ok) {
+        const errBody = await verifyRes.text();
+        throw new Error(`Token exchange failed: ${errBody}`);
+      }
+
+      const sessionData = await verifyRes.json();
+      const { access_token, refresh_token } = sessionData;
+
+      if (!access_token || !refresh_token) {
+        throw new Error("Token exchange returned no session");
+      }
+
+      // 3. Store the session via the SSR client so cookies are written to the response
+      const supabase = await createClient();
+      const { error: setSessionError } = await supabase.auth.setSession({
+        access_token,
+        refresh_token,
+      });
+
+      if (setSessionError) {
+        throw new Error(setSessionError.message);
+      }
+
+      console.log(`[AUTH] Session cookies set for ${normalizedEmail} via magic-link exchange`);
+      return NextResponse.json({ success: true, message: "Verification successful" });
+    } catch (sessionErr: any) {
+      console.error(`[AUTH] Session setup error for ${normalizedEmail}:`, sessionErr);
+      // OTP was valid — don't fail the whole request, just warn
+      // The client retry loop will still try to confirm the session
+      return NextResponse.json({ success: true, message: "Verification successful" });
+    }
   } catch (error: any) {
     console.error("Verify OTP error:", error);
     return NextResponse.json(

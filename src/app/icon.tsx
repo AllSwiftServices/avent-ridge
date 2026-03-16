@@ -29,9 +29,9 @@ export default function Icon() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'hsl(45, 100%, 51%)', // Premium Gold
-            borderRadius: '25%', // Rounded square (10px on 40px = 25%)
-            boxShadow: '0 10px 15px -3px rgba(250, 204, 21, 0.2)', // primary/20 shadow approx
+            backgroundColor: 'hsl(47, 100%, 50%)', // Vibrant Yellow
+            borderRadius: '25%', 
+            boxShadow: '0 10px 15px -3px rgba(234, 179, 8, 0.3)', // primary/20 shadow approx
           }}
         >
           <svg

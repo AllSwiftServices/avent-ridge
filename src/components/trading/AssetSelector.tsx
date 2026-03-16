@@ -54,8 +54,8 @@ export default function AssetSelector({
         )}
       >
         <div className={cn(
-          'w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-[10px] sm:text-xs font-bold text-white',
-          selected?.type === 'crypto' ? 'bg-linear-to-br from-orange-400 to-amber-500' : 'bg-linear-to-br from-blue-500 to-indigo-600'
+          'w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-[10px] sm:text-xs font-bold text-black',
+          selected?.type === 'crypto' ? 'bg-linear-to-br from-orange-400 to-amber-500' : 'bg-linear-to-br from-yellow-400 to-amber-600'
         )}>
           {selected?.symbol?.slice(0, 2)}
         </div>
@@ -107,8 +107,8 @@ export default function AssetSelector({
                         )}
                       >
                         <div className={cn(
-                          'w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white',
-                          type === 'crypto' ? 'bg-linear-to-br from-orange-400 to-amber-500' : 'bg-linear-to-br from-blue-500 to-indigo-600'
+                          'w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-black',
+                          type === 'crypto' ? 'bg-linear-to-br from-orange-400 to-amber-500' : 'bg-linear-to-br from-yellow-400 to-amber-600'
                         )}>
                           {asset.symbol.slice(0, 2)}
                         </div>

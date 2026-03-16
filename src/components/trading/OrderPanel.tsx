@@ -216,7 +216,7 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 0 }: a
         <div className="flex items-center gap-2">
           <span>Fixed Time</span>
           <div className="w-8 h-4 rounded-full relative bg-primary/20">
-            <div className="w-3 h-3 rounded-full absolute top-0.5 right-0.5 bg-primary" />
+            <div className="w-3 h-3 rounded-full absolute top-0.5 right-0.5 bg-primary shadow-[0_0_8px_rgba(234,179,8,0.5)]" />
           </div>
         </div>
       </div>
@@ -300,7 +300,7 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 0 }: a
               onClick={() => setDuration(d.value)}
               className={cn(
                 "py-2 rounded-xl text-xs font-semibold transition-all",
-                duration === d.value ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'bg-muted text-muted-foreground hover:text-foreground'
+                duration === d.value ? 'bg-linear-to-br from-primary to-amber-500 text-black shadow-lg shadow-primary/20' : 'bg-muted text-muted-foreground hover:text-foreground'
               )}
             >
               {d.label}
@@ -334,7 +334,7 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 0 }: a
                   initial={{ width: "100%" }}
                   animate={{ width: "0%" }}
                   transition={{ duration: timeLeft, ease: "linear" }}
-                  className="h-full bg-primary"
+                  className="h-full bg-linear-to-r from-primary to-amber-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]"
                 />
               </div>
               <div className="flex items-center gap-2 text-xs font-bold text-primary animate-bounce relative z-10">
@@ -348,8 +348,8 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 0 }: a
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }}
               className="flex flex-col items-center justify-center py-4 gap-2"
             >
-              <div className={cn("w-12 h-12 rounded-full flex items-center justify-center", lastSide === 'call' ? "bg-primary" : "bg-destructive")}>
-                <CheckCircle className="h-6 w-6 text-primary-foreground" />
+              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-linear-to-br from-primary to-amber-500 shadow-lg shadow-primary/30">
+                <CheckCircle className="h-6 w-6 text-black" />
               </div>
               <p className="font-bold text-sm text-foreground">
                 {lastSide === 'call' ? 'Call' : 'Put'} order placed!
@@ -360,7 +360,7 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 0 }: a
               <button
                 disabled={isLoading}
                 onClick={() => handleOrder('call')}
-                className="py-4 rounded-2xl font-bold text-primary-foreground text-base flex items-center justify-center gap-2 transition-transform active:scale-95 bg-primary shadow-lg shadow-primary/20 disabled:opacity-50"
+                className="py-4 rounded-2xl font-bold text-black text-base flex items-center justify-center gap-2 transition-transform active:scale-95 bg-linear-to-r from-primary to-amber-500 shadow-lg shadow-primary/20 disabled:opacity-50"
               >
                 {isLoading && lastSide === 'call' ? (
                   <div className="h-5 w-5 border-2 border-white/30 border-t-white animate-spin rounded-full" />

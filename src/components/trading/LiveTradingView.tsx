@@ -359,8 +359,8 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
       <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border px-4 lg:px-8 py-4">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-              <Zap className="h-6 w-6 text-primary-foreground" />
+            <div className="h-10 w-10 rounded-xl bg-linear-to-br from-primary to-amber-500 flex items-center justify-center shadow-lg shadow-primary/20">
+              <Zap className="h-6 w-6 text-black" />
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight">Live Trading</h1>

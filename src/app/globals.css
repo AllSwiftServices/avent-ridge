@@ -9,13 +9,13 @@
     --card-foreground: 240 25% 15%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 25% 15%;
-    --primary: 45 100% 51%; /* Premium Gold */
+    --primary: 47 100% 50%; /* Vibrant Yellow */
     --primary-foreground: 0 0% 0%;
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
     --muted: 240 4.8% 95.9%;
     --muted-foreground: 240 3.8% 46.1%;
-    --accent: 45 100% 51%;
+    --accent: 47 100% 50%;
     --accent-foreground: 0 0% 0%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
@@ -34,13 +34,13 @@
     --card-foreground: 0 0% 100%;
     --popover: 240 5% 8%;
     --popover-foreground: 0 0% 100%;
-    --primary: 45 100% 51%;
+    --primary: 47 100% 50%;
     --primary-foreground: 0 0% 0%;
     --secondary: 240 5% 12%;
     --secondary-foreground: 0 0% 100%;
     --muted: 240 5% 12%;
     --muted-foreground: 220 9% 70%;
-    --accent: 45 100% 51%;
+    --accent: 47 100% 50%;
     --accent-foreground: 0 0% 0%;
     --destructive: 1 77% 55%;
     --destructive-foreground: 0 0% 100%;
@@ -114,6 +114,10 @@
 
   .glow-blue {
     box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+
+  .glow-yellow {
+    box-shadow: 0 0 20px rgba(234, 179, 8, 0.3);
   }
 
   @keyframes countUp {

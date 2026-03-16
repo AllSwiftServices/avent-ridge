@@ -11,7 +11,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { useEffect } from 'react';
 
 const authPages = ['/'];
-const noNavPages = ['/verify-identity', '/admin-kyc'];
+const noNavPages = ['/verify-identity', '/admin-kyc', '/profile/chat'];
 
 export default function AppContent({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();

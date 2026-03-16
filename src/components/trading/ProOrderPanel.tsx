@@ -97,7 +97,7 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 0, 
             className={cn(
               "py-2.5 text-sm font-bold capitalize transition-all",
               tab === t
-                ? (t === 'buy' ? 'bg-primary text-primary-foreground rounded-2xl shadow-lg shadow-primary/20' : 'bg-destructive text-destructive-foreground rounded-2xl shadow-lg shadow-destructive/20')
+                ? (t === 'buy' ? 'bg-linear-to-br from-primary to-amber-500 text-black rounded-2xl shadow-lg shadow-primary/20' : 'bg-destructive text-destructive-foreground rounded-2xl shadow-lg shadow-destructive/20')
                 : "text-muted-foreground"
             )}
           >
@@ -115,7 +115,7 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 0, 
             className={cn(
               "px-3 py-1.5 rounded-xl text-xs font-semibold capitalize transition-all",
               orderType === ot
-                ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                ? 'bg-linear-to-br from-primary to-amber-500 text-black shadow-sm shadow-primary/20'
                 : 'bg-muted text-muted-foreground hover:text-foreground'
             )}
           >
@@ -183,7 +183,7 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 0, 
         <input
           type="range" min={1} max={100} value={leverage}
           onChange={e => setLeverage(Number(e.target.value))}
-          className="w-full accent-primary"
+          className="w-full accent-primary h-1.5 rounded-full appearance-none bg-muted"
         />
         <div className="flex justify-between text-[10px] mt-0.5 text-muted-foreground">
           <span>1x</span><span>25x</span><span>50x</span><span>100x</span>
@@ -206,8 +206,8 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 0, 
             initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }}
             className="flex flex-col items-center py-3 gap-2"
           >
-            <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", isBuy ? "bg-primary" : "bg-destructive")}>
-              <CheckCircle className="h-5 w-5 text-primary-foreground" />
+            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-linear-to-br from-primary to-amber-500 shadow-lg shadow-primary/30">
+              <CheckCircle className="h-5 w-5 text-black" />
             </div>
             <p className="text-sm font-bold text-foreground">Order placed!</p>
           </motion.div>
@@ -218,8 +218,8 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 0, 
             onClick={handleSubmit}
             disabled={isLoading}
             className={cn(
-              "w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed",
-              isBuy ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-destructive text-destructive-foreground shadow-lg shadow-destructive/20"
+              "w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg",
+              isBuy ? "bg-linear-to-r from-primary to-amber-500 text-black shadow-primary/20" : "bg-destructive text-destructive-foreground shadow-destructive/20"
             )}
           >
             {isBuy ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}

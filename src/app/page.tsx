@@ -33,23 +33,43 @@ export default function Home() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      // First step: Send OTP
-      const response = await fetch('/api/auth/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          type: isLogin ? 'login' : 'signup',
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to send verification code');
+      if (isLogin) {
+        // Direct email + password login — no OTP needed
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Invalid email or password');
+        }
+        showToast.success('Welcome back!');
+        // Poll for session and navigate
+        let authed = false;
+        for (let i = 0; i < 8; i++) {
+          await refreshUser();
+          const sessionRes = await fetch('/api/auth/session', { cache: 'no-store' });
+          const sessionData = await sessionRes.json();
+          if (sessionData?.user) { authed = true; break; }
+          await new Promise(r => setTimeout(r, 500));
+        }
+        if (!authed) throw new Error('Session could not be established. Please try again.');
+        window.location.href = '/dashboard';
+      } else {
+        // Signup — send OTP for email verification
+        const response = await fetch('/api/auth/send-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, type: 'signup' }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Failed to send verification code');
+        }
+        showToast.success('Verification code sent to your email!');
+        setStep('otp');
       }
-
-      showToast.success('Verification code sent to your email!');
-      setStep('otp');
     } catch (error: any) {
       showToast.error(error.message || 'An unexpected error occurred.');
     } finally {
@@ -123,9 +143,9 @@ export default function Home() {
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="w-12 h-12 rounded-xl bg-linear-to-br from-primary to-blue-600 flex items-center justify-center"
+          className="w-12 h-12 rounded-xl bg-linear-to-br from-primary to-amber-500 flex items-center justify-center shadow-lg shadow-primary/20"
         >
-          <Zap className="h-6 w-6 text-white animate-pulse" />
+          <Zap className="h-6 w-6 text-black animate-pulse" />
         </motion.div>
       </div>
     );
@@ -150,8 +170,8 @@ export default function Home() {
             className="flex justify-center mb-8"
           >
             <div className="flex items-center gap-3">
-              <div className="w-14 h-14 rounded-2xl bg-linear-to-br from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-primary/30">
-                <Zap className="h-7 w-7 text-white" />
+              <div className="w-14 h-14 rounded-2xl bg-linear-to-br from-primary to-amber-500 flex items-center justify-center shadow-lg shadow-primary/30">
+                <Zap className="h-7 w-7 text-black" />
               </div>
               <span className="text-2xl font-bold">Avent Ridge</span>
             </div>
@@ -263,7 +283,7 @@ export default function Home() {
                     <Button
                       type="submit"
                       disabled={isLoading}
-                      className="w-full h-14 rounded-2xl font-bold text-lg bg-linear-to-r from-primary to-blue-600 hover:opacity-90 shadow-lg shadow-primary/20 transition-all active:scale-[0.98]"
+                      className="w-full h-14 rounded-2xl font-bold text-lg bg-linear-to-r from-primary to-amber-500 hover:opacity-90 shadow-lg shadow-primary/20 transition-all active:scale-[0.98] text-black"
                     >
                       {isLoading ? 'Processing...' : isLogin ? 'Sign In' : 'Create Account'}
                       {!isLoading && <ArrowRight className="ml-2 h-5 w-5" />}
@@ -324,7 +344,7 @@ export default function Home() {
                       <Button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full h-14 rounded-2xl font-bold text-lg bg-linear-to-r from-primary to-blue-600 shadow-xl shadow-primary/20 active:scale-[0.98]"
+                        className="w-full h-14 rounded-2xl font-bold text-lg bg-linear-to-r from-primary to-amber-500 shadow-xl shadow-primary/20 active:scale-[0.98] text-black"
                       >
                         {isLoading ? 'Verifying...' : 'Verify & Continue'}
                       </Button>

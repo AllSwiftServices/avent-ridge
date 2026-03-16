@@ -1,13 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Wallet, Bitcoin, TrendingUp, Eye, EyeOff, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Wallet, Bitcoin, TrendingUp, Eye, EyeOff, ArrowUpRight, ArrowDownLeft, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AnimatedNumber from '../common/AnimatedNumber';
 import { cn } from '@/lib/utils';
 
 const iconMap = {
   main: Wallet,
-  crypto: Bitcoin,
+  crypto: DollarSign,
   stocks: TrendingUp,
 };
 

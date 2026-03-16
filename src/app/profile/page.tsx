@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   User, Shield, Moon, Sun, ChevronRight, LogOut,
-  CheckCircle, Clock, X, Lock, Bell, HelpCircle, FileText, Mail
+  CheckCircle, Clock, X, Lock, Bell, HelpCircle, FileText, Mail, MessageCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
@@ -72,11 +72,23 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const { isSubscribed, subscribeToPush, unsubscribeFromPush, isSupported } = usePushNotifications();
 
   useEffect(() => {
     setMounted(true);
+    // Fetch unread support message count
+    const fetchUnread = async () => {
+      try {
+        const res = await fetch('/api/support/unread');
+        const json = await res.json();
+        setUnreadCount(json.count || 0);
+      } catch { /* ignore */ }
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -210,7 +222,11 @@ export default function ProfilePage() {
     {
       title: 'Support',
       items: [
-        { icon: HelpCircle, label: 'Help Center', action: comingSoon },
+        { icon: HelpCircle, label: 'Help Center', action: () => navigate('/help-center') },
+        { icon: MessageCircle, label: 'Live Chat',
+          badge: unreadCount > 0 ? `${unreadCount} new` : 'Online',
+          badgeColor: unreadCount > 0 ? 'text-black bg-primary' : 'text-success bg-success/10',
+          action: () => navigate('/profile/chat') },
         { icon: FileText, label: 'Terms & Privacy', action: comingSoon },
       ]
     }
@@ -282,7 +298,6 @@ export default function ProfilePage() {
                   {kycRecord?.status === 'approved' && <div className="flex items-center gap-1"><CheckCircle className="h-4 w-4 text-primary" /><span className="text-[10px] font-bold text-primary uppercase tracking-wider">Verified</span></div>}
                   {kycRecord?.status === 'pending' && <div className="flex items-center gap-1"><Clock className="h-4 w-4 text-amber-500" /><span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">Pending</span></div>}
                   {kycRecord?.status === 'rejected' && <div className="flex items-center gap-1"><X className="h-4 w-4 text-destructive" /><span className="text-[10px] font-bold text-destructive uppercase tracking-wider">Failed</span></div>}
-                  {(user as any)?.email_verified && <div className="flex items-center gap-1 text-primary"><Mail className="h-4 w-4" /><span className="text-[10px] font-bold uppercase tracking-wider">Email Locked</span></div>}
                 </div>
               </div>
             </div>

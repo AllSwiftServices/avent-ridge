@@ -9,7 +9,7 @@ import {
   TrendingUp, Settings, ChevronRight, Save,
   RefreshCcw, Filter, ArrowUpRight, ArrowDownRight,
   UserPlus, Mail, Phone, Calendar, MapPin,
-  Zap, Bot, TrendingDown, BarChart3
+  Zap, Bot, TrendingDown, BarChart3, MessageCircle, Send, X
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
@@ -18,8 +18,9 @@ import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
 
-type AdminTab = 'overview' | 'users' | 'deposits' | 'withdrawals' | 'kyc' | 'assets' | 'trades';
+type AdminTab = 'overview' | 'users' | 'deposits' | 'withdrawals' | 'kyc' | 'assets' | 'trades' | 'support';
 
 interface UserData {
   id: string;
@@ -112,6 +113,207 @@ interface Withdrawal {
     email: string;
     name: string;
   };
+}
+
+function SupportAdminPanel() {
+  const [selectedConv, setSelectedConv] = React.useState<any>(null);
+  const [replyText, setReplyText] = React.useState('');
+  const [sending, setSending] = React.useState(false);
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+
+  const { data: conversations = [], refetch: refetchConvs, isLoading } = useQuery({
+    queryKey: ['admin-support-conversations'],
+    queryFn: async () => {
+      const { data } = await api.get<any>('/admin/support');
+      return data?.data || [];
+    },
+    refetchInterval: 8000,
+  });
+
+  const { data: messages = [], refetch: refetchMsgs } = useQuery({
+    queryKey: ['admin-support-messages', selectedConv?.id],
+    queryFn: async () => {
+      if (!selectedConv?.id) return [];
+      const { data } = await api.get<any>(`/support/conversations/${selectedConv.id}/messages`);
+      return data?.data || [];
+    },
+    enabled: !!selectedConv?.id,
+    refetchInterval: 5000,
+  });
+
+  React.useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleReply = async () => {
+    if (!replyText.trim() || !selectedConv?.id) return;
+    setSending(true);
+    try {
+      await api.post(`/support/conversations/${selectedConv.id}/messages`, { body: replyText.trim() });
+      setReplyText('');
+      refetchMsgs();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send reply');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleClose = async (convId: string) => {
+    try {
+      await api.post(`/support/conversations/${convId}/close`, {});
+      toast.success('Conversation closed');
+      refetchConvs();
+      if (selectedConv?.id === convId) setSelectedConv((prev: any) => ({ ...prev, status: 'closed' }));
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to close');
+    }
+  };
+
+  const openCount = (conversations as any[]).filter((c: any) => c.status === 'open').length;
+
+  return (
+    <motion.div
+      key="support"
+      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+      className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 h-[calc(100vh-220px)] min-h-[500px]"
+    >
+      {/* Left: conversation list */}
+      <div className="bg-card border border-border rounded-3xl overflow-hidden flex flex-col">
+        <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+          <div>
+            <h3 className="font-bold">Support Conversations</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">{openCount} open</p>
+          </div>
+          <button onClick={() => refetchConvs()} className="p-2 rounded-xl hover:bg-muted transition-colors">
+            <RefreshCcw className={cn('h-4 w-4 text-muted-foreground', isLoading && 'animate-spin')} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          {(conversations as any[]).length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-12">
+              <MessageCircle className="h-10 w-10 mb-2 opacity-20" />
+              <p className="text-sm font-bold">No conversations yet</p>
+            </div>
+          ) : (
+            (conversations as any[]).map((conv: any) => {
+              const lastMsg = conv.support_messages?.slice(-1)[0];
+              const isSelected = selectedConv?.id === conv.id;
+              return (
+                <div
+                  key={conv.id}
+                  onClick={() => setSelectedConv(conv)}
+                  className={cn(
+                    'px-5 py-4 border-b border-border/50 cursor-pointer transition-colors',
+                    isSelected ? 'bg-primary/5' : 'hover:bg-muted/30'
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-sm truncate">{conv.users?.name || conv.users?.email || 'User'}</p>
+                      <p className="text-xs text-muted-foreground truncate">{conv.users?.email}</p>
+                      {lastMsg && (
+                        <p className="text-xs text-muted-foreground mt-1 truncate">{lastMsg.body}</p>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span className={cn(
+                        'text-[9px] font-black uppercase px-2 py-0.5 rounded-full',
+                        conv.status === 'open' ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'
+                      )}>
+                        {conv.status}
+                      </span>
+                      {lastMsg && (
+                        <span className="text-[9px] text-muted-foreground">
+                          {format(new Date(lastMsg.created_at), 'HH:mm')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* Right: message thread */}
+      <div className="bg-card border border-border rounded-3xl overflow-hidden flex flex-col">
+        {!selectedConv ? (
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+            <MessageCircle className="h-12 w-12 mb-3 opacity-20" />
+            <p className="font-bold">Select a conversation</p>
+            <p className="text-xs mt-1">Click a conversation on the left to view messages</p>
+          </div>
+        ) : (
+          <>
+            {/* Thread header */}
+            <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+              <div>
+                <p className="font-bold text-sm">{selectedConv.users?.name || 'User'}</p>
+                <p className="text-xs text-muted-foreground">{selectedConv.users?.email}</p>
+              </div>
+              {selectedConv.status === 'open' && (
+                <button
+                  onClick={() => handleClose(selectedConv.id)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-xs font-bold hover:bg-muted transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" /> Close
+                </button>
+              )}
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+              {(messages as any[]).map((msg: any) => {
+                const isAdmin = msg.sender_role === 'admin';
+                return (
+                  <div key={msg.id} className={cn('flex', isAdmin ? 'justify-end' : 'justify-start')}>
+                    <div className={cn(
+                      'max-w-[70%] px-4 py-2.5 rounded-2xl text-sm',
+                      isAdmin ? 'bg-primary/15 text-foreground rounded-tr-sm' : 'bg-muted text-foreground rounded-tl-sm'
+                    )}>
+                      {!isAdmin && <p className="text-[9px] font-black text-primary uppercase tracking-wider mb-1">User</p>}
+                      {isAdmin && <p className="text-[9px] font-black text-primary uppercase tracking-wider mb-1">You (Admin)</p>}
+                      <p className="whitespace-pre-wrap">{msg.body}</p>
+                      <p className="text-[9px] text-muted-foreground text-right mt-1">
+                        {format(new Date(msg.created_at), 'HH:mm')}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Reply form */}
+            {selectedConv.status === 'open' ? (
+              <div className="px-4 py-3 border-t border-border flex gap-2">
+                <input
+                  value={replyText}
+                  onChange={e => setReplyText(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReply(); }}}
+                  placeholder="Type a reply..."
+                  className="flex-1 h-10 px-4 rounded-xl bg-muted/50 border border-border text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                />
+                <button
+                  onClick={handleReply}
+                  disabled={!replyText.trim() || sending}
+                  className="h-10 w-10 rounded-xl bg-linear-to-br from-primary to-amber-500 text-black flex items-center justify-center disabled:opacity-50 hover:opacity-90 transition-all"
+                >
+                  {sending ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </button>
+              </div>
+            ) : (
+              <div className="px-4 py-3 border-t border-border text-center">
+                <span className="text-xs font-bold text-muted-foreground bg-muted px-3 py-1 rounded-full">Conversation closed</span>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </motion.div>
+  );
 }
 
 export default function AdminDashboard() {
@@ -490,7 +692,7 @@ export default function AdminDashboard() {
       {/* ── NAVIGATION TABS ── */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-6">
         <div className="flex items-center gap-1 p-1 bg-muted rounded-2xl w-full md:w-fit overflow-x-auto scrollbar-hide">
-          {(['overview', 'users', 'deposits', 'withdrawals', 'kyc', 'assets', 'trades'] as const).map((tab) => (
+          {(['overview', 'users', 'deposits', 'withdrawals', 'kyc', 'assets', 'trades', 'support'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -1251,6 +1453,9 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 </motion.div>
+              )}
+              {activeTab === 'support' && (
+                <SupportAdminPanel />
               )}
           </AnimatePresence>
       </main>

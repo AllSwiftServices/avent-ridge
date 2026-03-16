@@ -18,6 +18,75 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 import AssetSelector from '@/components/trading/AssetSelector';
 import CandlestickChart from '@/components/trading/CandlestickChart';
+import { ChevronDown } from 'lucide-react';
+
+const OPTION_TYPES = ['Commodities', 'Crypto', 'Forex', 'Indices', 'Stocks'];
+const ASSETS_BY_TYPE: Record<string, string[]> = {
+  'Commodities': ['Gold', 'Silver', 'Crude Oil Brent', 'Crude Oil WTI', 'Natural Gas', 'Corn', 'Wheat', 'Copper'],
+  'Crypto': ['Bitcoin', 'Ethereum', 'Solana', 'XRP', 'Cardano', 'Dogecoin', 'Polkadot'],
+  'Forex': ['EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'USD/CAD', 'EUR/GBP'],
+  'Indices': ['S&P 500', 'Nasdaq 100', 'Dow Jones', 'FTSE 100', 'DAX 40'],
+  'Stocks': ['Apple', 'Microsoft', 'Tesla', 'Amazon', 'Google', 'Meta'],
+};
+const DURATIONS = [
+  { label: '30 Seconds', value: '30s' },
+  { label: '1 Minute', value: '1m' },
+  { label: '5 Minutes', value: '5m' },
+  { label: '15 Minutes', value: '15m' },
+  { label: '30 Minutes', value: '30m' },
+  { label: '1 Hour', value: '1h' },
+];
+
+const CountdownTimer = ({ endsAt, onExpire, tradeId }: { endsAt: string, onExpire?: () => void, tradeId?: string }) => {
+  const [timeLeft, setTimeLeft] = useState<string>('');
+  const [isExpired, setIsExpired] = useState(false);
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = new Date().getTime();
+      const end = new Date(endsAt).getTime();
+      const difference = end - now;
+
+      if (difference <= 0) {
+        setTimeLeft('Finalizing...');
+        if (!isExpired) {
+          setIsExpired(true);
+          onExpire?.();
+          
+          // Trigger instant payout if tradeId is provided
+          if (tradeId) {
+            api.post('/managed-trades/process-expired', { tradeId }).then(() => {
+              queryClient.invalidateQueries({ queryKey: ['managed-trades'] });
+              queryClient.invalidateQueries({ queryKey: ['trading-wallet'] });
+              queryClient.invalidateQueries({ queryKey: ['my-managed-trades'] });
+            }).catch(err => console.error("Auto-payout trigger failed:", err));
+          }
+        }
+        return;
+      }
+
+      setIsExpired(false);
+      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((difference / 1000 / 60) % 60);
+      const seconds = Math.floor((difference / 1000) % 60);
+
+      const parts = [];
+      if (hours > 0) parts.push(hours.toString().padStart(2, '0'));
+      parts.push(minutes.toString().padStart(2, '0'));
+      parts.push(seconds.toString().padStart(2, '0'));
+      
+      setTimeLeft(parts.join(':'));
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+    return () => clearInterval(timer);
+  }, [endsAt, onExpire, isExpired, tradeId, queryClient]);
+
+  return <span className={cn(isExpired ? "text-muted-foreground animate-pulse" : "font-mono font-bold")}>{timeLeft}</span>;
+};
+
 
 const DigitalClock = () => {
   const [time, setTime] = useState(new Date());
@@ -44,6 +113,13 @@ export default function TradesPage() {
   const [isTrading, setIsTrading] = useState(false);
   const [viewMode, setViewMode] = useState<'dashboard' | 'history'>('dashboard');
   const [isFixedTime, setIsFixedTime] = useState(true);
+  const [selectedExpired, setSelectedExpired] = useState(false);
+
+  // Filter state for selection
+  const [selOptionType, setSelOptionType] = useState<string>('Crypto');
+  const [selAssetId, setSelAssetId] = useState<string>('Bitcoin');
+  const [selDuration, setSelDuration] = useState<string>('5m');
+
 
   useEffect(() => {
     if (!isLoadingAuth && !user) navigate(createPageUrl('Home'));
@@ -61,10 +137,33 @@ export default function TradesPage() {
 
   const activeTrades = useMemo(() => trades?.filter(t => t.status === 'active') || [], [trades]);
 
-  // Set default selected trade if none selected
+  // Sync selection with active trades
+  useEffect(() => {
+    if (!trades) return;
+    
+    const matchingTrade = trades.find(t => 
+      t.status === 'active' && 
+      t.asset_type?.toLowerCase() === selOptionType?.toLowerCase() &&
+      (t.asset_name?.toLowerCase() === selAssetId?.toLowerCase() || t.asset_symbol?.toLowerCase() === selAssetId?.toLowerCase()) &&
+      t.duration === selDuration
+    );
+
+    if (matchingTrade) {
+      setSelectedTrade(matchingTrade);
+      setSelectedExpired(false);
+    } else {
+      setSelectedTrade(null);
+    }
+  }, [trades, selOptionType, selAssetId, selDuration]);
+
+  // Set initial filters from existing selections if any
   useEffect(() => {
     if (activeTrades.length > 0 && !selectedTrade) {
-      setSelectedTrade(activeTrades[0]);
+      const first = activeTrades[0];
+      setSelOptionType(first.asset_type.charAt(0).toUpperCase() + first.asset_type.slice(1));
+      setSelAssetId(first.asset_name);
+      setSelDuration(first.duration);
+      setSelectedTrade(first);
     }
   }, [activeTrades, selectedTrade]);
 
@@ -136,8 +235,9 @@ export default function TradesPage() {
   }));
 
   const handleAssetChange = (asset: any) => {
-    const trade = activeTrades.find(t => t.id === asset.tradeId);
-    if (trade) setSelectedTrade(trade);
+    setSelOptionType(asset.asset_type.charAt(0).toUpperCase() + asset.asset_type.slice(1));
+    setSelAssetId(asset.asset_name);
+    setSelDuration(asset.duration);
   };
 
   const walletBalance = Number(wallet?.main_balance || 0);
@@ -223,8 +323,14 @@ export default function TradesPage() {
                           <div className="h-10 w-px bg-border hidden md:block" />
                           <div className="text-right">
                             <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Ends In</p>
-                            <span className="text-lg font-bold">
-                              {selectedTrade?.ends_at ? formatDistanceToNow(new Date(selectedTrade.ends_at)) : 'N/A'}
+                            <span className="text-lg flex items-center justify-end">
+                              {selectedTrade?.ends_at ? (
+                                <CountdownTimer 
+                                  key={selectedTrade.id} 
+                                  endsAt={selectedTrade.ends_at} 
+                                  onExpire={() => setSelectedExpired(true)} 
+                                />
+                              ) : 'N/A'}
                             </span>
                           </div>
                         </div>
@@ -252,23 +358,46 @@ export default function TradesPage() {
                   </div>
 
                   <div className="space-y-5">
-                    {/* Option Type */}
+                    {/* Option Type Dropdown */}
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Option Type</label>
-                      <div className="w-full h-12 bg-muted/30 border border-border rounded-xl flex items-center px-4 font-semibold text-sm capitalize">
-                        {selectedTrade?.asset_type || 'Loading...'}
+                      <div className="relative">
+                        <select
+                          value={selOptionType}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setSelOptionType(val);
+                            setSelAssetId(ASSETS_BY_TYPE[val]?.[0] || '');
+                          }}
+                          className="w-full h-12 bg-muted/30 border border-border rounded-xl px-4 font-semibold text-sm appearance-none outline-none focus:ring-2 focus:ring-primary/20"
+                        >
+                          <option value="">Select a value</option>
+                          {OPTION_TYPES.map(type => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                       </div>
                     </div>
 
-                    {/* Asset Type */}
+                    {/* Asset Type Dropdown */}
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Asset Type</label>
-                      <AssetSelector
-                        selected={selectedTrade ? { symbol: selectedTrade.asset_symbol, type: selectedTrade.asset_type } : null}
-                        assets={tradeAssets}
-                        onChange={handleAssetChange}
-                      />
+                      <div className="relative">
+                        <select
+                          value={selAssetId}
+                          onChange={(e) => setSelAssetId(e.target.value)}
+                          className="w-full h-12 bg-muted/30 border border-border rounded-xl px-4 font-semibold text-sm appearance-none outline-none focus:ring-2 focus:ring-primary/20"
+                        >
+                          <option value="">Select a value</option>
+                          {ASSETS_BY_TYPE[selOptionType]?.map(asset => (
+                            <option key={asset} value={asset}>{asset}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      </div>
                     </div>
+
 
                     {/* Platform Time & Fixed Time */}
                     <div className="flex items-center justify-between px-1">
@@ -308,14 +437,24 @@ export default function TradesPage() {
                       </div>
                     </div>
 
-                    {/* Expiration Time */}
+                    {/* Expiration Time Dropdown */}
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Expiration Time</label>
-                      <div className="w-full h-12 bg-muted/30 border border-border rounded-xl flex items-center justify-between px-4 font-semibold text-sm">
-                        <span>{selectedTrade?.duration || 'N/A'}</span>
-                        <Timer className="h-4 w-4 text-muted-foreground" />
+                      <div className="relative">
+                        <select
+                          value={selDuration}
+                          onChange={(e) => setSelDuration(e.target.value)}
+                          className="w-full h-12 bg-muted/30 border border-border rounded-xl px-4 font-semibold text-sm appearance-none outline-none focus:ring-2 focus:ring-primary/20"
+                        >
+                          <option value="">Select a value</option>
+                          {DURATIONS.map(d => (
+                            <option key={d.value} value={d.value}>{d.label}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                       </div>
                     </div>
+ admissions
 
                     {/* Profit Display */}
                     <div className="space-y-1.5">
@@ -337,7 +476,7 @@ export default function TradesPage() {
                     <div className="grid grid-cols-2 gap-3 pt-2">
                       <button
                         onClick={() => handleTrade('call')}
-                        disabled={isTrading || !tradeAmount || !selectedTrade}
+                        disabled={isTrading || !tradeAmount || !selectedTrade || selectedExpired}
                         className={cn(
                           "h-12 rounded-xl flex items-center justify-center gap-2 font-bold transition-all shadow-lg",
                           "bg-success text-white shadow-success/20 hover:opacity-90 disabled:opacity-50"
@@ -345,6 +484,8 @@ export default function TradesPage() {
                       >
                         {isTrading ? (
                           <RefreshCcw className="h-4 w-4 animate-spin" />
+                        ) : selectedExpired ? (
+                          "Expired"
                         ) : (
                           <>
                             <ArrowUpCircle className="h-5 w-5" /> Call
@@ -353,7 +494,7 @@ export default function TradesPage() {
                       </button>
                       <button
                         onClick={() => handleTrade('put')}
-                        disabled={isTrading || !tradeAmount || !selectedTrade}
+                        disabled={isTrading || !tradeAmount || !selectedTrade || selectedExpired}
                         className={cn(
                           "h-12 rounded-xl flex items-center justify-center gap-2 font-bold transition-all shadow-lg",
                           "bg-destructive text-white shadow-destructive/20 hover:opacity-90 disabled:opacity-50"
@@ -361,6 +502,8 @@ export default function TradesPage() {
                       >
                         {isTrading ? (
                           <RefreshCcw className="h-4 w-4 animate-spin" />
+                        ) : selectedExpired ? (
+                          "Expired"
                         ) : (
                           <>
                             <motion.div animate={{ rotate: 180 }}>

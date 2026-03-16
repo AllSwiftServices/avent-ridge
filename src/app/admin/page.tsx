@@ -336,6 +336,30 @@ export default function AdminDashboard() {
       }
   };
 
+  const calculateEndsAt = (durationStr?: string) => {
+    if (!durationStr) return;
+    const match = durationStr.toLowerCase().match(/^(\d+)(s|m|h|d)$/);
+    if (!match) return;
+    
+    const value = parseInt(match[1]);
+    const unit = match[2];
+    let seconds = 0;
+    switch (unit) {
+      case 's': seconds = value; break;
+      case 'm': seconds = value * 60; break;
+      case 'h': seconds = value * 3600; break;
+      case 'd': seconds = value * 86400; break;
+    }
+    
+    if (seconds > 0) {
+      const date = new Date(Date.now() + (seconds * 1000));
+      // Format as YYYY-MM-DDTHH:mm:ss for datetime-local with seconds
+      const tzOffset = date.getTimezoneOffset() * 60000;
+      const localISOTime = new Date(date.getTime() - tzOffset).toISOString().slice(0, 19);
+      setNewTrade(prev => ({ ...prev, ends_at: localISOTime }));
+    }
+  };
+
   const handleCreateTrade = async () => {
     if (!newTrade.asset_symbol || !newTrade.profit_percent || !newTrade.ends_at) {
       toast.error("Please fill all required fields");
@@ -922,13 +946,16 @@ export default function AdminDashboard() {
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">End Time (UTC)</label>
-                        <input 
-                          type="datetime-local"
-                          value={newTrade.ends_at}
-                          onChange={(e) => setNewTrade({...newTrade, ends_at: e.target.value})}
-                          className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
-                        />
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">End Time (Local)</label>
+                        <div className="flex gap-2">
+                          <input 
+                            type="datetime-local"
+                            step="1"
+                            value={newTrade.ends_at}
+                            onChange={(e) => setNewTrade({...newTrade, ends_at: e.target.value})}
+                            className="flex-1 h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
+                          />
+                        </div>
                       </div>
 
                       <div className="space-y-2">
@@ -983,12 +1010,30 @@ export default function AdminDashboard() {
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Duration</label>
+                        <div className="flex justify-between items-center px-1">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase">Duration</label>
+                          <button 
+                            type="button"
+                            onClick={() => calculateEndsAt(newTrade.duration)}
+                            className="text-[9px] font-bold text-primary uppercase hover:underline"
+                          >
+                            Set End Time
+                          </button>
+                        </div>
                         <input 
                           type="text"
-                          placeholder="e.g. 5m, 1h, 1d"
+                          placeholder="e.g. 30s, 5m, 1h"
                           value={newTrade.duration || ''}
-                          onChange={(e) => setNewTrade({...newTrade, duration: e.target.value})}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setNewTrade({...newTrade, duration: val});
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              calculateEndsAt(newTrade.duration);
+                            }
+                          }}
                           className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
                         />
                       </div>

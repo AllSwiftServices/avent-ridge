@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, BarChart3, RefreshCw } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import AnimatedNumber from '@/components/common/AnimatedNumber';
@@ -68,14 +68,17 @@ export default function PortfolioPage() {
     }
   });
 
-  const { data: portfolio, isLoading } = useQuery({
+  const { data: portfolio, isLoading, refetch: refetchPortfolio } = useQuery({
     queryKey: ['portfolio-items'],
     queryFn: async () => {
       const { data, error } = await api.get<any[]>('/portfolio');
       if (error) throw error;
       return data;
     },
-    enabled: !!user
+    enabled: !!user,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   // Calculate portfolio metrics
@@ -198,7 +201,14 @@ export default function PortfolioPage() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-lg">Holdings</h3>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => refetchPortfolio()}
+                className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                title="Refresh holdings"
+              >
+                <RefreshCw className="h-4 w-4 text-muted-foreground" />
+              </button>
               {tabs.map((tab) => (
                 <button
                   key={tab.id}

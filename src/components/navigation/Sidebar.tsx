@@ -94,15 +94,7 @@ export default function Sidebar() {
         )}
       </nav>
 
-      <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20">
-        <p className="text-sm font-bold mb-1 text-foreground">Pro Trading</p>
-        <p className="text-xs text-muted-foreground mb-3">
-          Unlock advanced features and lower fees
-        </p>
-        <button className="w-full py-2 text-sm font-bold bg-primary text-primary-foreground rounded-xl hover:opacity-90 transition-all shadow-md shadow-primary/10">
-          Upgrade Now
-        </button>
-      </div>
+      
     </aside>
   );
 }

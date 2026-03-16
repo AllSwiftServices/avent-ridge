@@ -41,7 +41,11 @@ const ASSET_DEFAULTS: Record<string, { price: number, type: string }> = {
 
 const DEFAULT_ASSET = { symbol: 'BTC', name: 'Bitcoin', type: 'crypto', pair: 'BTC/USDT' };
 
-export default function AiTradingView() {
+interface AiTradingViewProps {
+  onViewChange?: (view: 'ai' | 'live') => void;
+}
+
+export default function AiTradingView({ onViewChange }: AiTradingViewProps) {
   const searchParams = useSearchParams();
   const initialAssetSymbol = searchParams.get('asset') || 'BTC';
   const [selectedAsset, setSelectedAsset] = useState<any>(
@@ -166,17 +170,18 @@ export default function AiTradingView() {
                   tradeMode === 'binary' ? "bg-primary text-primary-foreground" : "text-muted-foreground"
                 )}
               >
-                <Zap className="h-3 sm:h-3.5 w-3 sm:w-3.5" /> <span className="hidden min-[360px]:inline">Binary</span>
-                <span className="min-[360px]:hidden">Bin</span>
+                <Zap className="h-3 sm:h-3.5 w-3 sm:w-3.5" /> <span className="hidden min-[360px]:inline">Live Trading</span>
+                <span className="min-[360px]:hidden">Live</span>
               </button>
               <button
-                onClick={() => setTradeMode('advanced')}
+                onClick={() => onViewChange?.('live')}
                 className={cn(
                   "flex items-center gap-1 px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-semibold transition-all",
-                  tradeMode === 'advanced' ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                  "text-muted-foreground hover:bg-muted"
                 )}
               >
-                <BarChart2 className="h-3 sm:h-3.5 w-3 sm:w-3.5" /> <span className="hidden min-[360px]:inline">Pro</span>
+                <BarChart2 className="h-3 sm:h-3.5 w-3 sm:w-3.5" /> <span className="hidden min-[360px]:inline">Broker Trading</span>
+                <span className="min-[360px]:hidden">Broker</span>
               </button>
             </div>
             

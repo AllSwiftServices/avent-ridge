@@ -8,7 +8,8 @@ import {
   Shield, ArrowLeft, LayoutDashboard, Wallet, 
   TrendingUp, Settings, ChevronRight, Save,
   RefreshCcw, Filter, ArrowUpRight, ArrowDownRight,
-  UserPlus, Mail, Phone, Calendar, MapPin
+  UserPlus, Mail, Phone, Calendar, MapPin,
+  Zap, Bot, TrendingDown, BarChart3
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
@@ -145,6 +146,9 @@ export default function AdminDashboard() {
   const [userDetail, setUserDetail] = useState<any>(null);
   const [userDetailLoading, setUserDetailLoading] = useState(false);
   const [editForm, setEditForm] = useState<{ name: string; role: string; status: string }>({ name: '', role: '', status: '' });
+  const [holdingAdjust, setHoldingAdjust] = useState<Record<string, { amount: string; loading: boolean }>>({});
+  const [aiTradeSettings, setAiTradeSettings] = useState<{ mode: string; stats: any } | null>(null);
+  const [aiModeLoading, setAiModeLoading] = useState(false);
   const [newTrade, setNewTrade] = useState<Partial<ManagedTrade>>({
     asset_symbol: '',
     profit_percent: 10,
@@ -183,6 +187,10 @@ export default function AdminDashboard() {
       setAssets(aRes.data || []);
       setManagedTrades(tRes.data || []);
       setWithdrawals(wRes.data || []);
+
+      // Fetch AI trade settings
+      const { data: aiData } = await api.get<any>('/admin/ai-trade-settings');
+      if (aiData) setAiTradeSettings(aiData);
     } catch (err: any) {
       toast.error("Failed to load dashboard data");
     } finally {
@@ -196,6 +204,7 @@ export default function AdminDashboard() {
     setEditForm({ name: u.name || '', role: u.role || 'buyer', status: u.status || 'active' });
     setUserDetailLoading(true);
     setUserDetail(null);
+    setHoldingAdjust({});
     try {
       const { data } = await api.get<any>(`/users/${u.id}`);
       setUserDetail(data);
@@ -203,6 +212,32 @@ export default function AdminDashboard() {
       console.error('Failed to load user detail', e);
     } finally {
       setUserDetailLoading(false);
+    }
+  };
+
+  const handleAdjustHolding = async (holdingId: string, action: 'add' | 'reduce') => {
+    const usd_amount = parseFloat(holdingAdjust[holdingId]?.amount || '');
+    if (isNaN(usd_amount) || usd_amount <= 0) {
+      toast.error('Enter a valid USD amount');
+      return;
+    }
+    setHoldingAdjust(prev => ({ ...prev, [holdingId]: { ...prev[holdingId], loading: true } }));
+    try {
+      const { error } = await api.post('/portfolio/admin-adjust-holding', {
+        user_id: selectedUser!.id,
+        holding_id: holdingId,
+        usd_amount,
+        action,
+      });
+      if (error) throw error;
+      toast.success(action === 'add' ? `$${usd_amount} added as profit` : `$${usd_amount} reduced as loss`);
+      // Reload user detail to reflect updated holding
+      const { data } = await api.get<any>(`/users/${selectedUser!.id}`);
+      setUserDetail(data);
+      setHoldingAdjust(prev => ({ ...prev, [holdingId]: { amount: '', loading: false } }));
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to adjust holding');
+      setHoldingAdjust(prev => ({ ...prev, [holdingId]: { ...prev[holdingId], loading: false } }));
     }
   };
 
@@ -509,6 +544,87 @@ export default function AdminDashboard() {
                             ))}
                         </div>
                     </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'overview' && aiTradeSettings && (
+                <motion.div
+                  key="ai-control"
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                  className="mt-6 bg-card border border-border rounded-3xl p-4 md:p-6"
+                >
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Bot className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm">AI Trade Outcome Control</h3>
+                      <p className="text-[10px] text-muted-foreground">Override the outcome for all users' AI (Live Trading) trades</p>
+                    </div>
+                    <button onClick={fetchAllData} className="ml-auto p-2 rounded-xl hover:bg-muted transition-colors">
+                      <RefreshCcw className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3 mb-6">
+                    {[
+                      { mode: 'normal', label: 'Normal', sub: '30% win rate', icon: BarChart3 },
+                      { mode: 'always_win', label: 'Always Win', sub: 'Force all wins', icon: TrendingUp },
+                      { mode: 'always_loss', label: 'Always Loss', sub: 'Force all losses', icon: TrendingDown },
+                    ].map(({ mode, label, sub, icon: Icon }) => {
+                      const isActive = aiTradeSettings.mode === mode;
+                      const activeColor = mode === 'always_win'
+                        ? 'bg-success/10 text-success border border-success/30'
+                        : mode === 'always_loss'
+                          ? 'bg-destructive/10 text-destructive border border-destructive/30'
+                          : 'bg-primary/10 text-primary border border-primary/30';
+                      return (
+                        <button
+                          key={mode}
+                          disabled={aiModeLoading}
+                          onClick={async () => {
+                            setAiModeLoading(true);
+                            try {
+                              const { error } = await api.post('/admin/ai-trade-settings', { mode });
+                              if (error) throw error;
+                              setAiTradeSettings(prev => prev ? { ...prev, mode } : null);
+                              toast.success(`AI trade mode set to "${label}"`);
+                            } catch (err: any) {
+                              toast.error(err.message || 'Failed to update mode');
+                            } finally {
+                              setAiModeLoading(false);
+                            }
+                          }}
+                          className={cn(
+                            'flex flex-col items-center gap-1 p-3 rounded-2xl text-xs font-bold transition-all',
+                            isActive ? activeColor + ' ring-2 ring-primary/20 shadow-md' : 'bg-muted/40 text-muted-foreground hover:bg-muted',
+                            aiModeLoading && 'opacity-50 cursor-not-allowed'
+                          )}
+                        >
+                          <Icon className="h-5 w-5 mb-0.5" />
+                          <span>{label}</span>
+                          <span className="text-[9px] font-normal opacity-70">{sub}</span>
+                          {isActive && <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">● Active</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    {[
+                      { label: 'Total Staked', value: `$${(aiTradeSettings.stats?.totalStaked || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`, color: 'text-foreground' },
+                      { label: 'Paid Out', value: `$${(aiTradeSettings.stats?.totalPaidOut || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`, color: 'text-destructive' },
+                      { label: 'House Profit', value: `$${(aiTradeSettings.stats?.houseProfit || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`, color: (aiTradeSettings.stats?.houseProfit || 0) >= 0 ? 'text-success' : 'text-destructive' },
+                      { label: 'Total Trades', value: String(aiTradeSettings.stats?.totalTradeCount || 0), color: 'text-foreground' },
+                      { label: 'Wins', value: String(aiTradeSettings.stats?.totalWinCount || 0), color: 'text-success' },
+                      { label: 'Losses', value: String(aiTradeSettings.stats?.totalLossCount || 0), color: 'text-destructive' },
+                    ].map(({ label, value, color }) => (
+                      <div key={label} className="bg-muted/30 rounded-2xl p-3 text-center">
+                        <p className="text-[9px] text-muted-foreground uppercase font-bold mb-1">{label}</p>
+                        <p className={cn('font-black text-base', color)}>{value}</p>
+                      </div>
+                    ))}
+                  </div>
                 </motion.div>
               )}
 
@@ -1356,24 +1472,61 @@ export default function AdminDashboard() {
                               const currentValue = h.quantity * currentPrice;
                               const pnl = currentValue - h.total_invested;
                               const pnlPct = h.total_invested > 0 ? (pnl / h.total_invested) * 100 : 0;
+                              const adj = holdingAdjust[h.id] || { amount: '', loading: false };
                               return (
-                                  <div key={h.id} className="p-4 rounded-2xl bg-muted/30 border border-border">
-                                      <div className="flex items-center justify-between mb-2">
-                                          <div className="flex items-center gap-3">
-                                              <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center font-bold text-primary text-sm">{h.asset_symbol.slice(0,2)}</div>
-                                              <div>
-                                                  <p className="text-sm font-bold">{h.asset_symbol}</p>
-                                                  <p className="text-[10px] text-muted-foreground">{Number(h.quantity).toFixed(6)} units</p>
+                                  <div key={h.id} className="rounded-2xl bg-muted/30 border border-border overflow-hidden">
+                                      {/* Holding summary row */}
+                                      <div className="p-4">
+                                          <div className="flex items-center justify-between mb-2">
+                                              <div className="flex items-center gap-3">
+                                                  <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center font-bold text-primary text-sm">{h.asset_symbol.slice(0,2)}</div>
+                                                  <div>
+                                                      <p className="text-sm font-bold">{h.asset_symbol}</p>
+                                                      <p className="text-[10px] text-muted-foreground">{Number(h.quantity).toFixed(6)} units</p>
+                                                  </div>
+                                              </div>
+                                              <div className="text-right">
+                                                  <p className="text-sm font-bold">${currentValue.toLocaleString('en-US', {minimumFractionDigits:2})}</p>
+                                                  <p className={cn('text-[10px] font-bold', pnl >= 0 ? 'text-success' : 'text-destructive')}>{pnl >= 0 ? '+' : ''}{pnlPct.toFixed(2)}%</p>
                                               </div>
                                           </div>
-                                          <div className="text-right">
-                                              <p className="text-sm font-bold">${currentValue.toLocaleString('en-US', {minimumFractionDigits:2})}</p>
-                                              <p className={cn('text-[10px] font-bold', pnl >= 0 ? 'text-success' : 'text-destructive')}>{pnl >= 0 ? '+' : ''}{pnlPct.toFixed(2)}%</p>
+                                          <div className="flex justify-between text-[10px] text-muted-foreground">
+                                              <span>Avg buy: ${Number(h.avg_buy_price).toFixed(2)}</span>
+                                              <span>Invested: ${Number(h.total_invested).toLocaleString('en-US', {minimumFractionDigits:2})}</span>
                                           </div>
                                       </div>
-                                      <div className="flex justify-between text-[10px] text-muted-foreground">
-                                          <span>Avg buy: ${Number(h.avg_buy_price).toFixed(2)}</span>
-                                          <span>Invested: ${Number(h.total_invested).toLocaleString('en-US', {minimumFractionDigits:2})}</span>
+
+                                      {/* Admin adjust controls */}
+                                      <div className="border-t border-border px-4 py-3 bg-muted/10">
+                                          <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2">Admin Adjust (USD)</p>
+                                          <div className="flex gap-2">
+                                              <div className="relative flex-1">
+                                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">$</span>
+                                                  <input
+                                                      type="number"
+                                                      min="0"
+                                                      step="0.01"
+                                                      placeholder="0.00"
+                                                      value={adj.amount}
+                                                      onChange={e => setHoldingAdjust(prev => ({ ...prev, [h.id]: { ...prev[h.id], amount: e.target.value } }))}
+                                                      className="w-full h-9 pl-7 pr-3 bg-muted border border-border rounded-xl text-sm font-bold focus:outline-none focus:ring-1 focus:ring-primary/30"
+                                                  />
+                                              </div>
+                                              <button
+                                                  onClick={() => handleAdjustHolding(h.id, 'add')}
+                                                  disabled={adj.loading}
+                                                  className="h-9 px-3 rounded-xl bg-success/10 text-success text-xs font-bold border border-success/20 hover:bg-success/20 disabled:opacity-50 transition-colors whitespace-nowrap"
+                                              >
+                                                  {adj.loading ? '...' : '+ Add (Profit)'}
+                                              </button>
+                                              <button
+                                                  onClick={() => handleAdjustHolding(h.id, 'reduce')}
+                                                  disabled={adj.loading}
+                                                  className="h-9 px-3 rounded-xl bg-destructive/10 text-destructive text-xs font-bold border border-destructive/20 hover:bg-destructive/20 disabled:opacity-50 transition-colors whitespace-nowrap"
+                                              >
+                                                  {adj.loading ? '...' : '− Reduce (Loss)'}
+                                              </button>
+                                          </div>
                                       </div>
                                   </div>
                               );

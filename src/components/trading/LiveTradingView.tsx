@@ -102,7 +102,11 @@ const DigitalClock = () => {
   );
 };
 
-export default function LiveTradingView() {
+interface LiveTradingViewProps {
+  onViewChange?: (view: 'ai' | 'live') => void;
+}
+
+export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) {
   const { user, isLoadingAuth } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -469,57 +473,30 @@ export default function LiveTradingView() {
                       </div>
                     ) : (
                       <>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Option Type</label>
-                      <div className="relative">
-                        <select
-                          value={selOptionType}
-                          onChange={(e) => setSelOptionType(e.target.value)}
-                          className="w-full h-12 bg-muted/30 border border-border rounded-xl px-4 font-semibold text-sm appearance-none outline-none focus:ring-2 focus:ring-primary/20"
-                        >
-                          <option value="">Select Option Type</option>
-                          {availableOptionTypes.map(type => (
-                            <option key={type} value={type}>{type}</option>
-                          ))}
-                        </select>
-                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <div className="p-4 rounded-2xl bg-muted/20 border border-border space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase">Asset</span>
+                        <span className="text-sm font-bold">{selectedTrade.asset_symbol} — {selectedTrade.asset_name}</span>
                       </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Asset Type</label>
-                      <div className="relative">
-                        <select
-                          value={selAssetId}
-                          onChange={(e) => setSelAssetId(e.target.value)}
-                          className="w-full h-12 bg-muted/30 border border-border rounded-xl px-4 font-semibold text-sm appearance-none outline-none focus:ring-2 focus:ring-primary/20"
-                        >
-                          <option value="">Select Asset</option>
-                          {(availableAssetsByType[selOptionType] || []).map(asset => (
-                            <option key={asset} value={asset}>{asset}</option>
-                          ))}
-                        </select>
-                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase">Signal</span>
+                        <span className={cn(
+                          "text-sm font-bold uppercase px-2 py-0.5 rounded-lg",
+                          selectedTrade.signal_type === 'call' ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
+                        )}>
+                          {selectedTrade.signal_type === 'call' ? '▲ Call' : '▼ Put'}
+                        </span>
                       </div>
-                    </div>
-
-                    <div className="flex items-center justify-between px-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase">Fixed Time</span>
-                        <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase">Expires</span>
+                        <span className="text-sm font-mono font-bold text-primary">
+                          <CountdownTimer key={`info-${selectedTrade.id}`} endsAt={selectedTrade.ends_at} onExpire={() => setSelectedExpired(true)} />
+                        </span>
                       </div>
-                      <button
-                        onClick={() => setIsFixedTime(!isFixedTime)}
-                        className={cn(
-                          "w-10 h-5 rounded-full p-1 transition-colors relative",
-                          isFixedTime ? "bg-primary" : "bg-muted"
-                        )}
-                      >
-                        <motion.div
-                          animate={{ x: isFixedTime ? 20 : 0 }}
-                          className="w-3 h-3 bg-white rounded-full shadow-sm"
-                        />
-                      </button>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase">Profit</span>
+                        <span className="text-sm font-bold text-success">+{selectedTrade.profit_percent}%</span>
+                      </div>
                     </div>
 
                     <div className="space-y-1.5">

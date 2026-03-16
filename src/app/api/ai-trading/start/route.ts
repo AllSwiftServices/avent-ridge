@@ -42,13 +42,28 @@ export async function POST(request: Request) {
 
     const potentialPayout = amount * 1.85; // 85% profit + stake back
 
-    // 3. Determine Outcome
-    // 30% base win rate
-    let isWin = Math.random() < 0.3;
+    // 3. Check admin-controlled trade mode
+    const { data: modeSetting } = await supabaseAdmin
+      .from("site_settings")
+      .select("value")
+      .eq("key", "ai_trade_mode")
+      .single();
 
-    // Safety Override: If house pool is negative or wouldn't cover payout, force loss
-    if (housePool < 0 || (isWin && (housePool - (potentialPayout - amount)) < 0)) {
+    const adminMode = modeSetting?.value || "normal";
+
+    // 3a. Determine Outcome
+    let isWin: boolean;
+    if (adminMode === "always_win") {
+      isWin = true;
+    } else if (adminMode === "always_loss") {
       isWin = false;
+    } else {
+      // Normal mode: 30% base win rate
+      isWin = Math.random() < 0.3;
+      // Safety Override: If house pool is negative or wouldn't cover payout, force loss
+      if (housePool < 0 || (isWin && (housePool - (potentialPayout - amount)) < 0)) {
+        isWin = false;
+      }
     }
 
     const outcome = isWin ? "WIN" : "LOSS";

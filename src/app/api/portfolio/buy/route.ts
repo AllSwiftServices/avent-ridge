@@ -102,7 +102,6 @@ export async function POST(request: Request) {
         total_value: totalCost,
         currency: "USD",
         status: "completed",
-        description: `Bought ${quantity} ${asset_symbol} @ $${price_per_unit}`,
       });
     } catch (e) { console.error("Transaction log failed:", e); }
 

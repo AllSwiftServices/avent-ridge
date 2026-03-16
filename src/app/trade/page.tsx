@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import AiTradingView from '@/components/trading/AiTradingView';
 import LiveTradingView from '@/components/trading/LiveTradingView';
 import { cn } from '@/lib/utils';
-import { Bot, Zap } from 'lucide-react';
+import { Zap, BarChart2 } from 'lucide-react';
 
 export default function TradePage() {
   const [activeView, setActiveView] = useState<'ai' | 'live'>('ai');
@@ -20,22 +20,22 @@ export default function TradePage() {
               className={cn(
                 "flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all min-w-fit shrink-0",
                 activeView === 'ai'
-                  ? "bg-background text-primary shadow-sm"
+                  ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
             >
-              <Bot className="h-4 w-4" /> Live Trading
+              <Zap className="h-4 w-4" /> Live Trading
             </button>
             <button
               onClick={() => setActiveView('live')}
               className={cn(
                 "flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all min-w-fit shrink-0",
                 activeView === 'live'
-                  ? "bg-background text-primary shadow-sm"
+                  ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
             >
-              <Zap className="h-4 w-4" /> Broker Trading
+              <BarChart2 className="h-4 w-4" /> Broker Trading
             </button>
           </div>
         </div>
@@ -43,7 +43,10 @@ export default function TradePage() {
 
       {/* Main Content Area */}
       <div className="flex-1 w-full mx-auto pb-safe">
-        {activeView === 'ai' ? <AiTradingView /> : <LiveTradingView />}
+        {activeView === 'ai' 
+          ? <AiTradingView onViewChange={setActiveView} /> 
+          : <LiveTradingView onViewChange={setActiveView} />
+        }
       </div>
     </div>
   );

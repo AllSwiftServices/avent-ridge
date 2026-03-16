@@ -155,8 +155,8 @@ export default function Dashboard() {
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <QuickActions
             onDeposit={() => navigate(createPageUrl('wallet'))}
+            onMarkets={() => navigate(createPageUrl('Markets'))}
             onTrade={() => navigate(createPageUrl('trade'))}
-            onWinningTrades={() => navigate(createPageUrl('trades'))}
             onWithdraw={() => navigate(createPageUrl('wallet'))}
           />
         </motion.div>

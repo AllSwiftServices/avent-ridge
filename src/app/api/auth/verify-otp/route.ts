@@ -98,28 +98,30 @@ export async function POST(request: NextRequest) {
     // Next.js cookies() store gets the auth cookies written to the response.
     // ───────────────────────────────────────────────────────────────────────
     try {
-      // 1. Generate a one-time magic link token for this email
+      // 1. Generate a server-side email OTP token for this email
       const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: "magiclink",
         email: normalizedEmail,
       });
 
-      if (linkError || !linkData?.properties?.hashed_token) {
+      if (linkError || !linkData?.properties?.email_otp) {
         throw new Error(linkError?.message || "Failed to generate auth token");
       }
 
-      const hashedToken = linkData.properties.hashed_token;
+      // email_otp is the short OTP code associated with the link — this is what
+      // the /auth/v1/verify POST endpoint accepts (type: "email").
+      const emailOtp = linkData.properties.email_otp;
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
       const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-      // 2. Exchange the magic-link token for a real Supabase session
+      // 2. Exchange the email OTP for a real Supabase session
       const verifyRes = await fetch(`${supabaseUrl}/auth/v1/verify`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "apikey": supabaseAnonKey,
         },
-        body: JSON.stringify({ type: "magiclink", token: hashedToken }),
+        body: JSON.stringify({ email: normalizedEmail, token: emailOtp, type: "email" }),
       });
 
       if (!verifyRes.ok) {

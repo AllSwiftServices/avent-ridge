@@ -145,6 +145,7 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 0 }: a
         duration,
         direction: side === 'call' ? 'UP' : 'DOWN',
         assetSymbol: asset?.symbol,
+        price: price || 0,
       });
 
       if (error) throw error;

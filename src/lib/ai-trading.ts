@@ -34,6 +34,7 @@ export async function resolveAiTrade(tradeId: string) {
       type: "trade_win",
       amount: totalPayout,
       symbol: "AI-PROFT",
+      price: trade.entry_price || 0,
       status: "completed"
     });
 
@@ -58,6 +59,7 @@ export async function resolveAiTrade(tradeId: string) {
       type: "trade_loss",
       amount: 0,
       symbol: "AI-LOST",
+      price: trade.entry_price || 0,
       status: "completed"
     });
   }

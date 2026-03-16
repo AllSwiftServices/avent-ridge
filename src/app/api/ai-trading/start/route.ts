@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { amount, direction, assetSymbol, duration = 60 } = body;
+    const { amount, direction, assetSymbol, duration = 60, price = 0 } = body;
 
     if (!amount || amount <= 0) {
       return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
@@ -65,6 +65,7 @@ export async function POST(request: Request) {
         profit,
         duration,
         resolves_at: resolvesAt,
+        entry_price: price,
         status: "pending"
       })
       .select()
@@ -80,6 +81,7 @@ export async function POST(request: Request) {
         type: "trade_entry",
         amount: -amount,
         symbol: assetSymbol,
+        price: price,
         status: "completed"
       });
 

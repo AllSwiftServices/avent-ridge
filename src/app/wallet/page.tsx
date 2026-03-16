@@ -179,33 +179,7 @@ export default function WalletPage() {
           />
         </div>
 
-        {/* Payment Methods */}
-        <div>
-          <h3 className="font-bold text-lg mb-4">Payment Methods</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              { icon: CreditCard, label: 'Bank Card', color: 'bg-blue-500' },
-              { icon: Building, label: 'Bank Transfer', color: 'bg-emerald-500' },
-              { icon: Smartphone, label: 'E-Wallet', color: 'bg-purple-500' },
-              { icon: Plus, label: 'Add New', color: 'bg-muted', isAction: true },
-            ].map((method, i) => (
-              <motion.button
-                key={i}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className={cn(
-                  "flex flex-col items-center justify-center p-4 rounded-3xl border border-border bg-card",
-                  method.isAction ? "border-dashed" : "shadow-sm"
-                )}
-              >
-                <div className={cn("p-3 rounded-2xl mb-2", method.color, method.isAction ? "bg-muted text-muted-foreground" : "text-white")}>
-                  <method.icon className="h-5 w-5" />
-                </div>
-                <span className="text-xs font-medium">{method.label}</span>
-              </motion.button>
-            ))}
-          </div>
-        </div>
+       
 
         {/* Transactions Section */}
         <div className="space-y-4">

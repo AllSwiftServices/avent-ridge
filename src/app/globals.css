@@ -92,6 +92,14 @@
     @apply bg-white/10 backdrop-blur-xl border border-white/10;
   }
 
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+
   .dark .glass {
     @apply bg-white/5 backdrop-blur-xl border border-white/5;
   }

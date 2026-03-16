@@ -1,13 +1,14 @@
 import React from 'react';
 import { Link, useLocation } from '@/lib/react-router-shim';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, TrendingUp, PieChart, Wallet, Zap } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, PieChart, Wallet, Zap, Radio } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createPageUrl } from '@/utils';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Home', page: 'dashboard' },
   { icon: TrendingUp, label: 'Markets', page: 'markets' },
+  { icon: Radio, label: 'AI Trading', page: 'ai-trading' },
   { icon: Zap, label: 'Live Trading', page: 'live-trading' },
   { icon: PieChart, label: 'Portfolio', page: 'portfolio' },
   { icon: Wallet, label: 'Wallet', page: 'wallet' },
@@ -26,7 +27,7 @@ export default function BottomNav() {
       'bg-background/80 backdrop-blur-xl border-t border-border',
       'md:hidden'
     )}>
-      <div className="flex items-center justify-around py-2 px-2 safe-area-pb">
+      <div className="flex items-center justify-start sm:justify-around overflow-x-auto no-scrollbar py-2 px-2 safe-area-pb gap-1">
         {navItems.map((item) => {
           const isActive = location.pathname === createPageUrl(item.page);
           return (
@@ -34,7 +35,7 @@ export default function BottomNav() {
               key={item.page}
               to={createPageUrl(item.page)}
               className={cn(
-                'relative flex flex-col items-center py-2 px-3 rounded-2xl transition-all',
+                'relative flex flex-col items-center justify-center py-2 px-3 rounded-2xl transition-all min-w-[72px] shrink-0',
                 isActive ? 'text-primary' : 'text-muted-foreground'
               )}
             >
@@ -60,7 +61,7 @@ export default function BottomNav() {
             <Link
               to={createPageUrl('Admin')}
               className={cn(
-                'relative flex flex-col items-center py-2 px-3 rounded-2xl transition-all',
+                'relative flex flex-col items-center justify-center py-2 px-3 rounded-2xl transition-all min-w-[72px] shrink-0',
                 location.pathname === '/admin' ? 'text-primary' : 'text-muted-foreground'
               )}
             >

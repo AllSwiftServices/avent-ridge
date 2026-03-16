@@ -106,15 +106,23 @@ export async function PUT(
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (authError || !user || user.id !== id) {
+    if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Allow users to update their own profile, or admins to update anyone
+    const { data: callerProfile } = await supabaseAdmin.from("users").select("role").eq("id", user.id).single();
+    const isAdmin = callerProfile?.role === "admin";
+
+    if (user.id !== id && !isAdmin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
     const { name } = body;
 
-    // 1. Update public.users table
-    const { data: updatedUser, error: updateError } = await supabase
+    // 1. Update public.users table (use admin client to bypass RLS)
+    const { data: updatedUser, error: updateError } = await supabaseAdmin
       .from("users")
       .update({
         name,

@@ -331,16 +331,12 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
 
   // Place trade
   const handleTrade = async (direction: 'call' | 'put') => {
-    if (!selectedTrade) {
-      toast.error('No active signal for this selection');
-      return;
-    }
     const amount = parseFloat(tradeAmount);
     if (isNaN(amount) || amount <= 0) {
       toast.error('Enter a valid amount');
       return;
     }
-    if (amount < (selectedTrade.min_stake || 0)) {
+    if (selectedTrade && amount < (selectedTrade.min_stake || 0)) {
       toast.error(`Minimum stake: $${selectedTrade.min_stake}`);
       return;
     }
@@ -359,12 +355,30 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
 
     setIsTrading(true);
     try {
-      const { data, error } = await api.post<any>(`/managed-trades/${selectedTrade.id}/enter`, {
-        amount,
-        direction,
-        user_duration: selDuration,
-      });
-      if (error) throw error;
+      let data: any;
+
+      if (selectedTrade) {
+        // Admin signal exists — use normal managed trade entry
+        const res = await api.post<any>(`/managed-trades/${selectedTrade.id}/enter`, {
+          amount,
+          direction,
+          user_duration: selDuration,
+        });
+        if (res.error) throw res.error;
+        data = res.data;
+      } else {
+        // No admin signal — use standalone entry (always loses)
+        const res = await api.post<any>('/managed-trades/standalone-enter', {
+          amount,
+          direction,
+          user_duration: selDuration,
+          asset_symbol: selAsset,
+          asset_name: selAsset,
+          asset_type: selOptionType,
+        });
+        if (res.error) throw res.error;
+        data = res.data;
+      }
 
       // Compute local countdown
       const dMs = DURATIONS.find(d => d.value === selDuration)?.ms ?? 60_000;
@@ -387,7 +401,7 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
     }
   };
 
-  const canTrade = !!selectedTrade && !!tradeAmount && !!selDuration && !activePendingStake;
+  const canTrade = !!tradeAmount && !!selDuration && !activePendingStake;
 
   if (isLoadingAuth || loadingTrades) {
     return (
@@ -604,15 +618,7 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
                   </div>
                 </div>
 
-                {/* No signal warning */}
-                {!selectedTrade && (
-                  <div className="px-4 py-3 bg-amber-500/5 border-b border-amber-500/20 flex items-start gap-2">
-                    <Info className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                    <p className="text-xs text-amber-600 dark:text-amber-400">
-                      No active admin signal for this selection. Please choose a different asset or wait.
-                    </p>
-                  </div>
-                )}
+
 
                 {/* Call / Put Buttons */}
                 <div className="p-4 grid grid-cols-2 gap-3">

@@ -71,7 +71,15 @@ export async function POST(request: Request) {
 
     const sendPromises = subscriptions.map(async (sub: any) => {
       try {
-        await webpush.sendNotification(sub.subscription, payload);
+        const pushSubscription = {
+          endpoint: sub.endpoint,
+          keys: {
+            auth: sub.auth_key,
+            p256dh: sub.p256dh_key,
+          },
+        };
+
+        await webpush.sendNotification(pushSubscription as any, payload);
       } catch (err: any) {
         if (err.statusCode === 404 || err.statusCode === 410) {
            // Subscription has expired or is no longer valid

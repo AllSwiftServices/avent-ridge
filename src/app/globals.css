@@ -24,6 +24,12 @@
     --input: 240 5.9% 90%;
     --ring: 45 100% 51%;
     --radius: 1rem;
+    
+    /* Safe Area Insets */
+    --sat: env(safe-area-inset-top);
+    --sar: env(safe-area-inset-right);
+    --sab: env(safe-area-inset-bottom);
+    --sal: env(safe-area-inset-left);
   }
 
   .dark {
@@ -142,5 +148,25 @@
     );
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
+  }
+
+  .pt-safe {
+    padding-top: var(--sat, 0px);
+  }
+
+  .pb-safe {
+    padding-bottom: var(--sab, 0px);
+  }
+
+  .mt-safe {
+    margin-top: var(--sat, 0px);
+  }
+
+  .mb-safe {
+    margin-bottom: var(--sab, 0px);
+  }
+
+  .h-safe-top {
+    height: var(--sat, 0px);
   }
 }

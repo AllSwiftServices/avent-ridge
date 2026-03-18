@@ -46,6 +46,26 @@ const CRYPTO_OPTIONS: CryptoOption[] = [
 
 export default function DepositPage() {
   const navigate = useNavigate();
+  const [cryptoOptions, setCryptoOptions] = useState<CryptoOption[]>(CRYPTO_OPTIONS);
+  const [loadingSettings, setLoadingSettings] = useState(true);
+
+  React.useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch('/api/settings');
+        const data = await response.json();
+        if (data.deposit_methods) {
+          setCryptoOptions(data.deposit_methods);
+        }
+      } catch (err) {
+        console.error("Failed to fetch deposit settings:", err);
+      } finally {
+        setLoadingSettings(false);
+      }
+    };
+    fetchSettings();
+  }, []);
+
   const [step, setStep] = useState<DepositStep>('wallet_selection');
   const [selectedWallet, setSelectedWallet] = useState<WalletType | null>(null);
   const [selectedCrypto, setSelectedCrypto] = useState<CryptoOption | null>(null);
@@ -210,7 +230,7 @@ export default function DepositPage() {
 
               <div className="space-y-3">
                 <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider px-1">Select Asset</p>
-                {CRYPTO_OPTIONS.map((crypto) => (
+                {cryptoOptions.map((crypto) => (
                   <button
                     key={crypto.id}
                     onClick={() => {

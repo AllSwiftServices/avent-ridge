@@ -73,20 +73,14 @@ export async function PATCH(
         .from("transactions")
         .update({ status: 'failed' })
         .eq("user_id", withdrawal.user_id)
-        .eq("type", 'withdraw')
-        .eq("amount", withdrawal.amount)
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .like("description", `%(${withdrawal.id})%`);
     } else {
       // Update transaction status to completed
       await supabaseAdmin
         .from("transactions")
         .update({ status: 'completed' })
         .eq("user_id", withdrawal.user_id)
-        .eq("type", 'withdraw')
-        .eq("amount", withdrawal.amount)
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .like("description", `%(${withdrawal.id})%`);
     }
 
     // 3. Notify User

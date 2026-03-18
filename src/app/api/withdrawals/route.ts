@@ -144,7 +144,8 @@ export async function POST(request: Request) {
       amount: withdrawAmount,
       symbol: currency,
       total_value: withdrawAmount,
-      status: 'pending'
+      status: 'pending',
+      description: `Withdrawal request (${withdrawal.id})`
     });
 
     // 5. Notify Admins

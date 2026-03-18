@@ -20,7 +20,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
 
-type AdminTab = 'overview' | 'users' | 'deposits' | 'withdrawals' | 'kyc' | 'assets' | 'trades' | 'support';
+type AdminTab = 'overview' | 'users' | 'deposits' | 'withdrawals' | 'kyc' | 'assets' | 'trades' | 'settings' | 'notifications' | 'support';
 
 interface UserData {
   id: string;
@@ -361,6 +361,9 @@ export default function AdminDashboard() {
     ends_at: format(new Date(Date.now() + 86400000), "yyyy-MM-dd'T'HH:mm")
   });
 
+  const [settings, setSettings] = useState<any[]>([]);
+  const [notificationForm, setNotificationForm] = useState({ target: 'all', title: '', body: '' });
+
   useEffect(() => {
     if (!isLoadingAuth) {
       if (!user || user.role !== 'admin') {
@@ -374,13 +377,14 @@ export default function AdminDashboard() {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      const [uRes, dRes, kRes, aRes, tRes, wRes] = await Promise.all([
+      const [uRes, dRes, kRes, aRes, tRes, wRes, sRes] = await Promise.all([
         api.get<UserData[]>('/users'),
         api.get<Deposit[]>('/deposits'),
         api.get<KYCSubmission[]>('/kyc'),
         api.get<Asset[]>('/assets'),
         api.get<ManagedTrade[]>('/managed-trades'),
-        api.get<Withdrawal[]>('/withdrawals')
+        api.get<Withdrawal[]>('/withdrawals'),
+        api.get<any[]>('/settings')
       ]);
 
       setUsers(uRes.data || []);
@@ -389,6 +393,7 @@ export default function AdminDashboard() {
       setAssets(aRes.data || []);
       setManagedTrades(tRes.data || []);
       setWithdrawals(wRes.data || []);
+      setSettings(sRes.data || []);
 
       // Fetch AI trade settings
       const { data: aiData } = await api.get<any>('/admin/ai-trade-settings');
@@ -643,6 +648,38 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleUpdateSetting = async (key: string, value: any) => {
+    setProcessing(true);
+    try {
+      const { error } = await api.patch('/settings', { key, value });
+      if (error) throw error;
+      toast.success("Settings updated");
+      fetchAllData();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleSendNotification = async () => {
+    if (!notificationForm.title || !notificationForm.body) {
+      toast.error("Please fill title and body");
+      return;
+    }
+    setProcessing(true);
+    try {
+      const { error } = await api.post('/admin/notifications', notificationForm);
+      if (error) throw error;
+      toast.success("Notification(s) sent");
+      setNotificationForm({ target: 'all', title: '', body: '' });
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
 
   if (isLoadingAuth || (user && user.role !== 'admin')) {
     return (
@@ -655,7 +692,7 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-background text-foreground pb-24">
       {/* ── HEADER ── */}
-      <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border px-4 py-4 md:px-8">
+      <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border px-4 py-4 md:px-8 pt-safe">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 shrink-0">
@@ -692,7 +729,7 @@ export default function AdminDashboard() {
       {/* ── NAVIGATION TABS ── */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-6">
         <div className="flex items-center gap-1 p-1 bg-muted rounded-2xl w-full md:w-fit overflow-x-auto scrollbar-hide">
-          {(['overview', 'users', 'deposits', 'withdrawals', 'kyc', 'assets', 'trades', 'support'] as const).map((tab) => (
+          {(['overview', 'users', 'deposits', 'withdrawals', 'kyc', 'assets', 'trades', 'settings', 'notifications', 'support'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -1217,8 +1254,7 @@ export default function AdminDashboard() {
                           </table>
                       </div>
                   </motion.div>
-              )}
-
+               )}
                {activeTab === 'trades' && (
                 <motion.div key="trades" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
                   {/* Create Trade Form */}
@@ -1457,6 +1493,108 @@ export default function AdminDashboard() {
               {activeTab === 'support' && (
                 <SupportAdminPanel />
               )}
+
+               {activeTab === 'settings' && (
+                 <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+                     <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
+                        <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
+                           <Settings className="h-5 w-5 text-primary" /> Platform Settings
+                        </h3>
+                        <div className="space-y-8">
+                           {/* Deposit Methods */}
+                           <div className="space-y-4">
+                              <h4 className="text-sm font-bold border-l-4 border-primary pl-3">Deposit Wallet Addresses</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                 {settings.find(s => s.key === 'deposit_methods')?.value.map((method: any, idx: number) => (
+                                    <div key={method.id} className="p-4 rounded-2xl bg-muted/30 border border-border space-y-4">
+                                       <div className="flex items-center justify-between">
+                                          <span className="font-bold text-sm">{method.name} ({method.symbol})</span>
+                                          <span className="text-[10px] text-muted-foreground uppercase font-bold">{method.network}</span>
+                                       </div>
+                                       <div className="space-y-2">
+                                          <label className="text-[10px] font-bold text-muted-foreground uppercase">Wallet Address</label>
+                                          <input 
+                                             type="text" 
+                                             value={method.address}
+                                             onChange={(e) => {
+                                                const newMethods = [...settings.find(s => s.key === 'deposit_methods').value];
+                                                newMethods[idx] = { ...newMethods[idx], address: e.target.value, qrCode: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${e.target.value}` };
+                                                // We don't update state here yet, we'll save on button click or similar
+                                                // Actually for simplicity in this large file, let's just make it updateable locally first
+                                                setSettings(prev => prev.map(s => s.key === 'deposit_methods' ? { ...s, value: newMethods } : s));
+                                             }}
+                                             className="w-full h-10 px-3 bg-card border border-border rounded-xl text-xs font-mono"
+                                          />
+                                       </div>
+                                    </div>
+                                 ))}
+                              </div>
+                              <button 
+                                 onClick={() => handleUpdateSetting('deposit_methods', settings.find(s => s.key === 'deposit_methods').value)}
+                                 disabled={processing}
+                                 className="h-11 px-8 bg-primary text-primary-foreground font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 transition-all shadow-lg shadow-primary/20"
+                              >
+                                 <Save className="h-4 w-4" /> Save Deposit Settings
+                              </button>
+                           </div>
+                        </div>
+                     </div>
+                 </motion.div>
+               )}
+
+               {activeTab === 'notifications' && (
+                 <motion.div key="notifications" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+                     <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
+                        <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
+                           <Mail className="h-5 w-5 text-primary" /> Send Push Notifications
+                        </h3>
+                        <div className="max-w-2xl space-y-6">
+                           <div className="space-y-2">
+                              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Recipient</label>
+                              <select 
+                                 value={notificationForm.target}
+                                 onChange={(e) => setNotificationForm({...notificationForm, target: e.target.value})}
+                                 className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
+                              >
+                                 <option value="all">All Subscribed Users</option>
+                                 {users.map(u => (
+                                    <option key={u.id} value={u.id}>{u.email} ({u.name || 'Anonymous'})</option>
+                                 ))}
+                              </select>
+                           </div>
+
+                           <div className="space-y-2">
+                              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Title</label>
+                              <input 
+                                 type="text"
+                                 placeholder="e.g. Market Update"
+                                 value={notificationForm.title}
+                                 onChange={(e) => setNotificationForm({...notificationForm, title: e.target.value})}
+                                 className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
+                              />
+                           </div>
+
+                           <div className="space-y-2">
+                              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Message Body</label>
+                              <textarea 
+                                 placeholder="Type your message here..."
+                                 value={notificationForm.body}
+                                 onChange={(e) => setNotificationForm({...notificationForm, body: e.target.value})}
+                                 className="w-full h-32 p-4 bg-muted border border-border rounded-xl text-sm focus:outline-none resize-none"
+                              />
+                           </div>
+
+                           <button 
+                              onClick={handleSendNotification}
+                              disabled={processing || !notificationForm.title || !notificationForm.body}
+                              className="w-full h-12 bg-primary text-primary-foreground font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 transition-all shadow-lg shadow-primary/20"
+                           >
+                              <Send className="h-4 w-4" /> Send Notification
+                           </button>
+                        </div>
+                     </div>
+                 </motion.div>
+               )}
           </AnimatePresence>
       </main>
 

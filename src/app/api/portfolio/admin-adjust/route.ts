@@ -65,7 +65,7 @@ export async function POST(request: Request) {
         type: delta > 0 ? "admin_credit" : "admin_debit",
         amount: Math.abs(delta),
         total_value: Math.abs(delta),
-        currency,
+        symbol: currency,
         status: "completed",
         description: `Admin ${delta > 0 ? "added" : "removed"} $${Math.abs(delta)} ${delta > 0 ? "to" : "from"} ${currency} balance`,
       });

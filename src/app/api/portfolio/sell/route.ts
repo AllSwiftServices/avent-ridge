@@ -86,7 +86,7 @@ export async function POST(request: Request) {
         type: "trade_sell",
         amount: proceeds,
         total_value: proceeds,
-        currency: "USD",
+        symbol: "USD",
         status: "completed",
       });
     } catch (e) { console.error("Transaction log failed:", e); }

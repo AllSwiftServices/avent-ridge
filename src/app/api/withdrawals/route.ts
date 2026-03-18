@@ -138,15 +138,22 @@ export async function POST(request: Request) {
     }
 
     // 4. Log Transaction
-    await supabaseAdmin.from("transactions").insert({
+    const { error: txError } = await supabaseAdmin.from("transactions").insert({
       user_id: user.id,
       type: 'withdraw',
-      amount: withdrawAmount,
+      amount: -withdrawAmount, // Important: Withdrawal is a negative flow
       symbol: currency,
+      price: 1, // Add price to match deposit logic and avoid potential null errors
       total_value: withdrawAmount,
       status: 'pending',
       description: `Withdrawal request (${withdrawal.id})`
     });
+
+    if (txError) {
+      console.error("Failed to log withdrawal transaction:", txError);
+      // We don't necessarily want to fail the whole request if just logging failed,
+      // but in this case, the user's history is important.
+    }
 
     // 5. Notify Admins
     await sendPushToAdmins({

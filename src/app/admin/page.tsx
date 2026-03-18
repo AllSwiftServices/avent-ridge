@@ -930,7 +930,7 @@ export default function AdminDashboard() {
                                           </td>
                                           <td className="px-6 py-4 text-right">
                                               <button 
-                                                onClick={() => setSelectedUser(u)}
+                                                onClick={() => openUserDetail(u)}
                                                 className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
                                               >
                                                   <Eye className="h-4 w-4" />

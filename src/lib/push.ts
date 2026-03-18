@@ -27,7 +27,7 @@ export async function sendPushToUser(userId: string, payload: { title: string; b
       title: payload.title,
       body: payload.body,
       url: payload.url || '/profile/chat',
-      icon: '/logo192.png',
+      icon: '/icon.png',
     });
 
     await Promise.allSettled(

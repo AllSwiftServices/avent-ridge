@@ -11,15 +11,24 @@ self.addEventListener("push", function (event) {
     return;
   }
 
-  const data = event.data?.json() ?? {};
+  let data = {};
+  try {
+    data = event.data?.json() ?? {};
+  } catch (e) {
+    console.warn("Push event with non-JSON data:", event.data?.text());
+    data = { body: event.data?.text() };
+  }
+
   const title = data.title || "Avent Ridge Update";
   const options = {
     body: data.body || "You have a new notification.",
-    icon: "/icon.png",
-    badge: "/icon.png",
+    icon: data.icon || "/icon.png",
+    badge: data.badge || "/icon.png",
     data: {
       url: data.url || "/",
     },
+    // Vibration pattern for better visibility
+    vibrate: [100, 50, 100],
   };
 
   event.waitUntil(self.registration.showNotification(title, options));

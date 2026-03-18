@@ -62,8 +62,8 @@ export async function POST(request: Request) {
     const payload = JSON.stringify({
       title,
       body,
-      icon: "/logo-icon.png",
-      badge: "/logo-icon.png",
+      icon: "/icon.png",
+      badge: "/icon.png",
       data: {
         url: "/notifications"
       }

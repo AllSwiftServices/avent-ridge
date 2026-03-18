@@ -358,7 +358,7 @@ export default function AdminDashboard() {
     scope: 'all',
     signal_type: 'call',
     outcome: 'win',
-    ends_at: format(new Date(Date.now() + 86400000), "yyyy-MM-dd'T'HH:mm")
+    ends_at: '' // Initialize as empty to avoid hydration mismatch, will set in useEffect
   });
 
   const [settings, setSettings] = useState<any[]>([]);
@@ -371,6 +371,11 @@ export default function AdminDashboard() {
         return;
       }
       fetchAllData();
+      // Initialize default trade date only on client to prevent hydration mismatch
+      setNewTrade(prev => ({
+        ...prev,
+        ends_at: format(new Date(Date.now() + 86400000), "yyyy-MM-dd'T'HH:mm")
+      }));
     }
   }, [user, isLoadingAuth, navigate]);
 
@@ -384,7 +389,7 @@ export default function AdminDashboard() {
         api.get<Asset[]>('/assets'),
         api.get<ManagedTrade[]>('/managed-trades'),
         api.get<Withdrawal[]>('/withdrawals'),
-        api.get<any[]>('/settings')
+        api.get<any[]>('/admin/settings')
       ]);
 
       setUsers(uRes.data || []);
@@ -651,7 +656,7 @@ export default function AdminDashboard() {
   const handleUpdateSetting = async (key: string, value: any) => {
     setProcessing(true);
     try {
-      const { error } = await api.patch('/settings', { key, value });
+      const { error } = await api.patch('/admin/settings', { key, value });
       if (error) throw error;
       toast.success("Settings updated");
       fetchAllData();
@@ -1505,7 +1510,7 @@ export default function AdminDashboard() {
                            <div className="space-y-4">
                               <h4 className="text-sm font-bold border-l-4 border-primary pl-3">Deposit Wallet Addresses</h4>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                 {settings.find(s => s.key === 'deposit_methods')?.value.map((method: any, idx: number) => (
+                                 {settings.find(s => s.key === 'deposit_methods')?.value?.map((method: any, idx: number) => (
                                     <div key={method.id} className="p-4 rounded-2xl bg-muted/30 border border-border space-y-4">
                                        <div className="flex items-center justify-between">
                                           <span className="font-bold text-sm">{method.name} ({method.symbol})</span>
@@ -1517,7 +1522,7 @@ export default function AdminDashboard() {
                                              type="text" 
                                              value={method.address}
                                              onChange={(e) => {
-                                                const newMethods = [...settings.find(s => s.key === 'deposit_methods').value];
+                                                const methodSetting = settings.find(s => s.key === "deposit_methods"); if (!methodSetting) return; const newMethods = [...methodSetting.value];
                                                 newMethods[idx] = { ...newMethods[idx], address: e.target.value, qrCode: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${e.target.value}` };
                                                 // We don't update state here yet, we'll save on button click or similar
                                                 // Actually for simplicity in this large file, let's just make it updateable locally first
@@ -1530,7 +1535,7 @@ export default function AdminDashboard() {
                                  ))}
                               </div>
                               <button 
-                                 onClick={() => handleUpdateSetting('deposit_methods', settings.find(s => s.key === 'deposit_methods').value)}
+                                  onClick={() => { const methodSetting = settings.find(s => s.key === "deposit_methods"); if (methodSetting) handleUpdateSetting("deposit_methods", methodSetting.value); }}
                                  disabled={processing}
                                  className="h-11 px-8 bg-primary text-primary-foreground font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 transition-all shadow-lg shadow-primary/20"
                               >

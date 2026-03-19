@@ -134,13 +134,22 @@ export async function POST(
       console.error("Failed to log trade entry transaction:", txLogErr);
     }
 
-    // 4. Notify User
+    // 4. Notify User and Admins
     try {
-      const { sendPushNotification } = await import("@/lib/push-notifications");
+      const { sendPushNotification, sendPushToAdmins } = await import("@/lib/push-notifications");
+      
+      // Notify User
       await sendPushNotification(user.id, {
         title: "Trade Successful",
         body: `You've successfully opened a $${amount.toLocaleString()} trade in ${trade.asset_symbol} managed trade.`,
         url: "/trades"
+      });
+
+      // Notify Admins
+      await sendPushToAdmins({
+        title: "User Entered Trade",
+        body: `${user.email} entered $${amount.toLocaleString()} ${direction.toUpperCase()} on ${trade.asset_symbol} (Trade ID: ${trade.id}).`,
+        url: "/admin"
       });
     } catch (pushErr) {
       console.error("Failed to send notification:", pushErr);

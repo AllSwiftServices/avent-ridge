@@ -134,11 +134,20 @@ export async function POST(request: Request) {
 
     // ── Push notification ───────────────────────────────────────────────
     try {
-      const { sendPushNotification } = await import("@/lib/push-notifications");
+      const { sendPushNotification, sendPushToAdmins } = await import("@/lib/push-notifications");
+      
+      // Notify the user
       await sendPushNotification(user.id, {
         title: "Trade Successful",
         body: `You've successfully opened a $${amount.toLocaleString()} trade in ${asset_symbol}.`,
         url: "/trades",
+      });
+
+      // Notify admins
+      await sendPushToAdmins({
+        title: "New Trade Opened",
+        body: `${user.email} opened a $${amount.toLocaleString()} ${direction.toUpperCase()} trade on ${asset_symbol}.`,
+        url: "/admin", // Or wherever admins manage trades
       });
     } catch {
       // ignore push failures

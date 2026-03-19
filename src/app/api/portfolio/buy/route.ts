@@ -103,7 +103,15 @@ export async function POST(request: Request) {
         symbol: "USD",
         status: "completed",
       });
-    } catch (e) { console.error("Transaction log failed:", e); }
+
+      // Notify admins
+      const { sendPushToAdmins } = await import("@/lib/push-notifications");
+      await sendPushToAdmins({
+        title: "New Asset Purchase",
+        body: `${user.email} bought ${quantity} ${asset_symbol} at $${price_per_unit} (Total: $${totalCost.toLocaleString()}).`,
+        url: "/admin",
+      });
+    } catch (e) { console.error("Post-buy actions failed:", e); }
 
     return NextResponse.json({ success: true, holding });
   } catch (error: any) {

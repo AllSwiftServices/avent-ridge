@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { sendPushToUser } from "@/lib/push";
+import { sendPushToAdmins } from "@/lib/push-notifications";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -69,8 +70,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .update({ updated_at: new Date().toISOString() })
       .eq("id", id);
 
-    // Send push notification to the user when admin replies
+    // Notifications
     if (senderRole === "admin") {
+      // Send push notification to the user when admin replies
       const { data: conv } = await supabaseAdmin
         .from("support_conversations")
         .select("user_id")
@@ -85,6 +87,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           url: "/profile/chat",
         }).catch(() => {/* swallow errors */});
       }
+    } else {
+      // Send push notification to admins when user sends a message
+      sendPushToAdmins({
+        title: "New Support Message",
+        body: `${user.email}: ${msgBody.trim().slice(0, 100)}${msgBody.trim().length > 100 ? "..." : ""}`,
+        url: "/admin/support",
+      }).catch((e) => console.error("Failed to notify admins", e));
     }
 
     return NextResponse.json({ data });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { supabaseAdmin } from "@/lib/supabase-server";
+import { sendPushToAdmins } from "@/lib/push-notifications";
 
 export async function GET() {
   try {
@@ -47,6 +48,13 @@ export async function POST(request: NextRequest) {
         sender_role: "user",
         body: message,
       });
+
+      // Notify admins — fire and forget
+      sendPushToAdmins({
+        title: "New Support Request",
+        body: `${user.email}: ${message.slice(0, 100)}${message.length > 100 ? "..." : ""}`,
+        url: "/admin/support",
+      }).catch((e) => console.error("Failed to notify admins", e));
     }
 
     return NextResponse.json({ data: conv });

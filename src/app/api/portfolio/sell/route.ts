@@ -89,7 +89,15 @@ export async function POST(request: Request) {
         symbol: "USD",
         status: "completed",
       });
-    } catch (e) { console.error("Transaction log failed:", e); }
+
+      // Notify admins
+      const { sendPushToAdmins } = await import("@/lib/push-notifications");
+      await sendPushToAdmins({
+        title: "New Asset Sale",
+        body: `${user.email} sold ${quantity} ${asset_symbol} for $${proceeds.toLocaleString()}.`,
+        url: "/admin",
+      });
+    } catch (e) { console.error("Post-sell actions failed:", e); }
 
     return NextResponse.json({ success: true, proceeds });
   } catch (error: any) {

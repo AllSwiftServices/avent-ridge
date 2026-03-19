@@ -153,3 +153,57 @@ export async function PUT(
     );
   }
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const id = (await params).id;
+    const supabase = await createClient();
+    const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !currentUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Role check: Only admins can delete users
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", currentUser.id)
+      .single();
+
+    if (profile?.role !== "admin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Prevent self-deletion
+    if (currentUser.id === id) {
+      return NextResponse.json({ error: "Cannot delete your own admin account" }, { status: 400 });
+    }
+
+    // 1. Delete from Auth (this is critical)
+    const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(id);
+    if (authDeleteError) {
+      console.error("Auth delete error:", authDeleteError);
+      // Even if auth delete fails (e.g. user already gone from auth), we might still want to try cleaning up the DB
+    }
+
+    // 2. Delete from public.users (triggers cascades for wallets, holdings, etc. if configured)
+    const { error: dbDeleteError } = await supabaseAdmin
+      .from("users")
+      .delete()
+      .eq("id", id);
+
+    if (dbDeleteError) throw dbDeleteError;
+
+    return NextResponse.json({ success: true, message: "User deleted successfully" });
+  } catch (error: any) {
+    console.error("User deletion error:", error);
+    return NextResponse.json(
+      { message: error.message || "Failed to delete user" },
+      { status: 500 }
+    );
+  }
+}

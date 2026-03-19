@@ -9,7 +9,7 @@ import {
   TrendingUp, Settings, ChevronRight, Save,
   RefreshCcw, Filter, ArrowUpRight, ArrowDownRight,
   UserPlus, Mail, Phone, Calendar, MapPin,
-  Zap, Bot, TrendingDown, BarChart3, MessageCircle, Send, X
+  Zap, Bot, TrendingDown, BarChart3, MessageCircle, Send, X, Trash2
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
@@ -527,6 +527,23 @@ export default function AdminDashboard() {
       }
   };
 
+  const handleDeleteUser = async (id: string, email: string) => {
+      if (!window.confirm(`Are you sure you want to PERMANENTLY delete user ${email}? This cannot be undone and will remove all their data.`)) {
+          return;
+      }
+      setProcessing(true);
+      try {
+          const { error } = await api.delete(`/users/${id}`);
+          if (error) throw error;
+          toast.success("User deleted successfully");
+          fetchAllData();
+      } catch (err: any) {
+          toast.error(err.message || "Failed to delete user");
+      } finally {
+          setProcessing(false);
+      }
+  };
+
   const handleAdjustBalance = async (userId: string, direction: 'add' | 'remove') => {
       const amount = parseFloat(balanceAdjust);
       if (!amount || amount <= 0) { toast.error('Enter a valid amount'); return; }
@@ -892,7 +909,15 @@ export default function AdminDashboard() {
                                           )}>{u.kyc_status}</span>
                                       </div>
                                   </div>
-                                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                                  <div className="flex items-center gap-2">
+                                      <button 
+                                          onClick={(e) => { e.stopPropagation(); handleDeleteUser(u.id, u.email); }}
+                                          className="p-2 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                                      >
+                                          <Trash2 className="h-4 w-4" />
+                                      </button>
+                                      <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                                  </div>
                               </div>
                           ))}
                       </div>
@@ -934,12 +959,20 @@ export default function AdminDashboard() {
                                               {format(new Date(u.created_at), 'MMM dd, yyyy')}
                                           </td>
                                           <td className="px-6 py-4 text-right">
-                                              <button 
-                                                onClick={() => openUserDetail(u)}
-                                                className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
-                                              >
-                                                  <Eye className="h-4 w-4" />
-                                              </button>
+                                              <div className="flex items-center justify-end gap-2">
+                                                  <button 
+                                                    onClick={() => openUserDetail(u)}
+                                                    className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
+                                                  >
+                                                      <Eye className="h-4 w-4" />
+                                                  </button>
+                                                  <button 
+                                                    onClick={(e) => { e.stopPropagation(); handleDeleteUser(u.id, u.email); }}
+                                                    className="p-2 rounded-lg hover:bg-destructive/10 text-destructive transition-colors"
+                                                  >
+                                                      <Trash2 className="h-4 w-4" />
+                                                  </button>
+                                              </div>
                                           </td>
                                       </tr>
                                   ))}

@@ -15,9 +15,11 @@ import WalletBreakdown from '@/components/dashboard/WalletBreakdown';
 import QuickActions from '@/components/dashboard/QuickActions';
 import TopMovers from '@/components/dashboard/TopMovers';
 import AnimatedNumber from '@/components/common/AnimatedNumber';
+import { NotificationDrawer } from '@/components/notifications/NotificationDrawer';
 
 export default function Dashboard() {
   const [hideBalance, setHideBalance] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const { user, isLoadingAuth } = useAuth();
   const navigate = useNavigate();
 
@@ -55,6 +57,19 @@ export default function Dashboard() {
     },
     enabled: !!user
   });
+
+  const { data: notifications } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: async () => {
+      const { data, error } = await api.get<any[]>('/notifications');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user,
+    refetchInterval: 30000 // Refresh every 30s
+  });
+
+  const unreadCount = notifications?.filter((n: any) => !n.is_read).length || 0;
 
   const tradingWallet = wallets?.find(w => w.currency === 'trading') || { main_balance: 0 };
   const holdingWallet = wallets?.find(w => w.currency === 'holding') || { main_balance: 0 };
@@ -100,12 +115,24 @@ export default function Dashboard() {
           </div>
 
           {/* Bell */}
-          <button className="p-2 rounded-xl transition-colors relative shrink-0 text-muted-foreground">
+          <button 
+            onClick={() => setIsNotificationsOpen(true)}
+            className="p-2 rounded-xl transition-colors relative shrink-0 text-muted-foreground"
+          >
             <Bell className="h-5 w-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-destructive text-white text-[10px] flex items-center justify-center rounded-full border-2 border-background font-bold">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </button>
         </div>
       </header>
+
+      <NotificationDrawer 
+        open={isNotificationsOpen} 
+        onOpenChange={setIsNotificationsOpen} 
+      />
 
       <div className="px-4 py-6 space-y-8">
         {/* ── SECTION 1: Portfolio Overview ── */}

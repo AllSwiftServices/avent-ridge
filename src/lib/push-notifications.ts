@@ -27,6 +27,19 @@ export async function sendPushNotification(
       .select("*")
       .eq("user_id", userId);
 
+    // Save to notification history (always, even if no push subs)
+    try {
+      await supabaseAdmin.from("notifications").insert({
+        user_id: userId,
+        title: payload.title,
+        body: payload.body,
+        url: payload.url,
+        is_read: false,
+      });
+    } catch (dbError) {
+      console.error("Failed to save notification to history:", dbError);
+    }
+
     if (error) {
       console.error("Database error fetching subscriptions:", error);
       return {

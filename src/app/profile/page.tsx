@@ -15,6 +15,7 @@ import { Switch } from '@/components/ui/switch';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { useAuth } from '@/lib/AuthContext';
 import { showToast } from '@/lib/toast';
+import { NotificationDrawer } from '@/components/notifications/NotificationDrawer';
 
 const ProfileMenuItem = React.memo(({ item, isLast }: { item: any, isLast: boolean }) => {
   return (
@@ -73,21 +74,28 @@ export default function ProfilePage() {
   const { theme, toggleTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
 
   const { isSubscribed, subscribeToPush, unsubscribeFromPush, isSupported } = usePushNotifications();
 
   useEffect(() => {
     setMounted(true);
     // Fetch unread support message count
-    const fetchUnread = async () => {
+    const fetchUnreads = async () => {
       try {
-        const res = await fetch('/api/support/unread');
-        const json = await res.json();
-        setUnreadCount(json.count || 0);
+        const supportRes = await fetch('/api/support/unread');
+        const supportJson = await supportRes.json();
+        setUnreadCount(supportJson.count || 0);
+
+        const notifRes = await fetch('/api/notifications');
+        const notifJson = await notifRes.json();
+        const unreadNotifs = notifJson.filter((n: any) => !n.is_read).length;
+        setNotificationUnreadCount(unreadNotifs);
       } catch { /* ignore */ }
     };
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 30000);
+    fetchUnreads();
+    const interval = setInterval(fetchUnreads, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -212,7 +220,14 @@ export default function ProfilePage() {
         },
         {
           icon: Bell, 
-          label: 'Notifications', 
+          label: 'Notification History', 
+          badge: notificationUnreadCount > 0 ? `${notificationUnreadCount} new` : undefined,
+          badgeColor: 'text-white bg-destructive',
+          action: () => setIsNotificationsOpen(true)
+        },
+        {
+          icon: Shield, 
+          label: 'Push Notifications', 
           toggle: true,
           checked: isSubscribed,
           action: isSupported ? handleNotificationToggle : () => showToast.error('Push notifications are not supported on this browser.')
@@ -230,10 +245,15 @@ export default function ProfilePage() {
         { icon: FileText, label: 'Terms & Privacy', action: comingSoon },
       ]
     }
-  ], [mounted, theme, kycRecord, navigate, toggleTheme, comingSoon, isSubscribed, isSupported]);
+  ], [mounted, theme, kycRecord, navigate, toggleTheme, comingSoon, isSubscribed, isSupported, notificationUnreadCount]);
 
   return (
     <div className="min-h-screen pb-32 md:pb-8 bg-background text-foreground">
+      {/* Drawer */}
+      <NotificationDrawer 
+        open={isNotificationsOpen} 
+        onOpenChange={setIsNotificationsOpen} 
+      />
       {/* Header */}
       <header className="sticky top-0 z-30 backdrop-blur-xl border-b bg-background/95 border-border">
         <div className="px-4 py-4 flex items-center justify-between">

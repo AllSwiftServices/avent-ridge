@@ -62,7 +62,7 @@ export default function TradingHistory() {
   const tradeProfit = totalPayouts - totalTrades;
 
   return (
-    <div className="min-h-screen pb-24 md:pb-8 bg-background text-foreground">
+    <div className="min-h-screen pb-32 md:pb-8 bg-background text-foreground">
       <header className="sticky top-0 z-30 backdrop-blur-xl border-b px-4 py-4 bg-background/95 border-border pt-safe">
         <h1 className="font-bold text-2xl mb-4 text-foreground">Trading History</h1>
 

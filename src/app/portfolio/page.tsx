@@ -129,7 +129,7 @@ export default function PortfolioPage() {
   ];
 
   return (
-    <div className="min-h-screen pb-24 md:pb-8 bg-background text-foreground">
+    <div className="min-h-screen pb-32 md:pb-8 bg-background text-foreground">
       {/* Header */}
       <header className="sticky top-0 z-30 backdrop-blur-xl border-b bg-background/95 border-border pt-safe">
         <div className="px-4 py-4">

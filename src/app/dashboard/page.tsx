@@ -81,7 +81,7 @@ export default function Dashboard() {
   if (isLoadingAuth) return null;
 
   return (
-    <div className="min-h-screen pb-24 md:pb-8 bg-background text-foreground">
+    <div className="min-h-screen pb-32 md:pb-8 bg-background text-foreground">
       {/* ── HEADER ── */}
       <header className="sticky top-0 z-30 backdrop-blur-xl border-b bg-background/90 border-border">
         <div className="flex items-center gap-3 px-4 py-3">

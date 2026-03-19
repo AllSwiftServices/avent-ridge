@@ -185,7 +185,7 @@ export default function VerifyIdentity() {
   if (loading || isLoadingAuth) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-spin h-8 w-8 rounded-full border-2 border-primary border-t-transparent" /></div>;
 
   return (
-    <div className="min-h-screen pb-24 md:pb-8 bg-background">
+    <div className="min-h-screen pb-32 md:pb-8 bg-background">
       <header className="sticky top-0 z-30 border-b flex items-center gap-3 px-4 py-4 bg-background/95 border-border">
         <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-muted transition-colors">
           <ChevronLeft className="h-5 w-5 text-foreground" />

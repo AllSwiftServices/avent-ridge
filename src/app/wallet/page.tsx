@@ -132,7 +132,7 @@ export default function WalletPage() {
 
   if (isLoadingAuth || isLoadingWallets) {
     return (
-      <div className="min-h-screen pb-24 px-4 py-8 space-y-6">
+      <div className="min-h-screen pb-32 px-4 py-8 space-y-6">
         <CardSkeleton />
         <CardSkeleton />
         <CardSkeleton />
@@ -141,7 +141,7 @@ export default function WalletPage() {
   }
 
   return (
-    <div className="min-h-screen pb-24 md:pb-8 bg-background text-foreground">
+    <div className="min-h-screen pb-32 md:pb-8 bg-background text-foreground">
       {/* Header */}
       <header className="sticky top-0 z-30 backdrop-blur-xl border-b bg-background/95 border-border pt-safe">
         <div className="px-4 py-4 flex items-center justify-between">

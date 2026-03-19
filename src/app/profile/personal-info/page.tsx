@@ -46,7 +46,7 @@ export default function PersonalInfoPage() {
   };
 
   return (
-    <div className="min-h-screen pb-24 md:pb-8 bg-background text-foreground">
+    <div className="min-h-screen pb-32 md:pb-8 bg-background text-foreground">
       {/* Header */}
       <header className="sticky top-0 z-30 backdrop-blur-xl border-b bg-background/95 border-border">
         <div className="px-4 py-4 flex items-center gap-3">

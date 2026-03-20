@@ -190,7 +190,42 @@ export async function DELETE(
       // Even if auth delete fails (e.g. user already gone from auth), we might still want to try cleaning up the DB
     }
 
-    // 2. Delete from public.users (triggers cascades for wallets, holdings, etc. if configured)
+    // 2. Manual Cascade Cleanup for dependent tables
+    // We do this because some foreign keys might not have ON DELETE CASCADE set up
+    try {
+      // a. Support system cleanup
+      // First delete messages sent by user
+      await supabaseAdmin.from("support_messages").delete().eq("sender_id", id);
+      
+      // Then delete messages in user's conversations
+      const { data: userConvs } = await supabaseAdmin.from("support_conversations").select("id").eq("user_id", id);
+      if (userConvs && userConvs.length > 0) {
+        const convIds = userConvs.map(c => c.id);
+        await supabaseAdmin.from("support_messages").delete().in("conversation_id", convIds);
+        await supabaseAdmin.from("support_conversations").delete().in("id", convIds);
+      }
+
+      // b. Trading cleanup
+      await supabaseAdmin.from("managed_trade_stakes").delete().eq("user_id", id);
+      await supabaseAdmin.from("ai_trades").delete().eq("user_id", id);
+      await supabaseAdmin.from("holdings").delete().eq("user_id", id);
+      
+      // c. Financial cleanup
+      await supabaseAdmin.from("transactions").delete().eq("user_id", id);
+      await supabaseAdmin.from("deposits").delete().eq("user_id", id);
+      await supabaseAdmin.from("withdrawals").delete().eq("user_id", id);
+      await supabaseAdmin.from("wallets").delete().eq("user_id", id);
+
+      // d. Identity & Notifications cleanup
+      await supabaseAdmin.from("kyc").delete().eq("user_id", id);
+      await supabaseAdmin.from("notifications").delete().eq("user_id", id);
+
+    } catch (cleanupError) {
+      console.error("Manual cleanup error (non-fatal):", cleanupError);
+      // We continue to try deleting the user profile anyway
+    }
+
+    // 3. Delete from public.users (triggers cascades for any remaining if configured)
     const { error: dbDeleteError } = await supabaseAdmin
       .from("users")
       .delete()

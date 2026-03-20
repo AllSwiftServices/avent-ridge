@@ -58,7 +58,9 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 0, 
         user_id: user.id,
         type: isBuy ? 'buy' : 'sell',
         asset_symbol: asset?.symbol,
-        amount: total,
+        amount: total, // Still send amount for legacy/transaction record
+        total_value: total, // Explicitly send total_value for balance adjustment
+        currency: 'trading', // Expressly use the trading wallet for advanced trading view
         price_at_transaction: execPrice,
         quantity: qty,
         status: 'completed',

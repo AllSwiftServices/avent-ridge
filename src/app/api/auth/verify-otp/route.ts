@@ -101,6 +101,38 @@ export async function POST(request: NextRequest) {
 
         await sendWelcomeEmail(normalizedEmail, name || "there");
       }
+    } else if (type === "reset") {
+      console.log(`[AUTH] Processing password reset for: ${normalizedEmail}`);
+      
+      // 1. Find the user in Auth
+      const { data: userData, error: userError } = await supabaseAdmin.auth.admin.listUsers();
+      const user = userData?.users.find(u => u.email === normalizedEmail);
+      
+      if (!user) {
+        throw new Error("User not found in authentication system");
+      }
+      
+      // 2. Update their password
+      if (!password) {
+        throw new Error("New password is required for reset");
+      }
+      
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+        password: password,
+      });
+      
+      if (updateError) {
+        console.error(`[AUTH] Error updating password for ${user.id}:`, updateError);
+        throw updateError;
+      }
+      
+      // 3. Ensure profile is verified
+      await supabaseAdmin
+        .from("users")
+        .update({ email_verified: true })
+        .eq("id", user.id);
+        
+      console.log(`[AUTH] Password reset successful for: ${normalizedEmail}`);
     } else {
       console.log(`[AUTH] Login successful for: ${normalizedEmail}`);
       await supabaseAdmin

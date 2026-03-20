@@ -26,8 +26,26 @@ function getTransporter() {
   return transporter;
 }
 
-export async function sendOtpEmail(to: string, otp: string) {
-  console.log(`🚀 Attempting to send OTP email via SMTP to: ${to}`);
+export async function sendOtpEmail(to: string, otp: string, type: 'login' | 'signup' | 'reset' = 'login') {
+  console.log(`🚀 Attempting to send ${type} OTP email via SMTP to: ${to}`);
+
+  const subjects = {
+    login: "Verify Your Email - AR Trading",
+    signup: "Welcome to AR Trading - Verify Your Email",
+    reset: "Reset Your Password - AR Trading",
+  };
+
+  const titles = {
+    login: "Verify Your Email",
+    signup: "Welcome to AR Trading!",
+    reset: "Reset Your Password",
+  };
+
+  const messages = {
+    login: "Welcome back! Please use the verification code below to complete your sign in.",
+    signup: "Welcome to AR Trading! Please use the verification code below to complete your registration.",
+    reset: "You've requested to reset your password. Please use the verification code below to proceed.",
+  };
 
   const html = `
       <!DOCTYPE html>
@@ -58,8 +76,8 @@ export async function sendOtpEmail(to: string, otp: string) {
               <p>Premium Trading Platform</p>
             </div>
             <div class="content">
-              <div class="title">Verify Your Email</div>
-              <p class="text">Welcome to AR Trading! Please use the verification code below to complete your sign in.</p>
+              <div class="title">${titles[type]}</div>
+              <p class="text">${messages[type]}</p>
               <div class="otp-box">
                 <p class="otp-label">Verification Code</p>
                 <div class="otp-code">${otp}</div>
@@ -81,7 +99,7 @@ export async function sendOtpEmail(to: string, otp: string) {
     const info = await mailer.sendMail({
       from: process.env.SMTP_USER,
       to,
-      subject: "Verify Your Email - AR Trading",
+      subject: subjects[type],
       html,
     });
 

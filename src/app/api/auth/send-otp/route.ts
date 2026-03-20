@@ -20,9 +20,9 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // If login, check if user exists first
-    if (type === "login") {
-      console.log(`[AUTH] Checking if user exists: ${normalizedEmail}`);
+    // If login or reset, check if user exists first
+    if (type === "login" || type === "reset") {
+      console.log(`[AUTH] Checking if user exists for ${type}: ${normalizedEmail}`);
       const { data: existingUser, error: userError } = await supabaseAdmin
         .from("users")
         .select("id")
@@ -38,13 +38,13 @@ export async function POST(request: NextRequest) {
       }
 
       if (!existingUser) {
-        console.warn(`[AUTH] Login attempt for non-existent user: ${normalizedEmail}`);
+        console.warn(`[AUTH] ${type} attempt for non-existent user: ${normalizedEmail}`);
         return NextResponse.json(
           { success: false, error: "No account found with this email. Please sign up first." },
           { status: 404 },
         );
       }
-      console.log(`[AUTH] User found: ${existingUser.id}`);
+      console.log(`[AUTH] User found for ${type}: ${existingUser.id}`);
     }
 
     // Generate OTP
@@ -69,14 +69,12 @@ export async function POST(request: NextRequest) {
       throw new Error("Failed to generate verification code");
     }
 
-    // Send OTP email
-    console.log(`[AUTH] Sending OTP email to: ${normalizedEmail}`);
-    await sendOtpEmail(normalizedEmail, otp);
-    console.log(`[AUTH] OTP email sent successfully to: ${normalizedEmail}`);
+    await sendOtpEmail(normalizedEmail, otp, type as any);
+    console.log(`[AUTH] ${type} OTP email sent successfully to: ${normalizedEmail}`);
 
-    return NextResponse.json({
-      success: true,
-      message: "Verification code sent successfully",
+    return NextResponse.json({ 
+      success: true, 
+      message: `${type} OTP sent successfully`
     });
   } catch (error: any) {
     console.error("Send OTP error:", error);

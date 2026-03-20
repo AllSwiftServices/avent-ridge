@@ -54,12 +54,12 @@ export async function sendOtpEmail(to: string, otp: string) {
         <body>
           <div class="container">
             <div class="header">
-              <h1>Avent Ridge</h1>
+              <h1>AR Trading</h1>
               <p>Premium Trading Platform</p>
             </div>
             <div class="content">
               <div class="title">Verify Your Email</div>
-              <p class="text">Welcome to Avent Ridge! Please use the verification code below to complete your sign in.</p>
+              <p class="text">Welcome to AR Trading! Please use the verification code below to complete your sign in.</p>
               <div class="otp-box">
                 <p class="otp-label">Verification Code</p>
                 <div class="otp-code">${otp}</div>
@@ -68,7 +68,7 @@ export async function sendOtpEmail(to: string, otp: string) {
               <p class="text" style="font-size: 14px; margin-bottom: 0;">If you didn't request this code, please ignore this email.</p>
             </div>
             <div class="footer">
-              <p>© ${new Date().getFullYear()} Avent Ridge. All rights reserved.</p>
+              <p>© ${new Date().getFullYear()} AR Trading. All rights reserved.</p>
               <p>Trade with confidence on our secure platform</p>
             </div>
           </div>
@@ -81,7 +81,7 @@ export async function sendOtpEmail(to: string, otp: string) {
     const info = await mailer.sendMail({
       from: process.env.SMTP_USER,
       to,
-      subject: "Verify Your Email - Avent Ridge",
+      subject: "Verify Your Email - AR Trading",
       html,
     });
 
@@ -115,11 +115,11 @@ export async function sendWelcomeEmail(to: string, name: string) {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🎉 Welcome to Avent Ridge!</h1>
+              <h1>🎉 Welcome to AR Trading!</h1>
             </div>
             <div class="content">
               <div class="title">Hi ${name},</div>
-              <p class="text">Thank you for joining Avent Ridge! You're now part of our community of elite traders.</p>
+              <p class="text">Thank you for joining AR Trading! You're now part of our community of elite traders.</p>
               
               <div class="features">
                 <p>✓ Advanced trading tools & real-time analytics</p>
@@ -130,7 +130,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
               <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://aventridge.com"}/dashboard" class="button">Go to Dashboard</a>
             </div>
             <div class="footer">
-              <p>© ${new Date().getFullYear()} Avent Ridge. All rights reserved.</p>
+              <p>© ${new Date().getFullYear()} AR Trading. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -142,7 +142,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
     const info = await mailer.sendMail({
       from: process.env.SMTP_USER,
       to,
-      subject: "Welcome to Avent Ridge! 🎉",
+      subject: "Welcome to AR Trading! 🎉",
       html,
     });
 

@@ -32,9 +32,9 @@ export default function Sidebar() {
     )}>
       <div className="flex items-center gap-3 px-3 py-4 mb-6">
         <div className="w-10 h-10 rounded-xl bg-linear-to-br from-primary to-amber-500 flex items-center justify-center shadow-lg shadow-primary/20">
-          <Zap className="h-5 w-5 text-black" />
+          <span className="font-black text-lg text-black">AR</span>
         </div>
-        <span className="font-bold text-xl text-foreground">Avent Ridge</span>
+        <span className="font-bold text-xl text-foreground">AR Trading</span>
       </div>
 
       <nav className="flex-1 space-y-1">

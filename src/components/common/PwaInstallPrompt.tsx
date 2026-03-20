@@ -80,7 +80,7 @@ export function PwaInstallPrompt() {
                                     <h3 className="font-bold text-foreground">Install App</h3>
                                     <p className="text-xs text-muted-foreground mt-0.5">
                                         {isIOS
-                                            ? "Install Avent Ridge for a better experience."
+                                            ? "Install AR Trading for a better experience."
                                             : "Install our app for faster access and better performance."}
                                     </p>
                                 </div>

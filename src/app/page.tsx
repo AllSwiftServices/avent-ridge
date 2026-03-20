@@ -173,7 +173,7 @@ export default function Home() {
               <div className="w-14 h-14 rounded-2xl bg-linear-to-br from-primary to-amber-500 flex items-center justify-center shadow-lg shadow-primary/30">
                 <Zap className="h-7 w-7 text-black" />
               </div>
-              <span className="text-2xl font-bold">Avent Ridge</span>
+              <span className="text-2xl font-bold">AR Trading</span>
             </div>
           </motion.div>
 
@@ -364,7 +364,7 @@ export default function Home() {
             </AnimatePresence>
 
             <p className="text-center text-[11px] leading-relaxed text-muted-foreground/60 mt-8">
-              By continuing, you agree to Avent Ridge's <br />
+              By continuing, you agree to AR Trading's <br />
               <button className="underline hover:text-primary">Terms of Service</button> and <button className="underline hover:text-primary">Privacy Policy</button>
             </p>
           </motion.div>

@@ -31,12 +31,23 @@ export async function POST(request: NextRequest) {
 
     const signInData = await signInRes.json();
 
-    if (!signInRes.ok || !signInData.access_token) {
-      const msg = signInData.error_description || signInData.msg || signInData.error || "Invalid email or password";
-      return NextResponse.json({ success: false, error: msg }, { status: 401 });
-    }
+    const { access_token, refresh_token, user } = signInData;
 
-    const { access_token, refresh_token } = signInData;
+    // CRITICAL: Check if the user exists in the public.users table.
+    // This prevents "zombie users" who exist in Auth but not in our DB.
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from("users")
+      .select("id")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || !profile) {
+      console.warn(`[AUTH] Login attempted for user without profile: ${normalizedEmail}`);
+      return NextResponse.json(
+        { success: false, error: "Account profile missing. Please try signing up again." },
+        { status: 401 }
+      );
+    }
 
     // Store the session via SSR client so cookies are written to the response
     const supabase = await createClient();

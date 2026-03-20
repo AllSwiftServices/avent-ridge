@@ -10,11 +10,11 @@ const geistSans = { variable: "--font-geist-sans" };
 const geistMono = { variable: "--font-geist-mono" };
 
 export const metadata: Metadata = {
-  title: "Avent Ridge",
-  description: "Avent Ridge Trading Platform",
+  title: "AR Trading",
+  description: "AR Trading Platform",
   manifest: "/manifest.json",
   appleWebApp: {
-    title: "Avent Ridge",
+    title: "AR Trading",
     statusBarStyle: "black-translucent",
   },
 };

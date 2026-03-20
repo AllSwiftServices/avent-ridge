@@ -179,7 +179,7 @@ export default function LiveChatPage() {
             <Zap className="h-5 w-5 text-black" />
           </div>
           <div>
-            <p className="font-bold text-sm leading-none">Avent Ridge Support</p>
+            <p className="font-bold text-sm leading-none">AR Trading Support</p>
             <div className="flex items-center gap-1.5 mt-1">
               <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
               <span className="text-[10px] text-muted-foreground font-medium">Online · Typically replies in minutes</span>
@@ -209,7 +209,7 @@ export default function LiveChatPage() {
             <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3 max-w-[75%]">
               <p className="text-[10px] font-black text-primary uppercase tracking-wider mb-1">Support</p>
               <p className="text-sm">
-                👋 Hi {userName}! Welcome to Avent Ridge support. How can we help you today?
+                👋 Hi {userName}! Welcome to AR Trading support. How can we help you today?
               </p>
             </div>
           </motion.div>

@@ -55,30 +55,48 @@ export async function POST(request: NextRequest) {
 
     // Profile management
     if (type === "signup") {
-      console.log(`[AUTH] Creating new user for signup: ${normalizedEmail}`);
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email: normalizedEmail,
-        email_confirm: true,
-        user_metadata: { name },
-        password: password || Math.random().toString(36).slice(-12),
-      });
+      console.log(`[AUTH] Processing signup for: ${normalizedEmail}`);
+      
+      let userId: string;
+      
+      // 1. Check if auth user already exists (to handle partial signups)
+      const { data: existingAuth, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      const authUser = existingAuth?.users.find(u => u.email === normalizedEmail);
+      
+      if (authUser) {
+        console.log(`[AUTH] User already exists in Auth: ${authUser.id}. Re-using ID.`);
+        userId = authUser.id;
+      } else {
+        console.log(`[AUTH] Creating new user for signup: ${normalizedEmail}`);
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+          email: normalizedEmail,
+          email_confirm: true,
+          user_metadata: { name },
+          password: password || Math.random().toString(36).slice(-12),
+        });
 
-      if (authError) {
-        console.error(`[AUTH] Error creating auth user for ${normalizedEmail}:`, authError);
-        throw authError;
+        if (authError) {
+          console.error(`[AUTH] Error creating auth user for ${normalizedEmail}:`, authError);
+          throw authError;
+        }
+        userId = authData.user!.id;
       }
-      if (authData.user) {
-        console.log(`[AUTH] Auth user created: ${authData.user.id}. Creating profile...`);
-        const { error: profileError } = await supabaseAdmin.from("users").insert({
-          id: authData.user.id,
+
+      if (userId) {
+        console.log(`[AUTH] Ensuring profile exists for ${userId}...`);
+        // Use upsert to handle case where profile might partially exist or to avoid unique constraint errors
+        const { error: profileError } = await supabaseAdmin.from("users").upsert({
+          id: userId,
           email: normalizedEmail,
           name: name || normalizedEmail.split("@")[0],
           email_verified: true,
           role: "buyer",
-        });
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
 
         if (profileError) {
-          console.error(`[AUTH] Error creating profile for ${authData.user.id}:`, profileError);
+          console.error(`[AUTH] Error ensuring profile for ${userId}:`, profileError);
+          // If it's a "duplicate key" error, it's fine, but upsert handles that.
         }
 
         await sendWelcomeEmail(normalizedEmail, name || "there");

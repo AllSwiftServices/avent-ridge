@@ -365,7 +365,7 @@ export default function ProfilePage() {
 
         {/* Version */}
         <p className="text-center text-xs text-muted-foreground">
-          Avent Ridge v1.0.0
+          AR Trading v1.0.0
         </p>
       </div>
     </div>

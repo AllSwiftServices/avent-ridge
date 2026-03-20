@@ -19,7 +19,7 @@ self.addEventListener("push", function (event) {
     data = { body: event.data?.text() };
   }
 
-  const title = data.title || "Avent Ridge Update";
+  const title = data.title || "AR Trading Update";
   const options = {
     body: data.body || "You have a new notification.",
     icon: data.icon || "/icon.png",

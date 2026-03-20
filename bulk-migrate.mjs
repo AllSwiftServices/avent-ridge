@@ -56,10 +56,10 @@ walkSync('/Users/daniel/Documents/avent-ridge/src', (filePath) => {
     let content = fs.readFileSync(filePath, 'utf8');
     let original = content;
 
-    content = content.replace(/Real Apex Trade/g, 'Avent Ridge');
+    content = content.replace(/Real Apex Trade/g, 'AR Trading');
     content = content.replace(/RealApexTrade/g, 'AventRidge');
-    content = content.replace(/Apex Trade/g, 'Avent Ridge');
-    content = content.replace(/Base44/g, 'Avent Ridge');
+    content = content.replace(/Apex Trade/g, 'AR Trading');
+    content = content.replace(/Base44/g, 'AR Trading');
     content = content.replace(/import\.meta\.env\.VITE_/g, 'process.env.NEXT_PUBLIC_');
     content = content.replace(/import\.meta\.env/g, 'process.env');
     

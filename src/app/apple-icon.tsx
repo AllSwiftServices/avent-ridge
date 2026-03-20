@@ -16,24 +16,35 @@ export default function AppleIcon() {
           width: '100%',
           height: '100%',
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: 'hsl(47, 100%, 50%)',
         }}
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="100"
-          height="100"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="black"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+        <div
+          style={{
+            fontSize: 80,
+            fontWeight: 900,
+            color: 'black',
+            fontFamily: 'sans-serif',
+            marginBottom: -10,
+          }}
         >
-          <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>
-        </svg>
+          AR
+        </div>
+        <div
+          style={{
+            fontSize: 32,
+            fontWeight: 900,
+            color: 'black',
+            fontFamily: 'sans-serif',
+            textTransform: 'uppercase',
+            letterSpacing: 2,
+          }}
+        >
+          TRADING
+        </div>
       </div>
     ),
     { ...size }

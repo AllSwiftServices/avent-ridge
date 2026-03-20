@@ -153,3 +153,64 @@ export async function sendWelcomeEmail(to: string, name: string) {
     return null;
   }
 }
+export async function sendKycEmail(to: string, name: string, status: "approved" | "rejected", reason?: string) {
+  console.log(`🚀 Sending KYC ${status} email to: ${to}`);
+
+  const isApproved = status === "approved";
+  const title = isApproved ? "Identity Verified! 🎉" : "Verification Update";
+  const message = isApproved
+    ? "Great news! Your identity verification has been approved. You now have full access to all AR Trading features, including withdrawals and advanced trading."
+    : `Your KYC application was unfortunately rejected. Reason: ${reason || "Please ensure your documents are clear and valid."}`;
+
+  const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #09090b; margin: 0; padding: 0; color: #e4e4e7; }
+            .container { max-width: 600px; margin: 40px auto; background: #18181b; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); border: 1px solid #27272a; }
+            .header { background: ${isApproved ? "linear-gradient(135deg, #10b981 0%, #059669 100%)" : "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)"}; padding: 40px 30px; text-align: center; }
+            .header h1 { margin: 0; font-size: 28px; font-weight: bold; color: #ffffff; }
+            .content { padding: 40px 30px; text-align: center; }
+            .title { font-size: 24px; font-weight: 600; color: #ffffff; margin-bottom: 16px; }
+            .text { color: #a1a1aa; font-size: 16px; line-height: 1.6; margin-bottom: 20px; }
+            .button { display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: #ffffff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 20px 0; }
+            .footer { background: #09090b; padding: 30px; text-align: center; color: #52525b; font-size: 12px; border-top: 1px solid #27272a; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>${title}</h1>
+            </div>
+            <div class="content">
+              <div class="title">Hi ${name},</div>
+              <p class="text">${message}</p>
+              
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://aventridge.com"}/verify-identity" class="button">View Verification Status</a>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} AR Trading. All rights reserved.</p>
+              <p>Secure Trading Platform</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+  try {
+    const mailer = getTransporter();
+    const info = await mailer.sendMail({
+      from: process.env.SMTP_USER,
+      to,
+      subject: `${title} - AR Trading`,
+      html,
+    });
+
+    console.log(`✅ KYC email sent to ${to}. MessageId: ${info.messageId}`);
+    return info;
+  } catch (error: any) {
+    console.error(`❌ Error sending KYC email to ${to}:`, error.message);
+    return null;
+  }
+}

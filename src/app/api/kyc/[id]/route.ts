@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, supabaseAdmin } from "@/lib/supabase-server";
 import { sendPushNotification } from "@/lib/push-notifications";
+import { sendKycEmail } from "@/lib/email";
 
 export async function GET(
   request: Request,
@@ -89,6 +90,13 @@ export async function PATCH(
       .update({ kyc_status: status })
       .eq('id', id);
 
+    // Fetch user details for notification
+    const { data: userData } = await supabaseAdmin
+      .from("users")
+      .select("email, name")
+      .eq("id", id)
+      .single();
+
     try {
         await sendPushNotification(id, {
             title: status === 'approved' ? "Identity Verified! 🎉" : "Verification Update",
@@ -99,6 +107,19 @@ export async function PATCH(
         });
     } catch (e) {
         console.error("Failed to send push notification", e);
+    }
+
+    if (userData?.email) {
+      try {
+        await sendKycEmail(
+          userData.email, 
+          userData.name || userData.email.split('@')[0], 
+          status, 
+          rejection_reason
+        );
+      } catch (e) {
+        console.error("Failed to send KYC email", e);
+      }
     }
 
     return NextResponse.json({ success: true });

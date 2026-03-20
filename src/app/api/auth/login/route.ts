@@ -31,7 +31,16 @@ export async function POST(request: NextRequest) {
 
     const signInData = await signInRes.json();
 
+    if (!signInRes.ok || !signInData.access_token) {
+      const msg = signInData.error_description || signInData.msg || signInData.error || "Invalid email or password";
+      return NextResponse.json({ success: false, error: msg }, { status: 401 });
+    }
+
     const { access_token, refresh_token, user } = signInData;
+
+    if (!user?.id) {
+       return NextResponse.json({ success: false, error: "Authentication failed. User data missing." }, { status: 401 });
+    }
 
     // CRITICAL: Check if the user exists in the public.users table.
     // This prevents "zombie users" who exist in Auth but not in our DB.

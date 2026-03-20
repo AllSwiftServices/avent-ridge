@@ -22,7 +22,6 @@ export async function POST(request: NextRequest) {
       .from("verification_codes")
       .select("*")
       .eq("email", normalizedEmail)
-      .eq("code", otp)
       .maybeSingle();
 
     if (otpError) {
@@ -34,15 +33,27 @@ export async function POST(request: NextRequest) {
     }
 
     if (!otpRecord) {
-      console.warn(`[AUTH] Invalid OTP attempt for ${normalizedEmail}: ${otp}`);
+      console.warn(`[AUTH] No OTP found for ${normalizedEmail}`);
       return NextResponse.json(
-        { success: false, error: "Invalid or expired verification code" },
+        { success: false, error: "No active verification code found for this email. Please request a new one." },
+        { status: 401 },
+      );
+    }
+
+    // Check if OTP matches
+    if (otpRecord.code !== otp) {
+      console.warn(`[AUTH] Invalid OTP attempt for ${normalizedEmail}: provided ${otp}, expected ${otpRecord.code}`);
+      return NextResponse.json(
+        { success: false, error: "Invalid verification code" },
         { status: 401 },
       );
     }
 
     // Check if OTP has expired
-    if (new Date(otpRecord.expires_at) < new Date()) {
+    const expiryDate = new Date(otpRecord.expires_at);
+    const now = new Date();
+    if (expiryDate < now) {
+      console.warn(`[AUTH] Expired OTP for ${normalizedEmail}: expired at ${otpRecord.expires_at}, now is ${now.toISOString()}`);
       await supabaseAdmin.from("verification_codes").delete().eq("email", normalizedEmail);
       return NextResponse.json(
         { success: false, error: "Verification code has expired. Please request a new one." },
@@ -50,8 +61,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Delete used OTP
-    await supabaseAdmin.from("verification_codes").delete().eq("email", normalizedEmail);
+    // Note: We'll delete the OTP at the very end of the successful path
+    // so that flaky connections can retry if session setup fails.
 
     // Profile management
     if (type === "signup") {
@@ -198,6 +209,10 @@ export async function POST(request: NextRequest) {
       }
 
       console.log(`[AUTH] Session cookies set for ${normalizedEmail} via magic-link exchange`);
+      
+      // 4. Final step: Delete the verified OTP
+      await supabaseAdmin.from("verification_codes").delete().eq("email", normalizedEmail);
+      
       return NextResponse.json({ success: true, message: "Verification successful" });
     } catch (sessionErr: any) {
       console.error(`[AUTH] Session setup error for ${normalizedEmail}:`, sessionErr);

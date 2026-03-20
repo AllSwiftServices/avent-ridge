@@ -602,7 +602,7 @@ export default function AdminDashboard() {
 
   const calculateEndsAt = (durationStr?: string) => {
     if (!durationStr) return;
-    const match = durationStr.toLowerCase().match(/^(\d+)(s|m|h|d)$/);
+    const match = durationStr.toLowerCase().match(/^(\d+)(s|m|h|d|w)$/);
     if (!match) return;
     
     const value = parseInt(match[1]);
@@ -613,6 +613,7 @@ export default function AdminDashboard() {
       case 'm': seconds = value * 60; break;
       case 'h': seconds = value * 3600; break;
       case 'd': seconds = value * 86400; break;
+      case 'w': seconds = value * 604800; break;
     }
     
     if (seconds > 0) {
@@ -1409,32 +1410,33 @@ export default function AdminDashboard() {
                       </div>
 
                       <div className="space-y-2">
-                        <div className="flex justify-between items-center px-1">
-                          <label className="text-[10px] font-bold text-muted-foreground uppercase">Duration</label>
-                          <button 
-                            type="button"
-                            onClick={() => calculateEndsAt(newTrade.duration)}
-                            className="text-[9px] font-bold text-primary uppercase hover:underline"
-                          >
-                            Set End Time
-                          </button>
-                        </div>
-                        <input 
-                          type="text"
-                          placeholder="e.g. 30s, 5m, 1h"
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Duration</label>
+                        <select 
                           value={newTrade.duration || ''}
                           onChange={(e) => {
                             const val = e.target.value;
                             setNewTrade({...newTrade, duration: val});
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              calculateEndsAt(newTrade.duration);
-                            }
+                            if (val) calculateEndsAt(val);
                           }}
                           className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
-                        />
+                        >
+                          <option value="">Select duration...</option>
+                          <option value="30s">30 Seconds</option>
+                          <option value="1m">1 Minute</option>
+                          <option value="2m">2 Minutes</option>
+                          <option value="5m">5 Minutes</option>
+                          <option value="15m">15 Minutes</option>
+                          <option value="30m">30 Minutes</option>
+                          <option value="1h">1 Hour</option>
+                          <option value="2h">2 Hours</option>
+                          <option value="4h">4 Hours</option>
+                          <option value="8h">8 Hours</option>
+                          <option value="12h">12 Hours</option>
+                          <option value="1d">1 Day</option>
+                          <option value="2d">2 Days</option>
+                          <option value="3d">3 Days</option>
+                          <option value="1w">1 Week</option>
+                        </select>
                       </div>
 
                       <div className="space-y-2">

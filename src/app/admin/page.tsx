@@ -1775,22 +1775,28 @@ export default function AdminDashboard() {
                                   <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">User ID</p>
                                   <p className="text-[10px] font-mono text-muted-foreground truncate">{selectedUser.id}</p>
                               </div>
-                              {userDetail?.plain_password && (
-                                  <div className="col-span-2 p-3 rounded-2xl bg-muted/30 border border-border flex items-center justify-between">
-                                      <div>
-                                          <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Password</p>
-                                          <p className="text-sm font-bold font-mono">
-                                              {showPassword ? userDetail.plain_password : "••••••••"}
-                                          </p>
-                                      </div>
-                                      <button 
-                                          onClick={() => setShowPassword(!showPassword)}
-                                          className="p-2 hover:bg-muted rounded-lg text-muted-foreground transition-colors"
-                                      >
-                                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                      </button>
+                              <div className="col-span-2 p-3 rounded-2xl bg-muted/30 border border-border flex items-center justify-between">
+                                  <div>
+                                      <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Password</p>
+                                      {userDetail?.plain_password ? (
+                                        <p className="text-sm font-bold font-mono">
+                                            {showPassword ? userDetail.plain_password : "••••••••"}
+                                        </p>
+                                      ) : (
+                                        <p className="text-sm font-medium text-muted-foreground italic">
+                                            Not recorded
+                                        </p>
+                                      )}
                                   </div>
-                              )}
+                                  {userDetail?.plain_password && (
+                                    <button 
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="p-2 hover:bg-muted rounded-lg text-muted-foreground transition-colors"
+                                    >
+                                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </button>
+                                  )}
+                              </div>
                           </div>
                           {userDetail?.kyc && (
                               <div className="space-y-2">

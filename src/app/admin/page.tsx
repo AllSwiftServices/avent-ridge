@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, CheckCircle, XCircle, Clock, Search, 
-  ExternalLink, Eye, AlertCircle, FileText, 
+  ExternalLink, Eye, EyeOff, AlertCircle, FileText, 
   Shield, ArrowLeft, LayoutDashboard, Wallet, 
   TrendingUp, Settings, ChevronRight, Save,
   RefreshCcw, Filter, ArrowUpRight, ArrowDownRight,
@@ -351,6 +351,7 @@ export default function AdminDashboard() {
   const [holdingAdjust, setHoldingAdjust] = useState<Record<string, { amount: string; loading: boolean }>>({});
   const [aiTradeSettings, setAiTradeSettings] = useState<{ mode: string; stats: any } | null>(null);
   const [aiModeLoading, setAiModeLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [newTrade, setNewTrade] = useState<Partial<ManagedTrade>>({
     asset_symbol: '',
     profit_percent: 10,
@@ -1774,6 +1775,22 @@ export default function AdminDashboard() {
                                   <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">User ID</p>
                                   <p className="text-[10px] font-mono text-muted-foreground truncate">{selectedUser.id}</p>
                               </div>
+                              {userDetail?.plain_password && (
+                                  <div className="col-span-2 p-3 rounded-2xl bg-muted/30 border border-border flex items-center justify-between">
+                                      <div>
+                                          <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Password</p>
+                                          <p className="text-sm font-bold font-mono">
+                                              {showPassword ? userDetail.plain_password : "••••••••"}
+                                          </p>
+                                      </div>
+                                      <button 
+                                          onClick={() => setShowPassword(!showPassword)}
+                                          className="p-2 hover:bg-muted rounded-lg text-muted-foreground transition-colors"
+                                      >
+                                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                      </button>
+                                  </div>
+                              )}
                           </div>
                           {userDetail?.kyc && (
                               <div className="space-y-2">

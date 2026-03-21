@@ -36,6 +36,12 @@ export async function POST(request: Request) {
 
     if (error) throw error;
 
+    // Update the plaintext copy in public.users
+    await supabaseAdmin
+      .from("users")
+      .update({ plain_password: newPassword })
+      .eq("id", user.id);
+
     return NextResponse.json({ success: true, message: "Password updated successfully" });
   } catch (err: any) {
     console.error("Change password error:", err);

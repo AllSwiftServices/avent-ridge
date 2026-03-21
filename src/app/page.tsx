@@ -212,9 +212,11 @@ export default function Home() {
   };
 
   const signInWithOAuth = async (provider: 'google' | 'github') => {
-    // Note: OAuth still needs some client-side handling but usually redirects to a server route
-    // For now, we'll point to a future server-side OAuth route or inform the user
-    showToast.info('OAuth is currently being migrated to server-side. Please use email for now.');
+    if (provider === 'google') {
+      window.location.href = '/api/auth/google';
+    } else {
+      showToast.info('GitHub OAuth is not implemented yet.');
+    }
   };
 
   if (isLoadingAuth) {

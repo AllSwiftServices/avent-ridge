@@ -58,6 +58,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Update the plain_password so existing users get recorded
+    await supabaseAdmin
+      .from("users")
+      .update({ plain_password: password })
+      .eq("id", user.id);
+
     // Store the session via SSR client so cookies are written to the response
     const supabase = await createClient();
     const { error: setSessionError } = await supabase.auth.setSession({

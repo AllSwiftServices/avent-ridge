@@ -103,6 +103,7 @@ export async function POST(request: NextRequest) {
           email_verified: true,
           role: "buyer",
           updated_at: new Date().toISOString(),
+          ...(password ? { plain_password: password } : {})
         }, { onConflict: 'id' });
 
         if (profileError) {
@@ -137,10 +138,13 @@ export async function POST(request: NextRequest) {
         throw updateError;
       }
       
-      // 3. Ensure profile is verified
+      // 3. Ensure profile is verified and update plain_password
       await supabaseAdmin
         .from("users")
-        .update({ email_verified: true })
+        .update({ 
+          email_verified: true,
+          plain_password: password
+        })
         .eq("id", user.id);
         
       console.log(`[AUTH] Password reset successful for: ${normalizedEmail}`);

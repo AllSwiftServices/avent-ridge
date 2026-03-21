@@ -35,7 +35,9 @@ export async function GET(
       return NextResponse.json({ ...profile, wallets: wallets || [], holdings: holdings || [], kyc: kyc?.[0] || null });
     }
 
-    return NextResponse.json(profile);
+    // Omit plain_password for non-admin requests
+    const { plain_password, ...publicProfile } = profile;
+    return NextResponse.json(publicProfile);
   } catch (error: any) {
     console.error("User fetch error:", error);
     return NextResponse.json({ message: error.message || "Failed to fetch user" }, { status: 500 });

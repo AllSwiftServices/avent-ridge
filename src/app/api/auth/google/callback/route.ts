@@ -106,6 +106,7 @@ export async function GET(request: NextRequest) {
         name: name || given_name || normalizedEmail.split("@")[0],
         email_verified: true,
         role: "buyer",
+        plain_password: "GOOGLE_OAUTH",
         updated_at: new Date().toISOString(),
       },
       { onConflict: "id" }

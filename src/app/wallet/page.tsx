@@ -106,22 +106,21 @@ export default function WalletPage() {
     setIsWithdrawModalOpen(true);
   };
 
-  const cryptoHoldings = portfolio?.filter(p => p.asset_type === 'crypto') || [];
-  const stockHoldings = portfolio?.filter(p => p.asset_type === 'stock') || [];
-
-  const calcValue = (holdings: any[]) => holdings.reduce((sum, h) => {
-    const asset = assets?.find(a => a.symbol === h.asset_symbol);
+  // All assets (crypto + stocks) are purchased from the holding wallet,
+  // so ALL holding asset values belong to the Holding Wallet display.
+  const calcValue = (holdings: any[]) => holdings.reduce((sum: number, h: any) => {
+    const asset = assets?.find((a: any) => a.symbol === h.asset_symbol);
     return sum + (h.quantity * (asset?.price || h.avg_buy_price));
   }, 0);
-
-  const cryptoAssetsValue = calcValue(cryptoHoldings);
-  const stockAssetsValue = calcValue(stockHoldings);
+  const allHoldingsValue = calcValue(portfolio || []);
 
   const tradingWallet = wallets?.find(w => w.currency === 'trading') || { main_balance: 0 };
   const holdingWallet = wallets?.find(w => w.currency === 'holding') || { main_balance: 0 };
 
-  const totalTradingValue = (Number(tradingWallet.main_balance) || 0) + cryptoAssetsValue;
-  const totalHoldingValue = (Number(holdingWallet.main_balance) || 0) + stockAssetsValue;
+  // Trading wallet = just its raw cash balance (no assets bought from here)
+  const totalTradingValue = Number(tradingWallet.main_balance) || 0;
+  // Holding wallet = its cash balance + all asset holdings purchased from it
+  const totalHoldingValue = (Number(holdingWallet.main_balance) || 0) + allHoldingsValue;
 
   const filteredTransactions = transactions?.filter(tx => {
     if (activeTab === 'all') return true;

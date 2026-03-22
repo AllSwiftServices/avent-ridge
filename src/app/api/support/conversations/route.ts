@@ -49,10 +49,19 @@ export async function POST(request: NextRequest) {
         body: message,
       });
 
+      // Fetch user name for notification
+      const { data: profile } = await supabaseAdmin
+        .from("users")
+        .select("name")
+        .eq("id", user.id)
+        .single();
+      
+      const displayName = profile?.name || user.email;
+
       // Notify admins — fire and forget
       sendPushToAdmins({
         title: "New Support Request",
-        body: `${user.email}: ${message.slice(0, 100)}${message.length > 100 ? "..." : ""}`,
+        body: `${displayName}: ${message.slice(0, 100)}${message.length > 100 ? "..." : ""}`,
         url: "/admin/support",
       }).catch((e) => console.error("Failed to notify admins", e));
     }

@@ -48,7 +48,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { body: msgBody } = await request.json();
     if (!msgBody?.trim()) return NextResponse.json({ error: "Message cannot be empty" }, { status: 400 });
 
-    const { data: profile } = await supabaseAdmin.from("users").select("role").eq("id", user.id).single();
+    const { data: profile } = await supabaseAdmin.from("users").select("role, name").eq("id", user.id).single();
     const senderRole = profile?.role === "admin" ? "admin" : "user";
 
     const { data, error } = await supabaseAdmin
@@ -89,9 +89,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
     } else {
       // Send push notification to admins when user sends a message
+      const displayName = profile?.name || user.email;
       sendPushToAdmins({
         title: "New Support Message",
-        body: `${user.email}: ${msgBody.trim().slice(0, 100)}${msgBody.trim().length > 100 ? "..." : ""}`,
+        body: `${displayName}: ${msgBody.trim().slice(0, 100)}${msgBody.trim().length > 100 ? "..." : ""}`,
         url: "/admin/support",
       }).catch((e) => console.error("Failed to notify admins", e));
     }

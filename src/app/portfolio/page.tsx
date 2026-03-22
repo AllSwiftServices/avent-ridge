@@ -12,14 +12,17 @@ import { createPageUrl } from '@/utils';
 import { useAuth } from '@/lib/AuthContext';
 import AllocationChart from '@/components/portfolio/AllocationChart';
 import { CardSkeleton } from '@/components/common/LoadingSkeleton';
+import TradeModal from '@/components/trade/TradeModal';
+import { toast } from 'sonner';
 
 interface PortfolioItemProps {
   item: any;
   currentPrice: number;
   index: number;
+  onTradeClick?: (assetSymbol: string) => void;
 }
 
-function PortfolioItem({ item, currentPrice, index }: PortfolioItemProps) {
+function PortfolioItem({ item, currentPrice, index, onTradeClick }: PortfolioItemProps) {
   const profitLoss = (currentPrice - item.avg_buy_price) * item.quantity;
   const profitLossPercent = ((currentPrice - item.avg_buy_price) / item.avg_buy_price) * 100;
   const isPositive = profitLoss >= 0;
@@ -38,11 +41,19 @@ function PortfolioItem({ item, currentPrice, index }: PortfolioItemProps) {
         <p className="font-semibold text-sm">{item.asset_symbol}</p>
         <p className="text-xs text-muted-foreground">{item.quantity} units</p>
       </div>
-      <div className="text-right">
+      <div className="text-right flex flex-col items-end">
         <p className="font-semibold text-sm">${(item.quantity * currentPrice).toLocaleString()}</p>
-        <p className={cn("text-xs font-medium", isPositive ? "text-primary" : "text-destructive")}>
+        <p className={cn("text-xs font-medium mb-1", isPositive ? "text-primary" : "text-destructive")}>
           {isPositive ? '+' : ''}{profitLossPercent.toFixed(2)}%
         </p>
+        {onTradeClick && (
+          <button 
+            onClick={() => onTradeClick(item.asset_symbol)}
+            className="text-[10px] font-bold uppercase bg-muted hover:bg-muted/80 px-2 py-1 rounded-md transition-colors"
+          >
+            Trade
+          </button>
+        )}
       </div>
     </motion.div>
   );
@@ -50,6 +61,9 @@ function PortfolioItem({ item, currentPrice, index }: PortfolioItemProps) {
 
 export default function PortfolioPage() {
   const [activeTab, setActiveTab] = useState('all');
+  const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<any>(null);
+  
   const { user, isLoadingAuth } = useAuth();
   const navigate = useNavigate();
 
@@ -80,6 +94,19 @@ export default function PortfolioPage() {
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   });
+
+  const { data: wallets } = useQuery({
+    queryKey: ['wallets'],
+    queryFn: async () => {
+      const { data, error } = await api.get<any[]>('/wallets');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user
+  });
+
+  const holdingWallet = wallets?.find((w: any) => w.currency === 'holding') || { available_balance: 0 };
+  const currentPosition = portfolio?.find((p: any) => p.asset_symbol === selectedAsset?.symbol);
 
   // Calculate portfolio metrics
   const calculateMetrics = () => {
@@ -127,6 +154,41 @@ export default function PortfolioPage() {
     { id: 'stock', label: 'Stocks' },
     { id: 'crypto', label: 'Crypto' },
   ];
+
+  const handleTradeClick = (assetSymbol: string) => {
+    const asset = assets?.find((a: any) => a.symbol === assetSymbol);
+    if (asset) {
+      setSelectedAsset(asset);
+      setIsTradeModalOpen(true);
+    }
+  };
+
+  const handleTrade = async (trade: any) => {
+    const toastId = toast.loading(trade.type === 'buy' ? 'Buying...' : 'Selling...');
+    try {
+      if (trade.type === 'buy') {
+        const { error } = await api.post('/portfolio/buy', {
+          asset_symbol: trade.asset.symbol,
+          asset_name: trade.asset.name,
+          asset_type: trade.asset.type,
+          quantity: trade.quantity,
+          price_per_unit: trade.price,
+        });
+        if (error) throw error;
+        toast.success(`Bought ${trade.quantity.toFixed(6)} ${trade.asset.symbol}!`, { id: toastId });
+      } else {
+        const { error } = await api.post('/portfolio/sell', {
+          asset_symbol: trade.asset.symbol,
+          quantity: trade.quantity,
+        });
+        if (error) throw error;
+        toast.success(`Sold ${trade.quantity.toFixed(6)} ${trade.asset.symbol}!`, { id: toastId });
+      }
+      refetchPortfolio();
+    } catch (err: any) {
+      toast.error(err.message || 'Trade failed', { id: toastId });
+    }
+  };
 
   return (
     <div className="min-h-screen pb-32 md:pb-8 bg-background text-foreground">
@@ -250,6 +312,7 @@ export default function PortfolioPage() {
                     item={item}
                     currentPrice={asset?.price || item.avg_buy_price}
                     index={index}
+                    onTradeClick={handleTradeClick}
                   />
                 );
               })}
@@ -257,6 +320,18 @@ export default function PortfolioPage() {
           )}
         </div>
       </div>
+
+      <TradeModal
+        asset={selectedAsset}
+        isOpen={isTradeModalOpen}
+        onClose={() => {
+          setIsTradeModalOpen(false);
+          setSelectedAsset(null);
+        }}
+        onTrade={handleTrade}
+        balance={holdingWallet.available_balance || 0}
+        currentPosition={currentPosition}
+      />
     </div>
   );
 }

@@ -24,7 +24,8 @@ export default function TradeModal({ asset, isOpen, onClose, onTrade, balance = 
   const quantity = numAmount / (asset?.price || 1);
   const isPositive = asset.change_percent >= 0;
   const maxSellQty = currentPosition?.quantity || 0;
-  const canAfford = tradeType === 'buy' ? numAmount <= balance : numAmount <= maxSellQty;
+  // Fix: when selling, compare the requested quantity to the max quantity (with slight fp tolerance)
+  const canAfford = tradeType === 'buy' ? numAmount <= balance : quantity <= (maxSellQty + 0.000001);
 
   const chartData = asset.price_history?.length > 0 
     ? asset.price_history 
@@ -50,7 +51,19 @@ export default function TradeModal({ asset, isOpen, onClose, onTrade, balance = 
     }
   };
 
-  const quickAmounts = [100, 500, 1000, 5000];
+  const quickActions = tradeType === 'buy' 
+    ? [
+        { label: '$100', value: 100 },
+        { label: '$500', value: 500 },
+        { label: '$1k', value: 1000 },
+        { label: 'Max', value: balance }
+      ]
+    : [
+        { label: '25%', value: (maxSellQty * 0.25) * (asset?.price || 0) },
+        { label: '50%', value: (maxSellQty * 0.50) * (asset?.price || 0) },
+        { label: '75%', value: (maxSellQty * 0.75) * (asset?.price || 0) },
+        { label: 'Max', value: maxSellQty * (asset?.price || 0) }
+      ];
 
   return (
     <AnimatePresence>
@@ -195,17 +208,21 @@ export default function TradeModal({ asset, isOpen, onClose, onTrade, balance = 
 
                   {/* Quick Amounts */}
                   <div className="flex gap-2 mb-6">
-                    {quickAmounts.map((amt) => (
+                    {quickActions.map((action) => (
                       <button
-                        key={amt}
-                        onClick={() => setAmount(amt.toString())}
+                        key={action.label}
+                        onClick={() => {
+                          if (action.value > 0) {
+                            // Convert to string without scientific notation or trailing zeros
+                            setAmount(Number(action.value.toFixed(6)).toString());
+                          }
+                        }}
                         className={cn(
                           'flex-1 py-2 rounded-xl text-sm font-medium transition-all',
-                          'bg-muted hover:bg-muted/80',
-                          amount === amt.toString() && 'ring-2 ring-primary'
+                          'bg-muted hover:bg-muted/80'
                         )}
                       >
-                        ${amt}
+                        {action.label}
                       </button>
                     ))}
                   </div>

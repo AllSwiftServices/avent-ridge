@@ -74,11 +74,8 @@ export default function Dashboard() {
   const tradingWallet = wallets?.find(w => w.currency === 'trading') || { main_balance: 0 };
   const holdingWallet = wallets?.find(w => w.currency === 'holding') || { main_balance: 0 };
 
-  const cryptoHoldings = portfolio?.filter(p => p.asset_type === 'crypto') || [];
-  const stockHoldings = portfolio?.filter(p => p.asset_type === 'stock') || [];
-
-  const calcValue = (holdings: any[]) => holdings.reduce((sum, h) => {
-    const asset = assets?.find(a => a.symbol === h.asset_symbol);
+  const calcValue = (holdings: any[]) => holdings.reduce((sum: number, h: any) => {
+    const asset = assets?.find((a: any) => a.symbol === h.asset_symbol);
     return sum + (h.quantity * (asset?.price || h.avg_buy_price));
   }, 0);
 

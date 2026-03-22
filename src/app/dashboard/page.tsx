@@ -82,11 +82,12 @@ export default function Dashboard() {
     return sum + (h.quantity * (asset?.price || h.avg_buy_price));
   }, 0);
 
-  const cryptoValue = calcValue(cryptoHoldings);
-  const stockValue = calcValue(stockHoldings);
+  const allAssetsValue = calcValue(portfolio || []);
   
-  const tradingBalance = (tradingWallet.main_balance || 0) + cryptoValue;
-  const holdingBalance = (holdingWallet.main_balance || 0) + stockValue;
+  // Trading wallet = just its raw cash (no assets are purchased from here)
+  const tradingBalance = tradingWallet.main_balance || 0;
+  // Holding wallet = its cash balance + ALL asset holdings (crypto + stocks)
+  const holdingBalance = (holdingWallet.main_balance || 0) + allAssetsValue;
   
   const totalBalance = tradingBalance + holdingBalance;
   const totalChange = 2.45;

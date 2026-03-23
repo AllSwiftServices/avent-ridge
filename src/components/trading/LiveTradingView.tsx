@@ -676,7 +676,7 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
                           <p className="text-xs font-bold">{t.managed_trades?.asset_symbol} – {t.direction}</p>
                           <p className="text-[10px] text-muted-foreground">${t.stake_amount}</p>
                         </div>
-                        <p className="text-xs font-bold text-success">+${(Number(t.stake_amount) * (t.managed_trades?.profit_percent || 0) / 100).toFixed(2)}</p>
+                        <p className="text-xs font-bold text-amber-500">Pending</p>
                       </div>
                     ))}
                   </div>

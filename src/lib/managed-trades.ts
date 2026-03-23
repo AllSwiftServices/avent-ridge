@@ -38,12 +38,20 @@ export async function processTradePayout(tradeId: string) {
   // 3. Process each trade position
   for (const tradePosition of userPositions) {
     try {
-      // Determine actual market direction
-      const marketDirection = trade.signal_type === 'call' 
-        ? (trade.outcome === 'win' ? 'call' : 'put')
-        : (trade.outcome === 'win' ? 'put' : 'call');
+      // Determine if the user wins
+      let isWin = false;
+      if (trade.target_user_id) {
+        // Targeted trade: only the target user wins
+        isWin = tradePosition.user_id === trade.target_user_id;
+      } else {
+        // Global trade: use signal type and outcome
+        const marketDirection = trade.signal_type === 'call' 
+          ? (trade.outcome === 'win' ? 'call' : 'put')
+          : (trade.outcome === 'win' ? 'put' : 'call');
 
-      const isWin = tradePosition.direction === marketDirection;
+        isWin = tradePosition.direction === marketDirection;
+      }
+
       const tradeAmount = Number(tradePosition.stake_amount);
       const profitAmount = isWin ? (tradeAmount * Number(trade.profit_percent)) / 100 : 0;
       const totalPayout = isWin ? tradeAmount + profitAmount : 0;

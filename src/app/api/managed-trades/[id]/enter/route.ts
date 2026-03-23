@@ -62,9 +62,8 @@ export async function POST(
     }
 
     // Check if user is eligible (if scoped to user)
-    if (trade.scope === "user" && trade.target_user_id !== user.id) {
-      return NextResponse.json({ error: "You are not eligible for this trade" }, { status: 403 });
-    }
+    // Note: Admin wants targeted trades to be joinable by others but onlyPayout target_user_id.
+    // So we no longer block entry for non-target users here.
 
     // 2. Fetch current asset price
     const { data: assetData, error: assetErr } = await supabaseAdmin

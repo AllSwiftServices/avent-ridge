@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS managed_trades (
 -- Users can only see trades scoped to them or all users
 ALTER TABLE managed_trades ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users view relevant trades" ON managed_trades
-  FOR SELECT USING (scope = 'all' OR target_user_id = auth.uid());
+  FOR SELECT USING (true);
 
 CREATE POLICY "Admins full access to managed_trades" ON managed_trades
   FOR ALL USING (

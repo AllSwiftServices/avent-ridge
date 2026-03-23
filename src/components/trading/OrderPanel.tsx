@@ -284,13 +284,7 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 0 }: a
           </button>
         </div>
 
-        {/* ── POTENTIAL PROFIT ── */}
-        <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-primary/10 border border-primary/20">
-          <span className="text-sm text-primary">Potential Profit</span>
-          <span className="font-bold text-sm text-primary">
-            + ${potentialProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-          </span>
-        </div>
+        {/* Potential profit hidden as per requirement */}
 
         {/* ── DURATION PILLS ── */}
         <div className="grid grid-cols-2 min-[400px]:grid-cols-4 gap-2">

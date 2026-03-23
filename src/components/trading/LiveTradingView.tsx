@@ -603,20 +603,7 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
                   </div>
                 </div>
 
-                {/* Profit preview */}
-                <div className="p-4 border-b border-border">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <TrendingUp className="h-3 w-3 text-success" />
-                    <label className="text-xs font-bold text-success uppercase tracking-wider">
-                      Profit ({selectedTrade?.profit_percent ?? 80}%)
-                    </label>
-                  </div>
-                  <div className="h-11 bg-success/5 border border-success/20 rounded-2xl flex items-center px-4">
-                    <span className="font-black text-success">
-                      {profitPreview > 0 ? `$${profitPreview.toFixed(2)}` : '—'}
-                    </span>
-                  </div>
-                </div>
+                {/* Profit preview hidden as per requirement */}
 
 
 

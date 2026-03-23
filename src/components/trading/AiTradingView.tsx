@@ -56,24 +56,6 @@ export default function AiTradingView({ onViewChange }: AiTradingViewProps) {
   const { user, isLoadingAuth } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!isLoadingAuth && !user) {
-      navigate(createPageUrl('Home'));
-    }
-  }, [user, isLoadingAuth, navigate]);
-
-  const [livePrice, setLivePrice] = useState<number | null>(null);
-  const prevPriceRef = useRef<number | null>(null);
-  const [prevPrice, setPrevPrice] = useState<number | null>(null);
-  const [changePercent, setChangePercent] = useState(0);
-  const [high24h, setHigh24h] = useState(0);
-  const [low24h, setLow24h] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [openPosition, setOpenPosition] = useState<any>(null);
-  const [soundOn, setSoundOn] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const [tradeMode, setTradeMode] = useState<'binary' | 'advanced'>('binary');
-
   const { data: assets } = useQuery({
     queryKey: ['trading-assets'],
     queryFn: async () => {
@@ -93,22 +75,47 @@ export default function AiTradingView({ onViewChange }: AiTradingViewProps) {
     enabled: !!user
   });
 
+  // Pick initial asset once list loads
+  useEffect(() => {
+    if (assets && assets.length > 0) {
+      const initialAssetSymbol = searchParams.get('asset') || 'BTC';
+      const dbAsset = assets.find((a: any) => a.symbol === initialAssetSymbol) || assets[0];
+      setSelectedAsset(dbAsset);
+    }
+  }, [assets]);
+
+  useEffect(() => {
+    if (!isLoadingAuth && !user) {
+      navigate(createPageUrl('Home'));
+    }
+  }, [user, isLoadingAuth, navigate]);
+
+  const [livePrice, setLivePrice] = useState<number | null>(null);
+  const prevPriceRef = useRef<number | null>(null);
+  const [prevPrice, setPrevPrice] = useState<number | null>(null);
+  const [changePercent, setChangePercent] = useState(0);
+  const [high24h, setHigh24h] = useState(0);
+  const [low24h, setLow24h] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [openPosition, setOpenPosition] = useState<any>(null);
+  const [soundOn, setSoundOn] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [tradeMode, setTradeMode] = useState<'binary' | 'advanced'>('binary');
+
   const walletBalance = (wallets as any[])?.find(w => w.currency === 'trading')?.main_balance ?? 0;
 
   // Initialize price from DB or fallback
   useEffect(() => {
     setLoading(true);
     const dbAsset = assets?.find((a: any) => a.symbol === selectedAsset.symbol);
-    if (dbAsset) {
-      const basePrice = dbAsset.price ?? 100;
-      const baseChange = dbAsset.change_percent ?? 0;
-      setLivePrice(basePrice);
-      setPrevPrice(basePrice);
-      prevPriceRef.current = basePrice;
-      setChangePercent(baseChange);
-      setHigh24h(basePrice * 1.025);
-      setLow24h(basePrice * 0.975);
-    }
+    const basePrice = dbAsset?.price ?? ASSET_DEFAULTS[selectedAsset.symbol]?.price ?? 100;
+    const baseChange = dbAsset?.change_percent ?? 0;
+    setLivePrice(basePrice);
+    setPrevPrice(basePrice);
+    prevPriceRef.current = basePrice;
+    setChangePercent(baseChange);
+    setHigh24h(basePrice * 1.025);
+    setLow24h(basePrice * 0.975);
     setTimeout(() => setLoading(false), 400);
   }, [selectedAsset.symbol, assets]);
 
@@ -160,7 +167,7 @@ export default function AiTradingView({ onViewChange }: AiTradingViewProps) {
       {/* ── TOP BAR ── */}
       <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-xl border-b border-border">
         <div className="flex flex-wrap items-center justify-between px-2 sm:px-4 py-2 sm:py-3 gap-2 sm:gap-3">
-          <AssetSelector selected={selectedAsset} onChange={handleAssetChange} assets={assets} />
+          <AssetSelector selected={selectedAsset} onChange={handleAssetChange} assets={assets || undefined} />
           
           <div className="flex items-center gap-1 sm:gap-2">
             {/* Mode toggle */}

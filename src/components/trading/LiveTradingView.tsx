@@ -144,7 +144,7 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
 
   // Selections
   const [selOptionType, setSelOptionType] = useState('Crypto');
-  const [selAsset, setSelAsset] = useState('Bitcoin');
+  const [selAsset, setSelAsset] = useState('BTC');
   const [selDuration, setSelDuration] = useState('');
   const [tradeAmount, setTradeAmount] = useState('');
   const [isFixedTime, setIsFixedTime] = useState(true);
@@ -192,6 +192,8 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
     enabled: !!user,
   });
 
+
+
   const { OPTION_TYPES, ASSETS_BY_TYPE } = useMemo(() => {
     if (!adminAssets || adminAssets.length === 0) {
       return { OPTION_TYPES: [], ASSETS_BY_TYPE: {} };
@@ -231,6 +233,10 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
     return trades.filter(t => t.status === 'active' && new Date(t.ends_at).getTime() > now);
   }, [trades]);
 
+  const currentAsset = useMemo(() => {
+    return adminAssets?.find(a => a.symbol === selAsset);
+  }, [adminAssets, selAsset]);
+
   // Always show ALL option types from the static list
   const availableOptionTypes = OPTION_TYPES;
 
@@ -251,6 +257,8 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
     }
   }, [availableAssets, selAsset]);
 
+
+
   // Always show ALL durations from the static list
   const availableDurations = DURATIONS.map(d => d.value);
 
@@ -263,19 +271,11 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
 
   // Find the matching admin trade — fuzzy match asset name/symbol, ignore duration
   const selectedTrade = useMemo(() => {
-    const sel = selAsset.toLowerCase();
-    return activeTrades.find(t => {
-      const typeMatch = t.asset_type?.toLowerCase() === selOptionType.toLowerCase();
-      const nameMatch =
-        t.asset_name?.toLowerCase() === sel ||
-        t.asset_symbol?.toLowerCase() === sel ||
-        t.asset_name?.toLowerCase().includes(sel) ||
-        sel.includes(t.asset_name?.toLowerCase() || '') ||
-        sel.includes(t.asset_symbol?.toLowerCase() || '') ||
-        t.asset_symbol?.toLowerCase().includes(sel);
-      return typeMatch && nameMatch;
-    }) || null;
-  }, [activeTrades, selOptionType, selAsset]);
+    return activeTrades.find(t => 
+      t.asset_symbol === selAsset && 
+      (t.asset_type?.toLowerCase() === selOptionType.toLowerCase() || selOptionType === 'Other')
+    );
+  }, [activeTrades, selAsset, selOptionType]);
 
   // Wallet balance
   const { data: wallets } = useQuery({
@@ -406,7 +406,7 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
           user_duration: selDuration,
           asset_symbol: selAsset,
           asset_name: selAsset,
-          asset_type: selOptionType,
+          asset_type: currentAsset?.type || 'Asset',
         });
         if (res.error) throw res.error;
         data = res.data;
@@ -454,7 +454,7 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
             <div className="flex items-center justify-between mb-3">
               <div>
                 <p className="font-bold text-sm">{selAsset}</p>
-                <p className="text-[10px] text-muted-foreground">{selOptionType}</p>
+                <p className="text-[10px] text-muted-foreground">{currentAsset?.type || 'Asset'}</p>
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-right">
@@ -541,22 +541,22 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
                       onChange={e => setSelOptionType(e.target.value)}
                       className="w-full h-11 bg-muted/40 border border-border rounded-2xl px-4 pr-10 font-semibold text-sm appearance-none outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     >
-                      {availableOptionTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                      {availableOptionTypes.map((t: string) => <option key={t} value={t}>{t}</option>)}
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   </div>
                 </div>
 
-                {/* Asset Type */}
+                {/* Asset Name */}
                 <div className="p-4 border-b border-border space-y-1.5">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Asset Type</label>
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Asset Name</label>
                   <div className="relative">
                     <select
                       value={selAsset}
                       onChange={e => setSelAsset(e.target.value)}
                       className="w-full h-11 bg-muted/40 border border-border rounded-2xl px-4 pr-10 font-semibold text-sm appearance-none outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     >
-                      {availableAssets.map(a => <option key={a} value={a}>{a}</option>)}
+                      {availableAssets.map((a: string) => <option key={a} value={a}>{a}</option>)}
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   </div>

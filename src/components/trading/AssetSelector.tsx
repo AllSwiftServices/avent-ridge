@@ -3,18 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const ASSETS = [
-  { symbol: 'AAPL', name: 'Apple Inc.', type: 'stock' },
-  { symbol: 'TSLA', name: 'Tesla Inc.', type: 'stock' },
-  { symbol: 'NVDA', name: 'NVIDIA Corp.', type: 'stock' },
-  { symbol: 'MSFT', name: 'Microsoft Corp.', type: 'stock' },
-  { symbol: 'GOOGL', name: 'Alphabet Inc.', type: 'stock' },
-  { symbol: 'AMZN', name: 'Amazon.com', type: 'stock' },
-  { symbol: 'BTC', name: 'Bitcoin', type: 'crypto', pair: 'BTC/USDT' },
-  { symbol: 'ETH', name: 'Ethereum', type: 'crypto', pair: 'ETH/USDT' },
-  { symbol: 'SOL', name: 'Solana', type: 'crypto', pair: 'SOL/USDT' },
-  { symbol: 'XRP', name: 'Ripple', type: 'crypto', pair: 'XRP/USDT' },
-];
+const ASSETS: any[] = [];
 
 export default function AssetSelector({ 
   selected, 

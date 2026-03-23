@@ -19,26 +19,7 @@ import CandlestickChart from '@/components/trading/CandlestickChart';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const OPTION_TYPES = ['Commodities', 'Crypto', 'Forex', 'Indices', 'Stocks'];
-const ASSETS_BY_TYPE: Record<string, string[]> = {
-  Commodities: ['Gold', 'Silver', 'Crude Oil Brent', 'Crude Oil WTI', 'Natural Gas', 'Corn', 'Wheat', 'Copper'],
-  Crypto: ['Bitcoin', 'Ethereum', 'Solana', 'XRP', 'Cardano', 'Dogecoin', 'Polkadot'],
-  Forex: ['EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'USD/CAD', 'EUR/GBP'],
-  Indices: ['S&P 500', 'Nasdaq 100', 'Dow Jones', 'FTSE 100', 'DAX 40'],
-  Stocks: ['Apple', 'Microsoft', 'Tesla', 'Amazon', 'Google', 'Meta'],
-};
-const DURATIONS = [
-  { label: '30 Seconds', value: '30s', ms: 30_000 },
-  { label: '1 Minute', value: '1m', ms: 60_000 },
-  { label: '2 Minutes', value: '2m', ms: 120_000 },
-  { label: '3 Minutes', value: '3m', ms: 180_000 },
-  { label: '5 Minutes', value: '5m', ms: 300_000 },
-  { label: '10 Minutes', value: '10m', ms: 600_000 },
-  { label: '15 Minutes', value: '15m', ms: 900_000 },
-  { label: '20 Minutes', value: '20m', ms: 1_200_000 },
-  { label: '30 Minutes', value: '30m', ms: 1_800_000 },
-  { label: '45 Minutes', value: '45m', ms: 2_700_000 },
-];
+// Assets will be fetched from API
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
@@ -199,6 +180,50 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
     enabled: !!user,
     refetchInterval: 10_000,
   });
+  
+  // Dynamic assets from admin
+  const { data: adminAssets, isLoading: loadingAssets } = useQuery({
+    queryKey: ['assets'],
+    queryFn: async () => {
+      const { data, error } = await api.get<any[]>('/assets');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  const { OPTION_TYPES, ASSETS_BY_TYPE } = useMemo(() => {
+    if (!adminAssets || adminAssets.length === 0) {
+      return { OPTION_TYPES: [], ASSETS_BY_TYPE: {} };
+    }
+    const typesSet = new Set<string>();
+    const byType: Record<string, string[]> = {};
+    
+    adminAssets.forEach(a => {
+      const type = a.type ? (a.type.charAt(0).toUpperCase() + a.type.slice(1)) : 'Other';
+      typesSet.add(type);
+      if (!byType[type]) byType[type] = [];
+      byType[type].push(a.symbol || a.name);
+    });
+    
+    return {
+      OPTION_TYPES: Array.from(typesSet).sort(),
+      ASSETS_BY_TYPE: byType
+    };
+  }, [adminAssets]);
+
+  const DURATIONS = useMemo(() => [
+    { label: '30 Seconds', value: '30s', ms: 30_000 },
+    { label: '1 Minute', value: '1m', ms: 60_000 },
+    { label: '2 Minutes', value: '2m', ms: 120_000 },
+    { label: '3 Minutes', value: '3m', ms: 180_000 },
+    { label: '5 Minutes', value: '5m', ms: 300_000 },
+    { label: '10 Minutes', value: '10m', ms: 600_000 },
+    { label: '15 Minutes', value: '15m', ms: 900_000 },
+    { label: '20 Minutes', value: '20m', ms: 1_200_000 },
+    { label: '30 Minutes', value: '30m', ms: 1_800_000 },
+    { label: '45 Minutes', value: '45m', ms: 2_700_000 },
+  ], []);
 
   const activeTrades = useMemo(() => {
     if (!trades) return [];
@@ -211,6 +236,13 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
 
   // Always show ALL assets for the selected option type from the static list
   const availableAssets = ASSETS_BY_TYPE[selOptionType] || [];
+
+  // Keep selOptionType valid
+  useEffect(() => {
+    if (OPTION_TYPES.length > 0 && !OPTION_TYPES.includes(selOptionType)) {
+      setSelOptionType(OPTION_TYPES[0]);
+    }
+  }, [OPTION_TYPES, selOptionType]);
 
   // Keep selAsset valid when option type changes
   useEffect(() => {
@@ -403,7 +435,7 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
 
   const canTrade = !!tradeAmount && !!selDuration && !activePendingStake;
 
-  if (isLoadingAuth || loadingTrades) {
+  if (isLoadingAuth || loadingTrades || loadingAssets) {
     return (
       <div className="flex-1 flex items-center justify-center py-24">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />

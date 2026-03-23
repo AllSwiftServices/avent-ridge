@@ -99,14 +99,16 @@ export default function AiTradingView({ onViewChange }: AiTradingViewProps) {
   useEffect(() => {
     setLoading(true);
     const dbAsset = assets?.find((a: any) => a.symbol === selectedAsset.symbol);
-    const basePrice = dbAsset?.price ?? ASSET_DEFAULTS[selectedAsset.symbol]?.price ?? 100;
-    const baseChange = dbAsset?.change_percent ?? 0;
-    setLivePrice(basePrice);
-    setPrevPrice(basePrice);
-    prevPriceRef.current = basePrice;
-    setChangePercent(baseChange);
-    setHigh24h(basePrice * 1.025);
-    setLow24h(basePrice * 0.975);
+    if (dbAsset) {
+      const basePrice = dbAsset.price ?? 100;
+      const baseChange = dbAsset.change_percent ?? 0;
+      setLivePrice(basePrice);
+      setPrevPrice(basePrice);
+      prevPriceRef.current = basePrice;
+      setChangePercent(baseChange);
+      setHigh24h(basePrice * 1.025);
+      setLow24h(basePrice * 0.975);
+    }
     setTimeout(() => setLoading(false), 400);
   }, [selectedAsset.symbol, assets]);
 
@@ -158,7 +160,7 @@ export default function AiTradingView({ onViewChange }: AiTradingViewProps) {
       {/* ── TOP BAR ── */}
       <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-xl border-b border-border">
         <div className="flex flex-wrap items-center justify-between px-2 sm:px-4 py-2 sm:py-3 gap-2 sm:gap-3">
-          <AssetSelector selected={selectedAsset} onChange={handleAssetChange} />
+          <AssetSelector selected={selectedAsset} onChange={handleAssetChange} assets={assets} />
           
           <div className="flex items-center gap-1 sm:gap-2">
             {/* Mode toggle */}

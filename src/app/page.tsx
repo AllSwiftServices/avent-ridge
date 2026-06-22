@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Zap, Mail, Lock, Eye, EyeOff, ArrowRight, Chrome, User, Shield, RefreshCcw } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Chrome, User, Shield, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -225,9 +225,9 @@ export default function Home() {
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="w-12 h-12 rounded-xl bg-linear-to-br from-primary to-amber-500 flex items-center justify-center shadow-lg shadow-primary/20"
+          className="w-12 h-12 flex items-center justify-center"
         >
-          <Zap className="h-6 w-6 text-black animate-pulse" />
+          <img src="/icon.png" alt="AR Trading" className="w-12 h-12 object-contain animate-pulse" />
         </motion.div>
       </div>
     );
@@ -252,9 +252,7 @@ export default function Home() {
             className="flex justify-center mb-8"
           >
             <div className="flex items-center gap-3">
-              <div className="w-14 h-14 rounded-2xl bg-linear-to-br from-primary to-amber-500 flex items-center justify-center shadow-lg shadow-primary/30">
-                <Zap className="h-7 w-7 text-black" />
-              </div>
+              <img src="/icon.png" alt="AR Trading" className="w-14 h-14 object-contain" />
               <span className="text-2xl font-bold">AR Trading</span>
             </div>
           </motion.div>

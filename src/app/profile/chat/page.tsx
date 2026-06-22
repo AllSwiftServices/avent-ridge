@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Send, MessageCircle, CheckCircle, X, Zap, RefreshCcw } from 'lucide-react';
+import { ChevronLeft, Send, MessageCircle, CheckCircle, X, RefreshCcw } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
@@ -14,9 +14,7 @@ import { format } from 'date-fns';
 function TypingIndicator() {
   return (
     <div className="flex items-end gap-2 mb-3">
-      <div className="h-8 w-8 rounded-full bg-linear-to-br from-primary to-amber-500 flex items-center justify-center shadow flex-shrink-0">
-        <Zap className="h-4 w-4 text-black" />
-      </div>
+      <img src="/icon.png" alt="AR Trading Support" className="h-8 w-8 rounded-full object-contain shadow flex-shrink-0" />
       <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5">
         {[0, 1, 2].map(i => (
           <motion.div
@@ -41,9 +39,7 @@ function MessageBubble({ msg, userName }: { msg: any; userName: string }) {
     >
       {/* Avatar */}
       {!isUser && (
-        <div className="h-8 w-8 rounded-full bg-linear-to-br from-primary to-amber-500 flex items-center justify-center shadow flex-shrink-0">
-          <Zap className="h-4 w-4 text-black" />
-        </div>
+        <img src="/icon.png" alt="AR Trading Support" className="h-8 w-8 rounded-full object-contain shadow flex-shrink-0" />
       )}
       {isUser && (
         <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 text-xs font-black text-primary">
@@ -175,9 +171,7 @@ export default function LiveChatPage() {
           <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-muted transition-colors">
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <div className="h-10 w-10 rounded-full bg-linear-to-br from-primary to-amber-500 flex items-center justify-center shadow-lg shadow-primary/20">
-            <Zap className="h-5 w-5 text-black" />
-          </div>
+          <img src="/icon.png" alt="AR Trading Support" className="h-10 w-10 rounded-full object-contain shadow flex-shrink-0" />
           <div>
             <p className="font-bold text-sm leading-none">AR Trading Support</p>
             <div className="flex items-center gap-1.5 mt-1">
@@ -203,9 +197,7 @@ export default function LiveChatPage() {
             animate={{ opacity: 1, y: 0 }}
             className="flex items-end gap-2 mb-3"
           >
-            <div className="h-8 w-8 rounded-full bg-linear-to-br from-primary to-amber-500 flex items-center justify-center shadow flex-shrink-0">
-              <Zap className="h-4 w-4 text-black" />
-            </div>
+            <img src="/icon.png" alt="AR Trading Support" className="h-8 w-8 rounded-full object-contain shadow flex-shrink-0" />
             <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3 max-w-[75%]">
               <p className="text-[10px] font-black text-primary uppercase tracking-wider mb-1">Support</p>
               <p className="text-sm">

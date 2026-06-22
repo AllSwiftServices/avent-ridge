@@ -31,9 +31,7 @@ export default function Sidebar() {
       'bg-card border-r border-border p-4'
     )}>
       <div className="flex items-center gap-3 px-3 py-4 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-linear-to-br from-primary to-amber-500 flex items-center justify-center shadow-lg shadow-primary/20">
-          <span className="font-black text-lg text-black">AR</span>
-        </div>
+        <img src="/icon.png" alt="AR Trading" className="w-10 h-10 object-contain" />
         <span className="font-bold text-xl text-foreground">AR Trading</span>
       </div>
 

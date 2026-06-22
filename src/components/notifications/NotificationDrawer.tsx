@@ -16,6 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/AuthContext";
 
 interface Notification {
   id: string;
@@ -34,6 +35,7 @@ interface NotificationDrawerProps {
 export function NotificationDrawer({ open, onOpenChange }: NotificationDrawerProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { user } = useAuth();
 
   const { data: notifications, isLoading } = useQuery<Notification[]>({
     queryKey: ["notifications"],
@@ -59,7 +61,20 @@ export function NotificationDrawer({ open, onOpenChange }: NotificationDrawerPro
       markAsReadMutation.mutate([notification.id]);
     }
     if (notification.url) {
-      router.push(notification.url);
+      let targetUrl = notification.url;
+      if (targetUrl.startsWith("/admin") || targetUrl.startsWith("/admin-kyc")) {
+        const lowercaseUrl = targetUrl.toLowerCase();
+        if (lowercaseUrl.includes("support") || lowercaseUrl.includes("chat")) {
+          targetUrl = "/profile/chat";
+        } else if (lowercaseUrl.includes("deposit") || lowercaseUrl.includes("withdrawal") || lowercaseUrl.includes("wallet") || lowercaseUrl.includes("transaction")) {
+          targetUrl = "/wallet";
+        } else if (lowercaseUrl.includes("trade")) {
+          targetUrl = "/trade";
+        } else {
+          targetUrl = "/dashboard";
+        }
+      }
+      router.push(targetUrl);
       onOpenChange(false);
     }
   };

@@ -93,7 +93,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       sendPushToAdmins({
         title: "New Support Message",
         body: `${displayName}: ${msgBody.trim().slice(0, 100)}${msgBody.trim().length > 100 ? "..." : ""}`,
-        url: "/admin/support",
+        url: "/admin?tab=support",
       }).catch((e) => console.error("Failed to notify admins", e));
     }
 

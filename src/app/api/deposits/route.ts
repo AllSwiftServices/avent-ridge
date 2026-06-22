@@ -85,7 +85,7 @@ export async function POST(request: Request) {
         await sendPushToAdmins({
             title: "New Deposit Submitted",
             body: `${user.email} submitted a deposit of ${body.amount} ${body.currency}.`,
-            url: "/admin/deposits"
+            url: "/admin?tab=deposits"
         });
     } catch (e) {
         console.error("Failed to notify admins", e);

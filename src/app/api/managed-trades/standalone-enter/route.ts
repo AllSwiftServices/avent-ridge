@@ -140,7 +140,7 @@ export async function POST(request: Request) {
       await sendPushNotification(user.id, {
         title: "Trade Successful",
         body: `You've successfully opened a $${amount.toLocaleString()} trade in ${asset_symbol}.`,
-        url: "/trades",
+        url: "/trade",
       });
 
       // Notify admins

@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 
 type AdminTab = 'overview' | 'users' | 'deposits' | 'withdrawals' | 'kyc' | 'assets' | 'trades' | 'settings' | 'notifications' | 'support';
 
@@ -319,6 +320,7 @@ function SupportAdminPanel() {
 export default function AdminDashboard() {
   const { user, isLoadingAuth } = useAuth();
   const navigate = useNavigate();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -364,6 +366,13 @@ export default function AdminDashboard() {
 
   const [settings, setSettings] = useState<any[]>([]);
   const [notificationForm, setNotificationForm] = useState({ target: 'all', title: '', body: '' });
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['overview', 'users', 'deposits', 'withdrawals', 'kyc', 'assets', 'trades', 'settings', 'notifications', 'support'].includes(tab)) {
+      setActiveTab(tab as AdminTab);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!isLoadingAuth) {

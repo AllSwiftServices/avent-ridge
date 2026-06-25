@@ -14,7 +14,7 @@ import { format } from 'date-fns';
 function TypingIndicator() {
   return (
     <div className="flex items-end gap-2 mb-3">
-      <img src="/icon.png" alt="AR Trading Support" className="h-8 w-8 rounded-full object-contain shadow flex-shrink-0" />
+      <img src="/icon.png" alt="AR Exchange Support" className="h-8 w-8 rounded-full object-contain shadow flex-shrink-0" />
       <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5">
         {[0, 1, 2].map(i => (
           <motion.div
@@ -39,7 +39,7 @@ function MessageBubble({ msg, userName }: { msg: any; userName: string }) {
     >
       {/* Avatar */}
       {!isUser && (
-        <img src="/icon.png" alt="AR Trading Support" className="h-8 w-8 rounded-full object-contain shadow flex-shrink-0" />
+        <img src="/icon.png" alt="AR Exchange Support" className="h-8 w-8 rounded-full object-contain shadow flex-shrink-0" />
       )}
       {isUser && (
         <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 text-xs font-black text-primary">
@@ -171,9 +171,9 @@ export default function LiveChatPage() {
           <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-muted transition-colors">
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <img src="/icon.png" alt="AR Trading Support" className="h-10 w-10 rounded-full object-contain shadow flex-shrink-0" />
+          <img src="/icon.png" alt="AR Exchange Support" className="h-10 w-10 rounded-full object-contain shadow flex-shrink-0" />
           <div>
-            <p className="font-bold text-sm leading-none">AR Trading Support</p>
+            <p className="font-bold text-sm leading-none">AR Exchange Support</p>
             <div className="flex items-center gap-1.5 mt-1">
               <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
               <span className="text-[10px] text-muted-foreground font-medium">Online · Typically replies in minutes</span>
@@ -197,11 +197,11 @@ export default function LiveChatPage() {
             animate={{ opacity: 1, y: 0 }}
             className="flex items-end gap-2 mb-3"
           >
-            <img src="/icon.png" alt="AR Trading Support" className="h-8 w-8 rounded-full object-contain shadow flex-shrink-0" />
+            <img src="/icon.png" alt="AR Exchange Support" className="h-8 w-8 rounded-full object-contain shadow flex-shrink-0" />
             <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3 max-w-[75%]">
               <p className="text-[10px] font-black text-primary uppercase tracking-wider mb-1">Support</p>
               <p className="text-sm">
-                👋 Hi {userName}! Welcome to AR Trading support. How can we help you today?
+                👋 Hi {userName}! Welcome to AR Exchange support. How can we help you today?
               </p>
             </div>
           </motion.div>

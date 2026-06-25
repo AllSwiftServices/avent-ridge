@@ -365,7 +365,7 @@ export default function ProfilePage() {
 
         {/* Version */}
         <p className="text-center text-xs text-muted-foreground">
-          AR Trading v1.0.0
+          AR Exchange v1.0.0
         </p>
       </div>
     </div>

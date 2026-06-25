@@ -30,20 +30,20 @@ export async function sendOtpEmail(to: string, otp: string, type: 'login' | 'sig
   console.log(`🚀 Attempting to send ${type} OTP email via SMTP to: ${to}`);
 
   const subjects = {
-    login: "Verify Your Email - AR Trading",
-    signup: "Welcome to AR Trading - Verify Your Email",
-    reset: "Reset Your Password - AR Trading",
+    login: "Verify Your Email - AR Exchange",
+    signup: "Welcome to AR Exchange - Verify Your Email",
+    reset: "Reset Your Password - AR Exchange",
   };
 
   const titles = {
     login: "Verify Your Email",
-    signup: "Welcome to AR Trading!",
+    signup: "Welcome to AR Exchange!",
     reset: "Reset Your Password",
   };
 
   const messages = {
     login: "Welcome back! Please use the verification code below to complete your sign in.",
-    signup: "Welcome to AR Trading! Please use the verification code below to complete your registration.",
+    signup: "Welcome to AR Exchange! Please use the verification code below to complete your registration.",
     reset: "You've requested to reset your password. Please use the verification code below to proceed.",
   };
 
@@ -72,7 +72,7 @@ export async function sendOtpEmail(to: string, otp: string, type: 'login' | 'sig
         <body>
           <div class="container">
             <div class="header">
-              <h1>AR Trading</h1>
+              <h1>AR Exchange</h1>
               <p>Premium Trading Platform</p>
             </div>
             <div class="content">
@@ -86,7 +86,7 @@ export async function sendOtpEmail(to: string, otp: string, type: 'login' | 'sig
               <p class="text" style="font-size: 14px; margin-bottom: 0;">If you didn't request this code, please ignore this email.</p>
             </div>
             <div class="footer">
-              <p>© ${new Date().getFullYear()} AR Trading. All rights reserved.</p>
+              <p>© ${new Date().getFullYear()} AR Exchange. All rights reserved.</p>
               <p>Trade with confidence on our secure platform</p>
             </div>
           </div>
@@ -133,11 +133,11 @@ export async function sendWelcomeEmail(to: string, name: string) {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🎉 Welcome to AR Trading!</h1>
+              <h1>🎉 Welcome to AR Exchange!</h1>
             </div>
             <div class="content">
               <div class="title">Hi ${name},</div>
-              <p class="text">Thank you for joining AR Trading! You're now part of our community of elite traders.</p>
+              <p class="text">Thank you for joining AR Exchange! You're now part of our community of elite traders.</p>
               
               <div class="features">
                 <p>✓ Advanced trading tools & real-time analytics</p>
@@ -148,7 +148,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
               <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://aventridge.com"}/dashboard" class="button">Go to Dashboard</a>
             </div>
             <div class="footer">
-              <p>© ${new Date().getFullYear()} AR Trading. All rights reserved.</p>
+              <p>© ${new Date().getFullYear()} AR Exchange. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -160,7 +160,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
     const info = await mailer.sendMail({
       from: process.env.SMTP_USER,
       to,
-      subject: "Welcome to AR Trading! 🎉",
+      subject: "Welcome to AR Exchange! 🎉",
       html,
     });
 
@@ -177,7 +177,7 @@ export async function sendKycEmail(to: string, name: string, status: "approved" 
   const isApproved = status === "approved";
   const title = isApproved ? "Identity Verified! 🎉" : "Verification Update";
   const message = isApproved
-    ? "Great news! Your identity verification has been approved. You now have full access to all AR Trading features, including withdrawals and advanced trading."
+    ? "Great news! Your identity verification has been approved. You now have full access to all AR Exchange features, including withdrawals and advanced trading."
     : `Your KYC application was unfortunately rejected. Reason: ${reason || "Please ensure your documents are clear and valid."}`;
 
   const html = `
@@ -208,7 +208,7 @@ export async function sendKycEmail(to: string, name: string, status: "approved" 
               <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://aventridge.com"}/verify-identity" class="button">View Verification Status</a>
             </div>
             <div class="footer">
-              <p>© ${new Date().getFullYear()} AR Trading. All rights reserved.</p>
+              <p>© ${new Date().getFullYear()} AR Exchange. All rights reserved.</p>
               <p>Secure Trading Platform</p>
             </div>
           </div>
@@ -221,7 +221,7 @@ export async function sendKycEmail(to: string, name: string, status: "approved" 
     const info = await mailer.sendMail({
       from: process.env.SMTP_USER,
       to,
-      subject: `${title} - AR Trading`,
+      subject: `${title} - AR Exchange`,
       html,
     });
 

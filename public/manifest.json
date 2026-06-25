@@ -1,6 +1,6 @@
 {
-  "name": "AR Trading",
-  "short_name": "AR Trading",
+  "name": "AR Exchange",
+  "short_name": "AR Exchange",
   "description": "Secure trading and holding platform.",
   "start_url": "/dashboard",
   "display": "standalone",

@@ -10,11 +10,11 @@ const geistSans = { variable: "--font-geist-sans" };
 const geistMono = { variable: "--font-geist-mono" };
 
 export const metadata: Metadata = {
-  title: "AR Trading",
-  description: "AR Trading Platform",
+  title: "AR Exchange",
+  description: "AR Exchange Platform",
   manifest: "/manifest.json",
   appleWebApp: {
-    title: "AR Trading",
+    title: "AR Exchange",
     statusBarStyle: "black-translucent",
   },
 };

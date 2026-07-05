@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { target, subject, body } = await request.json();
+    const { target, name: customName, subject, body } = await request.json();
 
     if (!target || !subject || !body) {
       return NextResponse.json({ error: "Missing required fields (target, subject, body)" }, { status: 400 });
@@ -36,6 +36,8 @@ export async function POST(request: Request) {
         .select("email, name");
       if (error) throw error;
       recipients = data || [];
+    } else if (target.includes("@")) {
+      recipients = [{ email: target.trim(), name: customName ? customName.trim() : target.trim().split("@")[0] }];
     } else {
       const { data, error } = await supabaseAdmin
         .from("users")
@@ -45,7 +47,10 @@ export async function POST(request: Request) {
       
       if (error) throw error;
       if (data) {
-        recipients = [data];
+        recipients = [{
+          email: data.email,
+          name: customName ? customName.trim() : (data.name || data.email.split("@")[0])
+        }];
       }
     }
 

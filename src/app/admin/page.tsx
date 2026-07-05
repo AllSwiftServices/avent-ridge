@@ -366,7 +366,8 @@ export default function AdminDashboard() {
 
   const [settings, setSettings] = useState<any[]>([]);
   const [notificationForm, setNotificationForm] = useState({ target: 'all', title: '', body: '' });
-  const [emailForm, setEmailForm] = useState({ target: 'all', subject: '', body: '' });
+  const [emailForm, setEmailForm] = useState({ target: 'all', name: '', subject: '', body: '' });
+  const [recipientType, setRecipientType] = useState<'platform' | 'external'>('platform');
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -719,12 +720,16 @@ export default function AdminDashboard() {
       toast.error("Please fill subject and body");
       return;
     }
+    if (recipientType === 'external' && (!emailForm.target || !emailForm.target.includes('@'))) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
     setProcessing(true);
     try {
       const { data, error } = await api.post<{ count: number }>('/admin/send-email', emailForm);
       if (error) throw error;
       toast.success(`Successfully sent ${data?.count || 0} email(s)!`);
-      setEmailForm({ target: 'all', subject: '', body: '' });
+      setEmailForm({ target: recipientType === 'platform' ? 'all' : '', name: '', subject: '', body: '' });
     } catch (err: any) {
       toast.error(err.message || "Failed to send email");
     } finally {
@@ -1676,17 +1681,63 @@ export default function AdminDashboard() {
                             {/* Column 1: Compose Email */}
                             <div className="lg:col-span-6 space-y-6">
                                <div className="space-y-2">
-                                  <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Recipient</label>
-                                  <select 
-                                     value={emailForm.target}
-                                     onChange={(e) => setEmailForm({...emailForm, target: e.target.value})}
+                                  <div className="flex justify-between items-center px-1">
+                                     <label className="text-[10px] font-bold text-muted-foreground uppercase">Recipient</label>
+                                     <div className="flex items-center gap-2">
+                                        <button 
+                                           type="button"
+                                           onClick={() => {
+                                              setRecipientType('platform');
+                                              setEmailForm({...emailForm, target: 'all'});
+                                           }}
+                                           className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-all ${recipientType === 'platform' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                                        >
+                                           Platform User
+                                        </button>
+                                        <button 
+                                           type="button"
+                                           onClick={() => {
+                                              setRecipientType('external');
+                                              setEmailForm({...emailForm, target: ''});
+                                           }}
+                                           className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-all ${recipientType === 'external' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                                        >
+                                           External Email
+                                        </button>
+                                     </div>
+                                  </div>
+                                  
+                                  {recipientType === 'platform' ? (
+                                     <select 
+                                        value={emailForm.target}
+                                        onChange={(e) => setEmailForm({...emailForm, target: e.target.value})}
+                                        className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
+                                     >
+                                        <option value="all">All Users (Send to everyone)</option>
+                                        {users.map(u => (
+                                           <option key={u.id} value={u.id}>{u.email} ({u.name || 'Anonymous'})</option>
+                                        ))}
+                                     </select>
+                                  ) : (
+                                     <input 
+                                        type="email"
+                                        placeholder="Enter recipient email (e.g. john@example.com)"
+                                        value={emailForm.target}
+                                        onChange={(e) => setEmailForm({...emailForm, target: e.target.value})}
+                                        className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
+                                     />
+                                  )}
+                               </div>
+
+                               <div className="space-y-2">
+                                  <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Recipient Name (Optional)</label>
+                                  <input 
+                                     type="text"
+                                     placeholder="e.g. Daniel (falls back to username/email if left blank)"
+                                     value={emailForm.name}
+                                     onChange={(e) => setEmailForm({...emailForm, name: e.target.value})}
                                      className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
-                                  >
-                                     <option value="all">All Users (Send to everyone)</option>
-                                     {users.map(u => (
-                                        <option key={u.id} value={u.id}>{u.email} ({u.name || 'Anonymous'})</option>
-                                     ))}
-                                  </select>
+                                  />
                                </div>
 
                                <div className="space-y-2">
@@ -1768,7 +1819,11 @@ export default function AdminDashboard() {
                                      {/* Content */}
                                      <div className="p-6">
                                         <p className="text-gray-900 font-bold text-sm mb-4">
-                                           Hi {emailForm.target === 'all' ? "[User's Name]" : (users.find(u => u.id === emailForm.target)?.name || users.find(u => u.id === emailForm.target)?.email?.split('@')[0] || 'User')},
+                                           Hi {emailForm.name || (recipientType === 'external' 
+                                               ? (emailForm.target ? emailForm.target.split('@')[0] : 'User')
+                                               : (emailForm.target === 'all' 
+                                                  ? "[User's Name]" 
+                                                  : (users.find(u => u.id === emailForm.target)?.name || users.find(u => u.id === emailForm.target)?.email?.split('@')[0] || 'User')))},
                                         </p>
                                         <div className="text-gray-700 text-sm space-y-3 min-h-[120px] break-words" dangerouslySetInnerHTML={{ __html: parseMarkdownForPreview(emailForm.body) }} />
                                         

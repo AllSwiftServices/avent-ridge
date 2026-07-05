@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 
-type AdminTab = 'overview' | 'users' | 'deposits' | 'withdrawals' | 'kyc' | 'assets' | 'trades' | 'settings' | 'notifications' | 'support';
+type AdminTab = 'overview' | 'users' | 'deposits' | 'withdrawals' | 'kyc' | 'assets' | 'trades' | 'settings' | 'notifications' | 'support' | 'email';
 
 interface UserData {
   id: string;
@@ -366,10 +366,11 @@ export default function AdminDashboard() {
 
   const [settings, setSettings] = useState<any[]>([]);
   const [notificationForm, setNotificationForm] = useState({ target: 'all', title: '', body: '' });
+  const [emailForm, setEmailForm] = useState({ target: 'all', subject: '', body: '' });
 
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['overview', 'users', 'deposits', 'withdrawals', 'kyc', 'assets', 'trades', 'settings', 'notifications', 'support'].includes(tab)) {
+    if (tab && ['overview', 'users', 'deposits', 'withdrawals', 'kyc', 'assets', 'trades', 'settings', 'notifications', 'support', 'email'].includes(tab)) {
       setActiveTab(tab as AdminTab);
     }
   }, [searchParams]);
@@ -713,6 +714,24 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleSendEmail = async () => {
+    if (!emailForm.subject || !emailForm.body) {
+      toast.error("Please fill subject and body");
+      return;
+    }
+    setProcessing(true);
+    try {
+      const { data, error } = await api.post<{ count: number }>('/admin/send-email', emailForm);
+      if (error) throw error;
+      toast.success(`Successfully sent ${data?.count || 0} email(s)!`);
+      setEmailForm({ target: 'all', subject: '', body: '' });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send email");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
 
   if (isLoadingAuth || (user && user.role !== 'admin')) {
     return (
@@ -762,7 +781,7 @@ export default function AdminDashboard() {
       {/* ── NAVIGATION TABS ── */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-6">
         <div className="flex items-center gap-1 p-1 bg-muted rounded-2xl w-full md:w-fit overflow-x-auto scrollbar-hide">
-          {(['overview', 'users', 'deposits', 'withdrawals', 'kyc', 'assets', 'trades', 'settings', 'notifications', 'support'] as const).map((tab) => (
+          {(['overview', 'users', 'deposits', 'withdrawals', 'kyc', 'assets', 'trades', 'settings', 'notifications', 'support', 'email'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -1645,7 +1664,141 @@ export default function AdminDashboard() {
                      </div>
                  </motion.div>
                )}
-          </AnimatePresence>
+
+               {activeTab === 'email' && (
+                 <motion.div key="email" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+                      <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
+                         <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
+                            <Mail className="h-5 w-5 text-primary" /> Email Platform Users
+                         </h3>
+                         
+                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                            {/* Column 1: Compose Email */}
+                            <div className="lg:col-span-6 space-y-6">
+                               <div className="space-y-2">
+                                  <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Recipient</label>
+                                  <select 
+                                     value={emailForm.target}
+                                     onChange={(e) => setEmailForm({...emailForm, target: e.target.value})}
+                                     className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
+                                  >
+                                     <option value="all">All Users (Send to everyone)</option>
+                                     {users.map(u => (
+                                        <option key={u.id} value={u.id}>{u.email} ({u.name || 'Anonymous'})</option>
+                                     ))}
+                                  </select>
+                               </div>
+
+                               <div className="space-y-2">
+                                  <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Subject</label>
+                                  <input 
+                                     type="text"
+                                     placeholder="e.g. Account Verification Completed"
+                                     value={emailForm.subject}
+                                     onChange={(e) => setEmailForm({...emailForm, subject: e.target.value})}
+                                     className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
+                                  />
+                                </div>
+
+                               <div className="space-y-2">
+                                  <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Message Body (Markdown Supported)</label>
+                                  <textarea 
+                                     placeholder="Type your message using Markdown...&#10;&#10;e.g.&#10;### Welcome to the Platform&#10;We are **glad** to have you here!"
+                                     value={emailForm.body}
+                                     onChange={(e) => setEmailForm({...emailForm, body: e.target.value})}
+                                     className="w-full h-64 p-4 bg-muted border border-border rounded-xl text-sm font-mono focus:outline-none resize-y"
+                                  />
+                               </div>
+
+                               {/* Markdown Guide */}
+                               <div className="p-4 rounded-2xl bg-muted/40 border border-border/80 space-y-3">
+                                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Markdown Formatting Guide</p>
+                                  <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                                     <div>
+                                        <p className="font-semibold text-foreground">Headers:</p>
+                                        <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono"># Heading 1</code><br/>
+                                        <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono">### Heading 3</code>
+                                     </div>
+                                     <div>
+                                        <p className="font-semibold text-foreground">Lists:</p>
+                                        <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono">* Item 1</code><br/>
+                                        <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono">- Item 2</code>
+                                     </div>
+                                     <div>
+                                        <p className="font-semibold text-foreground">Text Styling:</p>
+                                        <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono">**Bold text**</code><br/>
+                                        <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono">*Italic text*</code>
+                                     </div>
+                                     <div>
+                                        <p className="font-semibold text-foreground">Links & Rules:</p>
+                                        <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono">[Label](url)</code><br/>
+                                        <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono">--- (Divider)</code>
+                                     </div>
+                                  </div>
+                               </div>
+
+                               <button 
+                                  onClick={handleSendEmail}
+                                  disabled={processing || !emailForm.subject || !emailForm.body}
+                                  className="w-full h-12 bg-primary text-primary-foreground font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 transition-all shadow-lg shadow-primary/20 cursor-pointer"
+                               >
+                                  {processing ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                  {processing ? 'Sending...' : 'Send Email'}
+                               </button>
+                            </div>
+
+                            {/* Column 2: Live Preview (BloFin styled) */}
+                            <div className="lg:col-span-6 space-y-3">
+                               <p className="text-[10px] font-bold text-muted-foreground uppercase px-1">Live Email Preview (BloFin style)</p>
+                               <div className="border border-border rounded-2xl overflow-hidden bg-muted/20 p-4 flex justify-center">
+                                  {/* BloFin layout simulation */}
+                                  <div className="w-full max-w-[500px] bg-white text-gray-800 rounded-lg shadow-sm border border-gray-200 overflow-hidden text-left" style={{ fontFamily: 'Arial, sans-serif' }}>
+                                     {/* Header */}
+                                     <div className="bg-black p-4 flex justify-between items-center" style={{ borderBottom: '3px solid #f97316' }}>
+                                        <span className="text-white font-extrabold text-lg tracking-tight">
+                                           <span style={{ color: '#f97316' }}>AR</span> Exchange
+                                        </span>
+                                        <table border={0} cellPadding={0} cellSpacing={0} style={{ display: 'inline-block' }}>
+                                          <tbody>
+                                            <tr>
+                                              <td style={{ width: '10px', height: '22px', backgroundColor: '#f97316' }}></td>
+                                              <td style={{ width: '3px' }}></td>
+                                              <td style={{ width: '10px', height: '22px', backgroundColor: '#22c55e' }}></td>
+                                            </tr>
+                                          </tbody>
+                                        </table>
+                                     </div>
+                                     
+                                     {/* Content */}
+                                     <div className="p-6">
+                                        <p className="text-gray-900 font-bold text-sm mb-4">
+                                           Hi {emailForm.target === 'all' ? "[User's Name]" : (users.find(u => u.id === emailForm.target)?.name || users.find(u => u.id === emailForm.target)?.email?.split('@')[0] || 'User')},
+                                        </p>
+                                        <div className="text-gray-700 text-sm space-y-3 min-h-[120px] break-words" dangerouslySetInnerHTML={{ __html: parseMarkdownForPreview(emailForm.body) }} />
+                                        
+                                        <p className="mt-8 text-gray-600 text-sm">
+                                           Regards,<br/>
+                                           <strong className="text-gray-900">AR Exchange team</strong>
+                                        </p>
+                                     </div>
+
+                                     {/* Footer */}
+                                     <div className="px-6 pb-6 pt-4 border-t border-gray-100 bg-white">
+                                        <p className="text-[9px] text-gray-400 text-center leading-normal mb-3">
+                                           AR Exchange strives to safeguard your account and transactions to protect you from scams. Thank you for choosing AR Exchange.
+                                        </p>
+                                        <p className="text-xs text-center font-bold">
+                                           <span style={{ color: '#f97316' }}>support@aventridge.com</span>
+                                        </p>
+                                     </div>
+                                  </div>
+                               </div>
+                            </div>
+                         </div>
+                      </div>
+                 </motion.div>
+               )}
+           </AnimatePresence>
       </main>
 
       {/* ── MODALS (USER DETAIL, DEPOSIT DETAIL, KYC DETAIL, ASSET EDIT) ── */}
@@ -2205,4 +2358,50 @@ function DocumentImage({ label, url }: { label: string, url: string }) {
         </div>
       </div>
     );
+}
+
+function parseMarkdownForPreview(markdown: string): string {
+  if (!markdown) return "<p style='color: #9ca3af;'>Type content to preview...</p>";
+  
+  let html = markdown
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  // Bold
+  html = html.replace(/(\*\*|__)(.*?)\1/g, "<strong>$2</strong>");
+
+  // Italic
+  html = html.replace(/(\*|_)(.*?)\1/g, "<em>$2</em>");
+
+  // Headers
+  html = html.replace(/^### (.*?)$/gm, '<h3 style="margin-top: 16px; margin-bottom: 8px; font-size: 16px; font-weight: bold; color: #111827; font-family: Arial, sans-serif;">$1</h3>');
+  html = html.replace(/^## (.*?)$/gm, '<h2 style="margin-top: 18px; margin-bottom: 8px; font-size: 18px; font-weight: bold; color: #111827; font-family: Arial, sans-serif;">$1</h2>');
+  html = html.replace(/^# (.*?)$/gm, '<h1 style="margin-top: 20px; margin-bottom: 8px; font-size: 20px; font-weight: bold; color: #111827; font-family: Arial, sans-serif;">$1</h1>');
+
+  // Horizontal rules
+  html = html.replace(/^---$/gm, '<hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 16px 0;" />');
+
+  // Links
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color: #f97316; text-decoration: underline; font-weight: 600;">$1</a>');
+
+  // Bullet lists
+  html = html.replace(/^\s*[-*+]\s+(.*?)$/gm, '<li style="margin-bottom: 4px; color: #4b5563; font-size: 14px; font-family: Arial, sans-serif;">$1</li>');
+  html = html.replace(/(<li.*?>.*?<\/li>\n?)+/g, (match) => {
+    return `<ul style="margin-top: 6px; margin-bottom: 12px; padding-left: 20px; list-style-type: disc;">${match}</ul>`;
+  });
+
+  // Paragraphs
+  const blocks = html.split(/\n\n+/);
+  const formattedBlocks = blocks.map(block => {
+    const trimmed = block.trim();
+    if (!trimmed) return "";
+    if (trimmed.startsWith("<h") || trimmed.startsWith("<ul") || trimmed.startsWith("<hr") || trimmed.startsWith("<li")) {
+      return trimmed.replace(/\n/g, "<br />");
+    }
+    const withBrs = trimmed.replace(/\n/g, "<br />");
+    return `<p style="margin: 0 0 12px; line-height: 1.5; color: #4b5563; font-size: 14px; font-family: Arial, sans-serif;">${withBrs}</p>`;
+  });
+
+  return formattedBlocks.filter(b => b !== "").join("\n");
 }

@@ -85,8 +85,8 @@ export function parseMarkdownToHtml(markdown: string): string {
 export function generateBloFinStyleEmailHtml(title: string, contentHtml: string, name?: string): string {
   const greeting = name ? `Hi ${name},` : "Hello,";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aventridge.com";
-  const leftLogoUrl = `${appUrl}/logo-left.jpg`;
-  const rightLogoUrl = `${appUrl}/logo-right.jpg`;
+  const leftLogoUrl = `${appUrl}/logo-left.png`;
+  const rightLogoUrl = `${appUrl}/logo-right.png`;
   
   return `
     <!DOCTYPE html>

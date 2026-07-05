@@ -1756,12 +1756,12 @@ export default function AdminDashboard() {
                                      {/* Header */}
                                      <div className="bg-black p-4 flex justify-between items-center" style={{ borderBottom: '3px solid #f97316' }}>
                                         <div className="flex items-center">
-                                           <img src="/logo-left.jpg" alt="Avent Ridge Exchange" style={{ height: '34px', objectFit: 'contain' }} />
+                                           <img src="/logo-left.png" alt="Avent Ridge Exchange" style={{ height: '34px', objectFit: 'contain' }} />
                                         </div>
                                         
                                         {/* Right Logo (Image 3) */}
                                         <div className="flex items-center">
-                                           <img src="/logo-right.jpg" alt="Icon" style={{ height: '28px', objectFit: 'contain' }} />
+                                           <img src="/logo-right.png" alt="Icon" style={{ height: '28px', objectFit: 'contain' }} />
                                         </div>
                                      </div>
                                      

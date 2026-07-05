@@ -1755,18 +1755,14 @@ export default function AdminDashboard() {
                                   <div className="w-full max-w-[500px] bg-white text-gray-800 rounded-lg shadow-sm border border-gray-200 overflow-hidden text-left" style={{ fontFamily: 'Arial, sans-serif' }}>
                                      {/* Header */}
                                      <div className="bg-black p-4 flex justify-between items-center" style={{ borderBottom: '3px solid #f97316' }}>
-                                        <span className="text-white font-extrabold text-lg tracking-tight">
-                                           <span style={{ color: '#f97316' }}>AR</span> Exchange
-                                        </span>
-                                        <table border={0} cellPadding={0} cellSpacing={0} style={{ display: 'inline-block' }}>
-                                          <tbody>
-                                            <tr>
-                                              <td style={{ width: '10px', height: '22px', backgroundColor: '#f97316' }}></td>
-                                              <td style={{ width: '3px' }}></td>
-                                              <td style={{ width: '10px', height: '22px', backgroundColor: '#22c55e' }}></td>
-                                            </tr>
-                                          </tbody>
-                                        </table>
+                                        <div className="flex items-center">
+                                           <img src="/logo-left.jpg" alt="Avent Ridge Exchange" style={{ height: '34px', objectFit: 'contain' }} />
+                                        </div>
+                                        
+                                        {/* Right Logo (Image 3) */}
+                                        <div className="flex items-center">
+                                           <img src="/logo-right.jpg" alt="Icon" style={{ height: '28px', objectFit: 'contain' }} />
+                                        </div>
                                      </div>
                                      
                                      {/* Content */}
@@ -1778,14 +1774,14 @@ export default function AdminDashboard() {
                                         
                                         <p className="mt-8 text-gray-600 text-sm">
                                            Regards,<br/>
-                                           <strong className="text-gray-900">AR Exchange team</strong>
+                                           <strong className="text-gray-900">Avent Ridge team</strong>
                                         </p>
                                      </div>
 
                                      {/* Footer */}
                                      <div className="px-6 pb-6 pt-4 border-t border-gray-100 bg-white">
                                         <p className="text-[9px] text-gray-400 text-center leading-normal mb-3">
-                                           AR Exchange strives to safeguard your account and transactions to protect you from scams. Thank you for choosing AR Exchange.
+                                           Avent Ridge strives to safeguard your account and transactions to protect you from scams. Thank you for choosing Avent Ridge.
                                         </p>
                                         <p className="text-xs text-center font-bold">
                                            <span style={{ color: '#f97316' }}>support@aventridge.com</span>

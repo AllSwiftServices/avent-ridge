@@ -31,8 +31,8 @@ export default function Sidebar() {
       'bg-card border-r border-border p-4'
     )}>
       <div className="flex items-center gap-3 px-3 py-4 mb-6">
-        <img src="/icon.png" alt="AR Exchange" className="w-10 h-10 object-contain" />
-        <span className="font-bold text-xl text-foreground">AR Exchange</span>
+        <img src="/icon.png" alt="Avent Ridge Exchange" className="w-10 h-10 object-contain" />
+        <span className="font-bold text-xl text-foreground">Avent Ridge Exchange</span>
       </div>
 
       <nav className="flex-1 space-y-1">

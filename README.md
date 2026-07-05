@@ -1,4 +1,4 @@
-# AR Exchange
+# Avent Ridge Exchange
 
 A modern trading platform built with Next.js and TypeScript.
 
@@ -21,7 +21,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - **Icons**: Lucide React
 - **Animations**: Framer Motion
 - **State Management**: TanStack Query (React Query)
-- **Auth**: Base44 SDK (AR Exchange customized)
+- **Auth**: Base44 SDK (Avent Ridge Exchange customized)
 
 ## Project Structure
 

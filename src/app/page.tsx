@@ -227,7 +227,7 @@ export default function Home() {
           animate={{ opacity: 1, scale: 1 }}
           className="w-12 h-12 flex items-center justify-center"
         >
-          <img src="/icon.png" alt="AR Exchange" className="w-12 h-12 object-contain animate-pulse" />
+          <img src="/icon.png" alt="Avent Ridge Exchange" className="w-12 h-12 object-contain animate-pulse" />
         </motion.div>
       </div>
     );
@@ -252,8 +252,8 @@ export default function Home() {
             className="flex justify-center mb-8"
           >
             <div className="flex items-center gap-3">
-              <img src="/icon.png" alt="AR Exchange" className="w-14 h-14 object-contain" />
-              <span className="text-2xl font-bold">AR Exchange</span>
+              <img src="/icon.png" alt="Avent Ridge Exchange" className="w-14 h-14 object-contain" />
+              <span className="text-2xl font-bold">Avent Ridge Exchange</span>
             </div>
           </motion.div>
 
@@ -579,7 +579,7 @@ export default function Home() {
             </AnimatePresence>
 
             <p className="text-center text-[11px] leading-relaxed text-muted-foreground/60 mt-8">
-              By continuing, you agree to AR Exchange's <br />
+              By continuing, you agree to Avent Ridge Exchange's <br />
               <button className="underline hover:text-primary">Terms of Service</button> and <button className="underline hover:text-primary">Privacy Policy</button>
             </p>
           </motion.div>

@@ -1,6 +1,6 @@
 {
-  "name": "AR Exchange",
-  "short_name": "AR Exchange",
+  "name": "Avent Ridge Exchange",
+  "short_name": "Avent Ridge Exchange",
   "description": "Secure trading and holding platform.",
   "start_url": "/dashboard",
   "display": "standalone",

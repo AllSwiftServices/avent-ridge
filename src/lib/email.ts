@@ -84,6 +84,9 @@ export function parseMarkdownToHtml(markdown: string): string {
  */
 export function generateBloFinStyleEmailHtml(title: string, contentHtml: string, name?: string): string {
   const greeting = name ? `Hi ${name},` : "Hello,";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aventridge.com";
+  const leftLogoUrl = `${appUrl}/logo-left.jpg`;
+  const rightLogoUrl = `${appUrl}/logo-right.jpg`;
   
   return `
     <!DOCTYPE html>
@@ -98,25 +101,16 @@ export function generateBloFinStyleEmailHtml(title: string, contentHtml: string,
           <tr>
             <td align="center">
               <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); border: 1px solid #e5e7eb;">
-                <!-- HEADER (BloFin style black bar) -->
+                <!-- HEADER (BloFin style black bar with Avent Ridge Branding) -->
                 <tr>
-                  <td style="background-color: #000000; padding: 24px 30px; border-bottom: 4px solid #f97316;">
+                  <td style="background-color: #000000; padding: 20px 30px; border-bottom: 4px solid #f97316;">
                     <table border="0" cellpadding="0" cellspacing="0" width="100%">
                       <tr>
-                        <td align="left" valign="middle">
-                          <span style="font-family: Arial, sans-serif; font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">
-                            <span style="color: #f97316;">AR</span> Exchange
-                          </span>
+                        <td align="left" valign="middle" style="font-size: 0; line-height: 0;">
+                          <img src="${leftLogoUrl}" height="38" style="display: block; height: 38px; border: 0; outline: none; text-decoration: none;" alt="Avent Ridge Exchange" />
                         </td>
-                        <td align="right" valign="middle" style="width: 50px;">
-                          <!-- Orange/Green diagonal blocks -->
-                          <table border="0" cellpadding="0" cellspacing="0" style="display: inline-block;">
-                            <tr>
-                              <td style="width: 12px; height: 26px; background-color: #f97316;"></td>
-                              <td style="width: 4px;"></td>
-                              <td style="width: 12px; height: 26px; background-color: #22c55e;"></td>
-                            </tr>
-                          </table>
+                        <td align="right" valign="middle" style="font-size: 0; line-height: 0;">
+                          <img src="${rightLogoUrl}" height="32" style="display: block; height: 32px; border: 0; outline: none; text-decoration: none;" alt="Icon" />
                         </td>
                       </tr>
                     </table>
@@ -139,7 +133,7 @@ export function generateBloFinStyleEmailHtml(title: string, contentHtml: string,
                     <!-- Regards -->
                     <p style="margin: 30px 0 0; font-size: 15px; color: #4b5563; line-height: 1.5; font-family: Arial, sans-serif;">
                       Regards,<br>
-                      <strong style="color: #111827;">AR Exchange team</strong>
+                      <strong style="color: #111827;">Avent Ridge Exchange team</strong>
                     </p>
                   </td>
                 </tr>
@@ -151,9 +145,9 @@ export function generateBloFinStyleEmailHtml(title: string, contentHtml: string,
                     
                     <!-- Disclaimer -->
                     <p style="margin: 0 0 16px; font-size: 11px; line-height: 1.5; color: #9ca3af; text-align: center; font-family: Arial, sans-serif;">
-                      AR Exchange strives to safeguard your account and transactions to protect you from scams. Thank you for choosing AR Exchange.
+                      Avent Ridge Exchange strives to safeguard your account and transactions to protect you from scams. Thank you for choosing Avent Ridge Exchange.
                     </p>
-
+                    
                     <!-- Support Link -->
                     <p style="margin: 0 0 20px; font-size: 12px; text-align: center; font-family: Arial, sans-serif;">
                       <a href="mailto:support@aventridge.com" style="color: #f97316; text-decoration: none; font-weight: bold;">support@aventridge.com</a>
@@ -196,20 +190,20 @@ export async function sendOtpEmail(to: string, otp: string, type: 'login' | 'sig
   console.log(`🚀 Attempting to send ${type} OTP email via SMTP to: ${to}`);
 
   const subjects = {
-    login: "Verify Your Email - AR Exchange",
-    signup: "Welcome to AR Exchange - Verify Your Email",
-    reset: "Reset Your Password - AR Exchange",
+    login: "Verify Your Email - Avent Ridge Exchange",
+    signup: "Welcome to Avent Ridge Exchange - Verify Your Email",
+    reset: "Reset Your Password - Avent Ridge Exchange",
   };
 
   const titles = {
     login: "Verify Your Email",
-    signup: "Welcome to AR Exchange!",
+    signup: "Welcome to Avent Ridge Exchange!",
     reset: "Reset Your Password",
   };
 
   const messages = {
     login: "Welcome back! Please use the verification code below to complete your sign in.",
-    signup: "Welcome to AR Exchange! Please use the verification code below to complete your registration.",
+    signup: "Welcome to Avent Ridge Exchange! Please use the verification code below to complete your registration.",
     reset: "You've requested to reset your password. Please use the verification code below to proceed.",
   };
 
@@ -254,7 +248,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
 
   const contentHtml = `
     <p style="margin: 0 0 16px; color: #4b5563; font-size: 15px; font-family: Arial, sans-serif; line-height: 1.6;">
-      Thank you for joining AR Exchange! You're now part of our community of elite traders.
+      Thank you for joining Avent Ridge Exchange! You're now part of our community of elite traders.
     </p>
     
     <div style="margin: 20px 0; padding-left: 14px; border-left: 3px solid #f97316;">
@@ -271,14 +265,14 @@ export async function sendWelcomeEmail(to: string, name: string) {
     </div>
   `;
 
-  const html = generateBloFinStyleEmailHtml("Welcome to AR Exchange!", contentHtml, name);
+  const html = generateBloFinStyleEmailHtml("Welcome to Avent Ridge Exchange!", contentHtml, name);
 
   try {
     const mailer = getTransporter();
     const info = await mailer.sendMail({
       from: process.env.SMTP_USER,
       to,
-      subject: "Welcome to AR Exchange! 🎉",
+      subject: "Welcome to Avent Ridge Exchange! 🎉",
       html,
     });
 
@@ -298,7 +292,7 @@ export async function sendKycEmail(to: string, name: string, status: "approved" 
   const statusColor = isApproved ? "#22c55e" : "#ef4444";
   
   const message = isApproved
-    ? "Great news! Your identity verification has been approved. You now have full access to all AR Exchange features, including withdrawals and advanced trading."
+    ? "Great news! Your identity verification has been approved. You now have full access to all Avent Ridge Exchange features, including withdrawals and advanced trading."
     : `Your KYC application was unfortunately rejected. Reason: ${reason || "Please ensure your documents are clear and valid."}`;
 
   const contentHtml = `
@@ -327,7 +321,7 @@ export async function sendKycEmail(to: string, name: string, status: "approved" 
     const info = await mailer.sendMail({
       from: process.env.SMTP_USER,
       to,
-      subject: `${title} - AR Exchange`,
+      subject: `${title} - Avent Ridge Exchange`,
       html,
     });
 

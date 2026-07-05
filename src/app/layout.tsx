@@ -12,15 +12,15 @@ const geistMono = { variable: "--font-geist-mono" };
 export const metadata: Metadata = {
   title: "Avent Ridge Exchange",
   description: "Avent Ridge Exchange Platform",
-  manifest: "/manifest.json",
+  manifest: "/manifest.json?v=2",
   appleWebApp: {
     title: "Avent Ridge Exchange",
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "black",
   },
 };
 
 export const viewport = {
-  themeColor: "#4f46e5",
+  themeColor: "#000000",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,

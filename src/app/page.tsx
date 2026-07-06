@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { AnimatePresence } from 'framer-motion';
 import { showToast } from '@/lib/toast';
+import Image from 'next/image';
 
 export default function Home() {
   const [isLogin, setIsLogin] = useState(true);
@@ -252,7 +253,7 @@ export default function Home() {
             className="flex justify-center mb-8"
           >
             <div className="flex items-center gap-3">
-              <img src="/icon.png" alt="Avent Ridge Exchange" className="w-14 h-14 object-contain" />
+              <Image src="/icon.png" alt="Avent Ridge Exchange" width={32} height={32} className="object-contain" />
               <span className="text-2xl font-bold">Avent Ridge Exchange</span>
             </div>
           </motion.div>

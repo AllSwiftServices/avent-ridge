@@ -228,7 +228,7 @@ export default function Home() {
           animate={{ opacity: 1, scale: 1 }}
           className="w-12 h-12 flex items-center justify-center"
         >
-          <img src="/icon.png" alt="Avent Ridge Exchange" className="w-12 h-12 object-contain animate-pulse" />
+          <Image src="/icon.png" alt="Avent Ridge Exchange" width={48} height={48} className="object-contain animate-pulse" />
         </motion.div>
       </div>
     );

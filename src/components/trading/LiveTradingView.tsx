@@ -105,7 +105,7 @@ const TradeResultOverlay = ({
               : <TrendingDown className="h-8 w-8 text-destructive" />}
           </div>
           <h2 className={cn("text-2xl font-black mb-1", result.isWin ? "text-primary" : "text-destructive")}>
-            {result.isWin ? 'You Win! 🎉' : 'Trade Lost'}
+            {result.isWin ? 'Profit! 🎉' : 'Trade Lost'}
           </h2>
           {result.isWin ? (
             <>
@@ -259,16 +259,6 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
 
 
 
-  // Always show ALL durations from the static list
-  const availableDurations = DURATIONS.map(d => d.value);
-
-  // Keep selDuration valid
-  useEffect(() => {
-    if (availableDurations.length > 0 && !availableDurations.includes(selDuration)) {
-      setSelDuration(availableDurations[0]);
-    }
-  }, [availableDurations, selDuration]);
-
   // Find the matching admin trade — fuzzy match asset name/symbol, ignore duration
   const selectedTrade = useMemo(() => {
     return activeTrades.find(t => 
@@ -276,6 +266,21 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
       (t.asset_type?.toLowerCase() === selOptionType.toLowerCase() || selOptionType === 'Other')
     );
   }, [activeTrades, selAsset, selOptionType]);
+
+  // If admin trade has a duration, lock to it; otherwise let user pick
+  const adminLockedDuration = selectedTrade?.duration || null;
+
+  // Available durations for user picker (only relevant when not locked)
+  const availableDurations = DURATIONS.map(d => d.value);
+
+  // Auto-apply admin duration when trade changes
+  useEffect(() => {
+    if (adminLockedDuration) {
+      setSelDuration(adminLockedDuration);
+    } else if (availableDurations.length > 0 && !availableDurations.includes(selDuration)) {
+      setSelDuration(availableDurations[0]);
+    }
+  }, [adminLockedDuration, selDuration]);
 
   // Wallet balance
   const { data: wallets } = useQuery({
@@ -616,23 +621,32 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
                 {/* Expiration Time */}
                 <div className="p-4 border-b border-border space-y-1.5">
                   <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Expiration Time</label>
-                  <div className="relative">
-                    <select
-                      value={selDuration}
-                      onChange={e => setSelDuration(e.target.value)}
-                      className={cn(
-                        "w-full h-11 bg-muted/40 border rounded-2xl px-4 pr-10 font-semibold text-sm appearance-none outline-none focus:ring-2 focus:ring-primary/20 transition-all",
-                        !selDuration ? "border-primary" : "border-border"
-                      )}
-                    >
-                      <option value="">Select a value</option>
-                      {availableDurations.map(d => {
-                        const meta = DURATIONS.find(dm => dm.value === d);
-                        return <option key={d} value={d}>{meta?.label || d}</option>;
-                      })}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                  </div>
+                  {adminLockedDuration ? (
+                    <div className="h-11 bg-muted/40 border border-border rounded-2xl px-4 flex items-center justify-between">
+                      <span className="font-semibold text-sm">
+                        {DURATIONS.find(d => d.value === adminLockedDuration)?.label || adminLockedDuration}
+                      </span>
+                      <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Fixed</span>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <select
+                        value={selDuration}
+                        onChange={e => setSelDuration(e.target.value)}
+                        className={cn(
+                          "w-full h-11 bg-muted/40 border rounded-2xl px-4 pr-10 font-semibold text-sm appearance-none outline-none focus:ring-2 focus:ring-primary/20 transition-all",
+                          !selDuration ? "border-primary" : "border-border"
+                        )}
+                      >
+                        <option value="">Select a value</option>
+                        {availableDurations.map(d => {
+                          const meta = DURATIONS.find(dm => dm.value === d);
+                          return <option key={d} value={d}>{meta?.label || d}</option>;
+                        })}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    </div>
+                  )}
                 </div>
 
                 {/* Profit preview hidden as per requirement */}

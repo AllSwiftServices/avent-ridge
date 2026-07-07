@@ -1373,15 +1373,11 @@ export default function AdminDashboard() {
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">End Time (Local)</label>
-                        <div className="flex gap-2">
-                          <input 
-                            type="datetime-local"
-                            step="1"
-                            value={newTrade.ends_at}
-                            onChange={(e) => setNewTrade({...newTrade, ends_at: e.target.value})}
-                            className="flex-1 h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
-                          />
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">End Time (auto-set by Duration)</label>
+                        <div className="h-11 px-4 bg-muted/50 border border-border rounded-xl text-sm flex items-center text-muted-foreground">
+                          {newTrade.ends_at
+                            ? new Date(newTrade.ends_at).toLocaleString()
+                            : 'Select a duration below to set automatically'}
                         </div>
                       </div>
 
@@ -1425,23 +1421,6 @@ export default function AdminDashboard() {
                         </select>
                       </div>
 
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">
-                          Entry Price ($)
-                          {newTrade.asset_symbol && (
-                            <span className="ml-2 text-primary lowercase float-right">
-                              current: ${assets.find(a => a.symbol === newTrade.asset_symbol)?.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 }) || '0.00'}
-                            </span>
-                          )}
-                        </label>
-                        <input 
-                          type="number"
-                          placeholder="e.g. 65000"
-                          value={newTrade.entry_price || ''}
-                          onChange={(e) => setNewTrade({...newTrade, entry_price: parseFloat(e.target.value)})}
-                          className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none"
-                        />
-                      </div>
 
                       <div className="space-y-2">
                         <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Duration</label>

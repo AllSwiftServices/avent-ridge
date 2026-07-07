@@ -683,6 +683,20 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleExpireTrade = async (id: string) => {
+    setProcessing(true);
+    try {
+      const { data, error } = await api.post<any>(`/managed-trades/${id}/expire`, {});
+      if (error) throw error;
+      toast.success(data.message || "Trade end time updated to now.");
+      fetchAllData();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const handleUpdateSetting = async (key: string, value: any) => {
     setProcessing(true);
     try {
@@ -1532,14 +1546,26 @@ export default function AdminDashboard() {
                           </div>
 
                           {t.status === 'active' && (
-                            <button
-                              onClick={() => handleCompleteTrade(t.id)}
-                              disabled={processing}
-                              className="px-6 h-11 bg-success text-success-foreground font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 transition-all shadow-lg shadow-success/10"
-                            >
-                              {processing ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                              Complete & Payout
-                            </button>
+                            <div className="flex items-center gap-2">
+                              {new Date(t.ends_at).getTime() > Date.now() && (
+                                <button
+                                  onClick={() => handleExpireTrade(t.id)}
+                                  disabled={processing}
+                                  className="px-4 h-11 bg-muted hover:bg-muted/80 text-foreground font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 transition-all border border-border"
+                                >
+                                  {processing ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <Clock className="h-4 w-4" />}
+                                  End Time Now
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleCompleteTrade(t.id)}
+                                disabled={processing}
+                                className="px-6 h-11 bg-success text-success-foreground font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 transition-all shadow-lg shadow-success/10"
+                              >
+                                {processing ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                                Complete & Payout
+                              </button>
+                            </div>
                           )}
                         </div>
                       ))}

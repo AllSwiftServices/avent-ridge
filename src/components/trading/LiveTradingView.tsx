@@ -438,7 +438,9 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
     }
   };
 
-  const canTrade = !!tradeAmount && !!selDuration && !activePendingStake;
+  const parsedAmount = parseFloat(tradeAmount);
+  const isOverBalance = !!tradeAmount && !isNaN(parsedAmount) && parsedAmount > walletBalance;
+  const canTrade = !!tradeAmount && !isNaN(parsedAmount) && parsedAmount > 0 && !!selDuration && !activePendingStake && !isOverBalance;
 
   if (isLoadingAuth || loadingTrades || loadingAssets) {
     return (
@@ -599,21 +601,35 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
                 <div className="p-4 border-b border-border space-y-1.5">
                   <div className="flex justify-between items-center">
                     <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Amount</label>
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className={cn(
+                      "text-[10px] font-semibold",
+                      isOverBalance ? "text-destructive" : "text-muted-foreground"
+                    )}>
                       Balance: ${Number(walletBalance).toLocaleString()}
                     </span>
                   </div>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">$</span>
+                    <span className={cn(
+                      "absolute left-4 top-1/2 -translate-y-1/2 font-bold",
+                      isOverBalance ? "text-destructive" : "text-muted-foreground"
+                    )}>$</span>
                     <input
                       type="number"
                       value={tradeAmount}
                       onChange={e => setTradeAmount(e.target.value)}
                       placeholder="0.00"
-                      className="w-full h-11 pl-9 pr-4 bg-muted/40 border border-border rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className={cn(
+                        "w-full h-11 pl-9 pr-4 bg-muted/40 border rounded-2xl font-bold text-sm outline-none transition-all",
+                        isOverBalance
+                          ? "border-destructive ring-2 ring-destructive/20 text-destructive"
+                          : "border-border focus:ring-2 focus:ring-primary/20"
+                      )}
                     />
                   </div>
-                  {selectedTrade && (
+                  {isOverBalance && (
+                    <p className="text-[10px] font-bold text-destructive">Insufficient balance</p>
+                  )}
+                  {selectedTrade && !isOverBalance && (
                     <p className="text-[10px] text-muted-foreground">Min: ${selectedTrade.min_stake}</p>
                   )}
                 </div>

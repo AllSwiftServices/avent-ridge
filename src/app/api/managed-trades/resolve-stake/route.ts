@@ -27,14 +27,26 @@ export async function POST(request: Request) {
     if (stakeErr || !stake) {
       return NextResponse.json({ error: "Stake not found" }, { status: 404 });
     }
-
-    if (stake.status !== "active") {
-      return NextResponse.json({ success: true, already_resolved: true, status: stake.status });
-    }
-
     const trade = stake.managed_trades;
     if (!trade) {
       return NextResponse.json({ error: "Trade not found" }, { status: 404 });
+    }
+
+    if (stake.status !== "active") {
+      const isWin = stake.status === "paid_out";
+      const tradeAmount = Number(stake.stake_amount);
+      const profitPercent = trade.profit_percent ?? 80;
+      const profitAmount = isWin ? (tradeAmount * Number(profitPercent)) / 100 : 0;
+      const totalPayout = isWin ? tradeAmount + profitAmount : 0;
+
+      return NextResponse.json({
+        success: true,
+        already_resolved: true,
+        isWin,
+        totalPayout,
+        profitAmount,
+        tradeAmount,
+      });
     }
 
     // Determine win/loss based on admin's outcome setting

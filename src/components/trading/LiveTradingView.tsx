@@ -347,9 +347,7 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
         credentials: 'include',
       });
       const result = await res.json();
-      if (result.already_resolved) {
-        // already done
-      } else {
+      if (result.success) {
         setTradeResult({
           isWin: result.isWin,
           totalPayout: result.totalPayout,

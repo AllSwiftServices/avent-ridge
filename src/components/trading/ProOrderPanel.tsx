@@ -42,6 +42,7 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 0, 
   const execPrice = orderType === 'market' ? price : (parseFloat(limitPrice) || price);
   const total = (parseFloat(quantity) || 0) * execPrice;
   const isBuy = tab === 'buy';
+  const isOverBalance = isBuy && total > Number(balance);
 
   const handleSubmit = async () => {
     const qty = parseFloat(quantity);
@@ -193,12 +194,21 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 0, 
       </div>
 
       {/* Order total */}
-      <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-muted">
+      <div className={cn(
+        "flex items-center justify-between px-3 py-2.5 rounded-xl",
+        isOverBalance ? "bg-destructive/10 ring-1 ring-destructive" : "bg-muted"
+      )}>
         <span className="text-xs text-muted-foreground">Order Total</span>
-        <span className="text-sm font-bold text-foreground">
+        <span className={cn(
+          "text-sm font-bold",
+          isOverBalance ? "text-destructive" : "text-foreground"
+        )}>
           ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </span>
       </div>
+      {isOverBalance && (
+        <p className="text-[10px] font-bold text-destructive px-1 -mt-2">Insufficient balance (Balance: ${Number(balance).toLocaleString()})</p>
+      )}
 
       {/* Submit */}
       <AnimatePresence mode="wait">
@@ -218,7 +228,7 @@ export default function ProOrderPanel({ asset, price, balance: balanceProp = 0, 
             key="btn"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             onClick={handleSubmit}
-            disabled={isLoading}
+            disabled={isLoading || isOverBalance}
             className={cn(
               "w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg",
               isBuy ? "bg-linear-to-r from-primary to-amber-500 text-black shadow-primary/20" : "bg-destructive text-destructive-foreground shadow-destructive/20"

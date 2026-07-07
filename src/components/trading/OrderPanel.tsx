@@ -118,6 +118,7 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 0 }: a
   }, [aiHistory, step, queryClient, refetchHistory]);
 
   const potentialProfit = +(amount * PROFIT_RATE).toFixed(2);
+  const isOverBalance = amount > Number(balance);
 
   const handleOrder = async (side: 'call' | 'put') => {
     if (!user) {
@@ -263,25 +264,36 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 0 }: a
         </div>
 
         {/* ── AMOUNT INPUT ── */}
-        <div className="flex items-center rounded-xl overflow-hidden bg-muted">
-          <button
-            onClick={() => setAmount(a => Math.max(1, a - (a >= 100 ? 10 : 1)))}
-            className="px-4 py-3 hover:text-foreground text-muted-foreground transition-colors"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <input
-            type="number"
-            value={amount}
-            onChange={e => setAmount(Math.max(1, Number(e.target.value)))}
-            className="flex-1 text-center bg-transparent text-sm font-semibold focus:outline-none text-foreground"
-          />
-          <button
-            onClick={() => setAmount(a => a + (a >= 100 ? 10 : 1))}
-            className="px-4 py-3 hover:text-foreground text-muted-foreground transition-colors"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
+        <div className="space-y-1.5">
+          <div className={cn(
+            "flex items-center rounded-xl overflow-hidden",
+            isOverBalance ? "ring-2 ring-destructive bg-destructive/5" : "bg-muted"
+          )}>
+            <button
+              onClick={() => setAmount(a => Math.max(1, a - (a >= 100 ? 10 : 1)))}
+              className="px-4 py-3 hover:text-foreground text-muted-foreground transition-colors"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <input
+              type="number"
+              value={amount}
+              onChange={e => setAmount(Math.max(1, Number(e.target.value)))}
+              className={cn(
+                "flex-1 text-center bg-transparent text-sm font-semibold focus:outline-none",
+                isOverBalance ? "text-destructive" : "text-foreground"
+              )}
+            />
+            <button
+              onClick={() => setAmount(a => Math.min(Number(balance), a + (a >= 100 ? 10 : 1)))}
+              className="px-4 py-3 hover:text-foreground text-muted-foreground transition-colors"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+          {isOverBalance && (
+            <p className="text-[10px] font-bold text-destructive px-1">Insufficient balance</p>
+          )}
         </div>
 
         {/* Potential profit hidden as per requirement */}
@@ -352,7 +364,7 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 0 }: a
           ) : (
             <motion.div key="btns" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-2 gap-3">
               <button
-                disabled={isLoading}
+                disabled={isLoading || isOverBalance}
                 onClick={() => handleOrder('call')}
                 className="py-4 rounded-2xl font-bold text-black text-base flex items-center justify-center gap-2 transition-transform active:scale-95 bg-linear-to-r from-primary to-amber-500 shadow-lg shadow-primary/20 disabled:opacity-50"
               >
@@ -365,7 +377,7 @@ export default function OrderPanel({ asset, price, balance: balanceProp = 0 }: a
                 )}
               </button>
               <button
-                disabled={isLoading}
+                disabled={isLoading || isOverBalance}
                 onClick={() => handleOrder('put')}
                 className="py-4 rounded-2xl font-bold text-destructive-foreground text-base flex items-center justify-center gap-2 transition-transform active:scale-95 bg-destructive shadow-lg shadow-destructive/20 disabled:opacity-50"
               >

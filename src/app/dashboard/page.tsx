@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, TrendingUp, TrendingDown, Bell, Search, User, Sun, Moon } from 'lucide-react';
+import { Eye, EyeOff, Bell, Search, User, Sun, Moon } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
@@ -87,9 +87,7 @@ export default function Dashboard() {
   const holdingBalance = (holdingWallet.main_balance || 0) + allAssetsValue;
   
   const totalBalance = tradingBalance + holdingBalance;
-  const totalChange = 2.45;
-  const isPositive = totalChange >= 0;
-  const changeDollar = (totalBalance * totalChange) / 100;
+  const isPositive = totalBalance >= 0;
 
   if (isLoadingAuth) return null;
 
@@ -149,16 +147,6 @@ export default function Dashboard() {
           ) : (
             <AnimatedNumber value={totalBalance} prefix="$" decimals={2} className="text-4xl font-bold tracking-tight text-foreground" />
           )}
-
-          <div className={cn('flex items-center justify-center gap-1.5 mt-2 text-sm font-semibold')}>
-            {isPositive ? <TrendingUp className="h-4 w-4 text-primary" /> : <TrendingDown className="h-4 w-4 text-destructive" />}
-            <span className={isPositive ? 'text-primary' : 'text-destructive'}>
-              {isPositive ? '+' : ''}{totalChange.toFixed(2)}%
-            </span>
-            <span className="text-muted-foreground">
-              ({isPositive ? '+' : ''}${Math.abs(changeDollar).toFixed(2)}) today
-            </span>
-          </div>
 
           {/* Chart */}
           <div className="mt-6 rounded-3xl p-4 border bg-card border-border shadow-md">

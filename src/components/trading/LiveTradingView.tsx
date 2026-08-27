@@ -303,14 +303,16 @@ export default function LiveTradingView({ onViewChange }: LiveTradingViewProps) 
     enabled: !!user,
   });
 
-  // Price simulation
+  // Price simulation — seeded from the real asset price (same as AI Trading),
+  // and intentionally NOT dependent on selectedTrade/entry_price so opening
+  // or resolving a trade never resets or otherwise affects the chart.
   useEffect(() => {
-    const base = selectedTrade?.entry_price || 45000;
+    const base = currentAsset?.price || 100;
     setLivePrice(base);
     prevPriceRef.current = base;
     setPrevPrice(base);
-    setChangePercent(0);
-  }, [selAsset, selectedTrade?.entry_price]);
+    setChangePercent(currentAsset?.change_percent ?? 0);
+  }, [selAsset, currentAsset?.price]);
 
   useEffect(() => {
     if (!livePrice) return;

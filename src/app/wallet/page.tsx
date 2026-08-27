@@ -26,6 +26,24 @@ import WalletCard from '@/components/wallet/WalletCard';
 import { showToast } from '@/lib/toast';
 import { CardSkeleton } from '@/components/common/LoadingSkeleton';
 
+// Money direction per transaction type — NOT the sign of tx.amount, which is
+// stored inconsistently across insert points (some routes store the debited
+// stake as a positive magnitude, others as negative). 'credit' = money added
+// to the wallet, 'debit' = money removed, 'neutral' = a status log entry for
+// a transaction whose actual money movement already happened elsewhere (e.g.
+// a trade loss — the stake was already debited at entry, so logging it again
+// as a second outflow would double-count it).
+const CREDIT_TYPES = new Set(['deposit', 'sell', 'trade_sell', 'holding_profit', 'managed_trade_payout']);
+const DEBIT_TYPES = new Set(['withdraw', 'buy', 'trade_buy', 'trade_entry', 'managed_trade_entry', 'holding_loss']);
+const NEUTRAL_TYPES = new Set(['managed_trade_loss']);
+
+function getTxDirection(type: string): 'credit' | 'debit' | 'neutral' {
+  if (CREDIT_TYPES.has(type)) return 'credit';
+  if (NEUTRAL_TYPES.has(type)) return 'neutral';
+  if (DEBIT_TYPES.has(type)) return 'debit';
+  return 'debit'; // conservative default for any unrecognized type
+}
+
 export default function WalletPage() {
   const { user, isLoadingAuth } = useAuth();
   const navigate = useNavigate();
@@ -211,7 +229,9 @@ export default function WalletPage() {
                 <p className="text-muted-foreground">No transactions found</p>
               </div>
             ) : (
-              filteredTransactions.map((tx, i) => (
+              filteredTransactions.map((tx, i) => {
+                const direction = getTxDirection(tx.type);
+                return (
                 <motion.div
                   key={tx.id}
                   initial={{ opacity: 0, x: -20 }}
@@ -221,11 +241,13 @@ export default function WalletPage() {
                 >
                   <div className={cn(
                     "p-3 rounded-xl",
-                    tx.type === 'deposit' || tx.type === 'sell' ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
+                    direction === 'credit' ? "bg-success/10 text-success"
+                      : direction === 'neutral' ? "bg-muted text-muted-foreground"
+                      : "bg-destructive/10 text-destructive"
                   )}>
-                    {tx.type === 'deposit' || tx.type === 'sell' ? <ArrowDownLeft className="h-5 w-5" /> : <ArrowUpRight className="h-5 w-5" />}
+                    {direction === 'credit' ? <ArrowDownLeft className="h-5 w-5" /> : <ArrowUpRight className="h-5 w-5" />}
                   </div>
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-sm capitalize">{tx.type} {tx.symbol ? `- ${tx.symbol}` : ''}</span>
@@ -245,16 +267,18 @@ export default function WalletPage() {
                   <div className="text-right shrink-0">
                     <p className={cn(
                       "font-bold text-sm",
-                      tx.type === 'deposit' || tx.type === 'sell' ? "text-success" : "text-destructive"
+                      direction === 'credit' ? "text-success"
+                        : direction === 'neutral' ? "text-muted-foreground"
+                        : "text-destructive"
                     )}>
-                      {tx.type === 'deposit' || tx.type === 'sell' ? '+' : '-'}${tx.total_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {direction === 'neutral' ? '' : direction === 'credit' ? '+' : '-'}${tx.total_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </p>
                     <p className="text-[10px] text-muted-foreground uppercase">{tx.status}</p>
                   </div>
-                  
+
                   <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                 </motion.div>
-              ))
+              );})
             )}
           </div>
         </div>

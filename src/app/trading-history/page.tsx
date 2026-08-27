@@ -11,15 +11,29 @@ import { useNavigate } from '@/lib/react-router-shim';
 import { createPageUrl } from '@/utils';
 import { useAuth } from '@/lib/AuthContext';
 
+// buy = spends cash to acquire an asset (debit); sell = converts an asset
+// back to cash (credit) — confirmed against the actual wallet-balance
+// adjustment in /api/transactions/route.ts (`sell`/`deposit` add to balance,
+// `buy`/`withdraw` subtract). managed_trade_loss is a status log for a trade
+// whose stake was already debited at entry, so it's neutral, not a second debit.
 const TYPE_CONFIG: any = {
-  buy: { label: 'Buy', icon: ArrowDownLeft, color: 'text-primary', bg: 'bg-primary/10' },
-  sell: { label: 'Sell', icon: ArrowUpRight, color: 'text-destructive', bg: 'bg-destructive/10' },
+  buy: { label: 'Buy', icon: ArrowUpRight, color: 'text-destructive', bg: 'bg-destructive/10' },
+  sell: { label: 'Sell', icon: ArrowDownLeft, color: 'text-primary', bg: 'bg-primary/10' },
+  trade_buy: { label: 'Buy', icon: ArrowUpRight, color: 'text-destructive', bg: 'bg-destructive/10' },
+  trade_sell: { label: 'Sell', icon: ArrowDownLeft, color: 'text-primary', bg: 'bg-primary/10' },
   deposit: { label: 'Deposit', icon: ArrowDownLeft, color: 'text-primary', bg: 'bg-primary/10' },
   withdraw: { label: 'Withdraw', icon: ArrowUpRight, color: 'text-destructive', bg: 'bg-destructive/10' },
   managed_trade_stake: { label: 'Trade Entry', icon: ArrowUpRight, color: 'text-destructive', bg: 'bg-destructive/10' },
   managed_trade_entry: { label: 'Trade Entry', icon: ArrowUpRight, color: 'text-destructive', bg: 'bg-destructive/10' },
   managed_trade_payout: { label: 'Trade Result', icon: ArrowDownLeft, color: 'text-primary', bg: 'bg-primary/10' },
+  managed_trade_loss: { label: 'Trade Loss', icon: ArrowUpRight, color: 'text-muted-foreground', bg: 'bg-muted' },
+  trade_entry: { label: 'AI Trade Entry', icon: ArrowUpRight, color: 'text-destructive', bg: 'bg-destructive/10' },
+  holding_profit: { label: 'Holding Profit', icon: ArrowDownLeft, color: 'text-primary', bg: 'bg-primary/10' },
+  holding_loss: { label: 'Holding Loss', icon: ArrowUpRight, color: 'text-destructive', bg: 'bg-destructive/10' },
 };
+
+const CREDIT_TYPES = new Set(['deposit', 'sell', 'trade_sell', 'holding_profit', 'managed_trade_payout']);
+const NEUTRAL_TYPES = new Set(['managed_trade_loss']);
 
 const TABS = ['all', 'buy', 'sell', 'deposit', 'withdraw', 'trades'];
 
@@ -125,7 +139,8 @@ export default function TradingHistory() {
             {filtered.map((tx: any, i: number) => {
               const cfg = TYPE_CONFIG[tx.type] || TYPE_CONFIG.buy;
               const Icon = cfg.icon;
-              const isIncome = tx.type === 'buy' || tx.type === 'deposit' || tx.type === 'managed_trade_payout';
+              const isNeutral = NEUTRAL_TYPES.has(tx.type);
+              const isIncome = CREDIT_TYPES.has(tx.type);
               return (
                 <motion.div
                   key={tx.id}
@@ -155,8 +170,8 @@ export default function TradingHistory() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className={cn("font-bold text-sm", isIncome ? "text-primary" : "text-destructive")}>
-                      {isIncome ? '+' : '-'}${tx.amount?.toFixed(2)}
+                    <p className={cn("font-bold text-sm", isNeutral ? "text-muted-foreground" : isIncome ? "text-primary" : "text-destructive")}>
+                      {isNeutral ? '' : isIncome ? '+' : '-'}${tx.amount?.toFixed(2)}
                     </p>
                     {tx.price_at_transaction && (
                       <p className="text-[11px] mt-0.5 text-muted-foreground">

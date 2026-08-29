@@ -11,11 +11,10 @@ const iconMap = {
   stocks: TrendingUp,
 };
 
-export default function WalletCard({ 
-  type = 'main', 
-  title, 
-  balance, 
-  change, 
+export default function WalletCard({
+  type = 'main',
+  title,
+  balance,
   hideBalance,
   onToggleHide,
   onDeposit,
@@ -24,14 +23,12 @@ export default function WalletCard({
   type?: 'main' | 'crypto' | 'stocks';
   title: string;
   balance: number;
-  change: number;
   hideBalance: boolean;
   onToggleHide: () => void;
   onDeposit?: () => void;
   onWithdraw?: () => void;
 }) {
   const Icon = (iconMap as any)[type] || Wallet;
-  const isPositive = change >= 0;
 
   return (
     <motion.div
@@ -60,21 +57,12 @@ export default function WalletCard({
         {hideBalance ? (
           <span className="text-3xl font-bold tracking-tight text-foreground">••••••</span>
         ) : (
-          <AnimatedNumber 
-            value={balance} 
-            prefix="$" 
+          <AnimatedNumber
+            value={balance}
+            prefix="$"
             decimals={2}
             className="text-3xl font-bold tracking-tight text-foreground"
           />
-        )}
-        
-        {!hideBalance && (
-          <div className="flex items-center gap-1 mt-1 text-sm font-semibold">
-            <span className={isPositive ? 'text-success' : 'text-destructive'}>
-              {isPositive ? '+' : ''}{change?.toFixed(2)}%
-            </span>
-            <span className="text-muted-foreground">24h</span>
-          </div>
         )}
       </div>
       

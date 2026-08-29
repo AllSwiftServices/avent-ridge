@@ -178,7 +178,6 @@ export default function WalletPage() {
             type="crypto"
             title="Trading Wallet"
             balance={totalTradingValue}
-            change={2.5}
             hideBalance={hideBalance}
             onToggleHide={() => setHideBalance(!hideBalance)}
             onDeposit={() => navigate(createPageUrl('Wallet/Deposit'))}
@@ -188,7 +187,6 @@ export default function WalletPage() {
             type="stocks"
             title="Holding Wallet"
             balance={totalHoldingValue}
-            change={-1.2}
             hideBalance={hideBalance}
             onToggleHide={() => setHideBalance(!hideBalance)}
             onDeposit={() => navigate(createPageUrl('Wallet/Deposit'))}
